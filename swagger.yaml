@@ -1,0 +1,1285 @@
+openapi: 3.0.0
+info:
+  title: Movie Backend API
+  description: |
+    API documentation cho ứng dụng Movie Backend
+    
+    **🔄 PHIÊN BẢN ĐÃ CẬP NHẬT:**
+    - ❌ Đã bỏ JWT tokens  
+    - ❌ Đã bỏ authentication middleware
+    - ✅ Sử dụng userId đơn giản
+    
+    **📋 FLOW AUTH MỚI (1 màn hình duy nhất):**
+    1. **Màn hình nhập SĐT:** User nhập số điện thoại
+    2. **Hệ thống check:** 
+       - Nếu SĐT đã đăng ký → Gửi OTP đăng nhập → Verify → Vào trang chủ
+       - Nếu SĐT chưa đăng ký → Gửi OTP đăng ký → Verify → Nhập thông tin → Vào trang chủ
+    3. **Lưu userId:** Store trong AsyncStorage/localStorage để dùng cho các API khác
+    
+    **📱 CÁC BƯỚC THỰC HIỆN:**
+    1. Gọi `/api/auth/send-otp` với số điện thoại
+    2. Gọi `/api/auth/verify-otp` để xác thực
+    3. Nếu response có `needsRegistration: true` → Gọi `/api/auth/complete-registration`
+    4. Nếu response có `needsRegistration: false` → Đăng nhập thành công, vào trang chủ
+    
+    **📁 AWS S3 CONFIGURATION:**
+    - **Bucket:** locdev-bucket (ap-southeast-1)
+    - **Avatar path:** assets/avatar-users/{uuid}.{extension}
+    - **Supported formats:** JPEG, PNG, GIF
+    - **Max file size:** 2MB
+    - **Auto cleanup:** Old avatars deleted when uploading new ones
+    
+    **🎯 PROFILE UPDATE API:**
+    - **Endpoint:** PUT `/api/users/profile?userId={id}`
+    - **Content-Type:** multipart/form-data
+    - **Fields:** full_name, gender, avatar (file)
+    - **Integration:** Direct S3 upload + MongoDB update
+  version: 1.2.0
+  contact:
+    email: your-email@example.com
+
+servers:
+  - url: http://localhost:3003
+    description: Development server
+  - url: https://backend-app-lou3.onrender.com
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: Các API liên quan đến xác thực người dùng (/api/auth) - Trả về userId
+  - name: User
+    description: Các API liên quan đến thông tin người dùng (/api/users) - Cần userId
+  - name: Movie
+    description: Các API liên quan đến phim (/api/movies)
+  - name: Episode
+    description: Các API liên quan đến tập phim (/api/episodes)
+  - name: Favorite
+    description: Các API liên quan đến danh sách yêu thích (/api/favorites) - Cần userId
+  - name: Payment
+    description: Các API liên quan đến thanh toán (/api/payments) - Cần userId
+  - name: Rating
+    description: Các API liên quan đến đánh giá (/api/ratings) - Cần userId
+  - name: Genre
+    description: Các API liên quan đến thể loại phim (/api/genres)
+  - name: Home
+    description: Các API trang chủ (/api/home) - Banner, phim mới, đề xuất
+
+paths:
+  # === FLOW MỚI: 1 MÀN HÌNH DUY NHẤT ===
+  /api/auth/send-otp:
+    post:
+      tags:
+        - Authentication
+      summary: 🔄 Gửi mã OTP (Đăng ký/Đăng nhập thống nhất)
+      description: |
+        **🔄 FLOW MỚI:** Gửi mã OTP cho cả đăng ký và đăng nhập trong 1 API duy nhất.
+        
+        **Logic xử lý:**
+        - Nếu số điện thoại đã tồn tại → Gửi OTP đăng nhập
+        - Nếu số điện thoại chưa tồn tại → Gửi OTP đăng ký
+        - Frontend không cần biết user đã đăng ký hay chưa
+        
+        **Đặc điểm:**
+        - Mã OTP có 6 số, gửi qua SMS
+        - OTP có thời hạn (thường 5 phút)
+        - Rate limiting: Tối đa 3 lần/phút
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PhoneRequest'
+      responses:
+        '200':
+          description: Gửi OTP thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Đã gửi mã OTP"
+                  data:
+                    type: object
+                    properties:
+                      phone:
+                        type: string
+                        example: "0912345678"
+                      isExistingUser:
+                        type: boolean
+                        example: true
+                        description: "true = user đã đăng ký (đăng nhập), false = user mới (đăng ký)"
+              example:
+                status: "success"
+                message: "Đã gửi mã OTP đăng nhập"
+                data:
+                  phone: "0912345678"
+                  isExistingUser: true
+        '400':
+          description: Lỗi validate số điện thoại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/verify-otp:
+    post:
+      tags:
+        - Authentication
+      summary: 🔄 Xác thực OTP (Đăng ký/Đăng nhập thống nhất)
+      description: |
+        **🔄 FLOW MỚI:** Xác thực mã OTP cho cả đăng ký và đăng nhập.
+        
+        **Response paths:**
+        1. **User đã đăng ký:** `needsRegistration: false` → Frontend vào trang chủ
+        2. **User chưa đăng ký:** `needsRegistration: true` → Frontend chuyển màn hình nhập thông tin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyOTPRequest'
+      responses:
+        '200':
+          description: Xác thực OTP thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Xác thực OTP thành công"
+                  data:
+                    type: object
+                    properties:
+                      needsRegistration:
+                        type: boolean
+                        example: false
+                        description: "false = đăng nhập thành công, true = cần nhập thông tin đăng ký"
+                      userId:
+                        type: string
+                        example: "683d7b63d0ee4aeb15a11369"
+                        description: "Chỉ có khi needsRegistration = false"
+                      user:
+                        $ref: '#/components/schemas/UserInfo'
+                        description: "Chỉ có khi needsRegistration = false"
+              examples:
+                existing_user:
+                  summary: User đã đăng ký (đăng nhập thành công)
+                  value:
+                    status: "success"
+                    message: "Đăng nhập thành công"
+                    data:
+                      needsRegistration: false
+                      userId: "683d7b63d0ee4aeb15a11369"
+                      user:
+                        _id: "683d7b63d0ee4aeb15a11369"
+                        uid: "683d7b63d0ee4aeb15a11369"
+                        full_name: "Nguyễn Văn A"
+                        email: "example@gmail.com"
+                        phone: "0912345678"
+                        gender: "male"
+                        avatar: "https://example.com/avatar.jpg"
+                        is_phone_verified: true
+                new_user:
+                  summary: User chưa đăng ký (cần nhập thông tin)
+                  value:
+                    status: "success"
+                    message: "Xác thực OTP thành công, vui lòng nhập thông tin"
+                    data:
+                      needsRegistration: true
+        '400':
+          description: Mã OTP không hợp lệ hoặc đã hết hạn
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/complete-registration:
+    post:
+      tags:
+        - Authentication
+      summary: 🔄 Hoàn tất đăng ký (Sau khi verify OTP)
+      description: |
+        **🔄 FLOW MỚI:** Hoàn tất quá trình đăng ký sau khi verify OTP thành công.
+        
+        **Khi nào sử dụng:**
+        - Khi `/api/auth/verify-otp` trả về `needsRegistration: true`
+        - User đã xác thực số điện thoại, giờ cần nhập thông tin cá nhân
+        
+        **⚠️ QUAN TRỌNG:**
+        - Không cần truyền phone, hệ thống tự động lấy từ OTP record đã verify
+        - Phải gọi trong vòng 10 phút sau khi verify OTP thành công
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            example:
+              full_name: "Nguyễn Văn A"
+              email: "example@gmail.com"
+              gender: "male"
+      responses:
+        '201':
+          description: Đăng ký thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Lỗi validate dữ liệu, email đã tồn tại, hoặc phone không hợp lệ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: 🔄 Đăng xuất
+      description: |
+        Đăng xuất người dùng (chỉ trả về success message).
+        
+        **📱 Frontend cần làm:**
+        - Xóa `userId` khỏi AsyncStorage/localStorage
+        - Không cần gọi API refresh token hay gì cả
+      responses:
+        '200':
+          description: Đăng xuất thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Đăng xuất thành công"
+
+  /api/users/profile:
+    get:
+      tags:
+        - User
+      summary: Lấy thông tin profile
+      description: |
+        Lấy thông tin chi tiết của user.
+        
+        **🔄 THAY ĐỔI:** Không cần Bearer token, chỉ cần truyền userId qua query params
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "683d7b63d0ee4aeb15a11369"
+          description: "ID của user cần lấy thông tin"
+      responses:
+        '200':
+          description: Lấy thông tin thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+              example:
+                status: "success"
+                data:
+                  user:
+                    _id: "683d7b63d0ee4aeb15a11369"
+                    uid: "683d7b63d0ee4aeb15a11369"
+                    full_name: "Nguyễn Văn A"
+                    email: "example@gmail.com"
+                    phone: "0912345678"
+                    gender: "male"
+                    avatar: "https://example.com/avatar.jpg"
+                    is_phone_verified: true
+        '400':
+          description: Thiếu userId hoặc userId không hợp lệ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "error"
+                message: "userId là bắt buộc"
+        '404':
+          description: Không tìm thấy user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "error"
+                message: "Không tìm thấy user"
+
+    put:
+      tags:
+        - User
+      summary: 🔄 Cập nhật profile (với upload avatar)
+      description: |
+        **🔄 API ĐÃ CẬP NHẬT:** Hỗ trợ upload avatar trực tiếp lên AWS S3 + cập nhật thông tin profile.
+        
+        **📋 TÍNH NĂNG:**
+        - ✅ Cập nhật họ tên, giới tính
+        - ✅ Upload avatar lên AWS S3 (auto delete avatar cũ)
+        - ✅ Validation file ảnh (JPEG, PNG, GIF, max 2MB)
+        - ✅ Unified API: có thể update chỉ text hoặc chỉ avatar hoặc cả hai
+        
+        **📤 REQUEST FORMAT:**
+        - **Content-Type:** `multipart/form-data` (bắt buộc)
+        - **Text fields:** full_name, gender
+        - **File field:** avatar (optional)
+        
+        **📁 S3 STORAGE:**
+        - Path: `assets/avatar-users/{uuid}.{ext}`
+        - Auto generate unique filename
+        - Auto delete old avatar khi upload mới
+        
+        **⚠️ LƯU Ý:**
+        - Phone, email KHÔNG thể cập nhật qua API này (readonly)
+        - Avatar file: JPEG/PNG/GIF, max 2MB
+        - Nếu không upload avatar → chỉ update text fields
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "684269635fb34def3a1e28fd"
+          description: "ID của user cần cập nhật"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                full_name:
+                  type: string
+                  description: "Họ và tên người dùng"
+                  example: "Đạt Thiện"
+                gender:
+                  type: string
+                  enum: [male, female, other]
+                  description: "Giới tính: male=Nam, female=Nữ, other=Khác"
+                  example: "male"
+                avatar:
+                  type: string
+                  format: binary
+                  description: "File ảnh đại diện (JPEG/PNG/GIF, max 2MB)"
+            encoding:
+              avatar:
+                contentType: image/jpeg, image/png, image/gif
+            examples:
+              update_text_only:
+                summary: "Chỉ cập nhật text (không upload avatar)"
+                value:
+                  full_name: "Đạt Thiện Updated"
+                  gender: "male"
+              update_with_avatar:
+                summary: "Cập nhật text + upload avatar"
+                value:
+                  full_name: "Đạt Thiện Updated"
+                  gender: "male"
+                  avatar: "[BINARY FILE DATA]"
+      responses:
+        '200':
+          description: ✅ Cập nhật thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+              examples:
+                text_only_update:
+                  summary: "Cập nhật chỉ text thành công"
+                  value:
+                    status: "success"
+                    message: "✅ User profile updated successfully"
+                    data:
+                      user:
+                        _id: "684269635fb34def3a1e28fd"
+                        uid: "684269635fb34def3a1e28fd"
+                        full_name: "Đạt Thiện Updated"
+                        email: "datthien@gmail.com"
+                        phone: "0288348192"
+                        gender: "male"
+                        avatar: "https://locdev-bucket.s3.ap-southeast-1.amazonaws.com/assets/avatar-users/old-avatar.jpg"
+                        is_phone_verified: true
+                avatar_upload_success:
+                  summary: "Upload avatar + cập nhật text thành công"
+                  value:
+                    status: "success"
+                    message: "✅ User profile updated successfully"
+                    data:
+                      user:
+                        _id: "684269635fb34def3a1e28fd"
+                        uid: "684269635fb34def3a1e28fd"
+                        full_name: "Đạt Thiện Updated"
+                        email: "datthien@gmail.com"
+                        phone: "0288348192"
+                        gender: "male"
+                        avatar: "https://locdev-bucket.s3.ap-southeast-1.amazonaws.com/assets/avatar-users/32c5a14e-3fa0-497a-b036-32de0cdc842a.jpg"
+                        is_phone_verified: true
+        '400':
+          description: ❌ Lỗi validation hoặc file
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missing_userId:
+                  summary: "Thiếu userId"
+                  value:
+                    status: "error"
+                    message: "userId là bắt buộc"
+                file_too_large:
+                  summary: "File quá lớn"
+                  value:
+                    status: "error"
+                    message: "Tệp quá lớn. Chỉ cho phép tệp nhỏ hơn 2MB"
+                invalid_file_type:
+                  summary: "Loại file không hợp lệ"
+                  value:
+                    status: "error"
+                    message: "Chỉ cho phép file ảnh (JPEG, PNG, GIF)"
+                s3_upload_error:
+                  summary: "Lỗi upload S3"
+                  value:
+                    status: "error"
+                    message: "Lỗi khi upload file lên S3"
+        '404':
+          description: ❌ Không tìm thấy user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "error"
+                message: "Không tìm thấy user"
+        '500':
+          description: ❌ Lỗi server
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "error"
+                message: "Lỗi server khi xử lý upload"
+
+  /api/home/new-releases:
+    get:
+      tags:
+        - Home
+      summary: API Banner và Phim đề xuất
+      description: |
+        Lấy danh sách phim mới ra mắt cho Banner đầu trang và danh sách ở dưới "Phim dành cho bạn".
+        
+        **Đặc điểm:**
+        - Public API (không cần đăng nhập)
+        - Chỉ lấy phim có release_status = "released"
+        - Sắp xếp theo ngày tạo mới nhất
+        - Trả về 2 sections riêng biệt
+      parameters:
+        - name: bannerLimit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 5
+            minimum: 1
+            maximum: 10
+          description: Số lượng phim trong banner list (mặc định 5)
+          example: 3
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 6
+            minimum: 1
+            maximum: 12
+          description: Số lượng phim trong grid "Phim dành cho bạn" (mặc định 6)
+          example: 4
+        - name: days
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 30
+            minimum: 1
+            maximum: 365
+          description: Lấy phim mới trong X ngày gần đây (mặc định 30 ngày)
+          example: 15
+      responses:
+        '200':
+          description: Lấy dữ liệu thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    type: object
+                    properties:
+                      banner:
+                        type: object
+                        properties:
+                          title:
+                            type: string
+                            example: "Phim mới ra mắt"
+                          type:
+                            type: string
+                            example: "banner_list"
+                          movies:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/BannerMovie'
+                      recommended:
+                        type: object
+                        properties:
+                          title:
+                            type: string
+                            example: "Phim dành cho bạn"
+                          type:
+                            type: string
+                            example: "grid"
+                          movies:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/GridMovie'
+        '500':
+          description: Lỗi server
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/home/continue-watching:
+    get:
+      tags:
+        - Home
+      summary: API Đang xem (Cần userId sẽ phát triển trong tương lai)
+      description: |
+        Lấy danh sách phim đang xem của user.
+        
+        **🔄 THAY ĐỔI:** Cần truyền userId qua query params thay vì Bearer token
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "683d7b63d0ee4aeb15a11369"
+          description: "ID của user cần lấy danh sách đang xem"
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 8
+          example: 8
+      responses:
+        '200':
+          description: Lấy dữ liệu thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    type: object
+                    properties:
+                      title:
+                        type: string
+                        example: "Đang xem"
+                      type:
+                        type: string
+                        example: "continue_watching"
+                      data:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            movieId:
+                              type: string
+                              example: "60d5ecb74df5e2001f8b4567"
+                            title:
+                              type: string
+                              example: "Avatar"
+                            poster:
+                              type: string
+                              example: "https://example.com/poster.jpg"
+                            progress:
+                              type: number
+                              example: 0.65
+                            lastWatchedAt:
+                              type: string
+                              format: date-time
+                              example: "2023-12-01T10:30:00Z"
+        '400':
+          description: Thiếu userId
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "error"
+                message: "userId là bắt buộc"
+
+  /api/home/trending:
+    get:
+      tags:
+        - Home
+      summary: API Phim đang thịnh hành
+      description: |
+        Lấy danh sách phim đang thịnh hành (được xem nhiều nhất).
+        
+        **Đặc điểm:**
+        - Public API (không cần đăng nhập)
+        - Sắp xếp theo view count
+        - Format giống GridMovie
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 7
+            minimum: 1
+            maximum: 20
+          description: Số lượng phim trending (mặc định 7)
+          example: 7
+      responses:
+        '200':
+          description: Lấy dữ liệu thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    type: object
+                    properties:
+                      title:
+                        type: string
+                        example: "Phim đang thịnh hành"
+                      type:
+                        type: string
+                        example: "grid"
+                      movies:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/GridMovie'
+        '500':
+          description: Lỗi server
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/home/top-rated:
+    get:
+      tags:
+        - Home
+      summary: API Phim được đánh giá cao
+      description: |
+        Lấy danh sách phim được đánh giá cao nhất.
+        
+        **Đặc điểm:**
+        - Public API (không cần đăng nhập)
+        - Sắp xếp theo rating
+        - Chỉ lấy phim có rating > 0
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 8
+            minimum: 1
+            maximum: 20
+          description: Số lượng phim top-rated (mặc định 8)
+          example: 8
+      responses:
+        '200':
+          description: Lấy dữ liệu thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    type: object
+                    properties:
+                      title:
+                        type: string
+                        example: "Phim được đánh giá cao"
+                      type:
+                        type: string
+                        example: "grid"
+                      movies:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/GridMovie'
+        '500':
+          description: Lỗi server
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/home/sports:
+    get:
+      tags:
+        - Home
+      summary: API Sự kiện thể thao
+      description: |
+        Lấy danh sách sự kiện thể thao.
+        
+        **Đặc điểm:**
+        - Public API (không cần đăng nhập)
+        - Chỉ lấy movie_type = "Thể thao"
+        - Filter theo status (upcoming, released, ended)
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 8
+            minimum: 1
+            maximum: 20
+          description: Số lượng sự kiện thể thao (mặc định 8)
+          example: 8
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [upcoming, released, ended]
+          description: |
+            Filter theo trạng thái sự kiện:
+            - upcoming: Sự kiện sắp diễn ra
+            - released: Sự kiện đã phát hành (mặc định)
+            - ended: Sự kiện đã kết thúc
+          example: released
+      responses:
+        '200':
+          description: Lấy dữ liệu thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    type: object
+                    properties:
+                      title:
+                        type: string
+                        example: "Sự kiện thể thao"
+                      type:
+                        type: string
+                        example: "grid"
+                      movies:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/GridMovie'
+        '500':
+          description: Lỗi server
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/home/anime:
+    get:
+      tags:
+        - Home
+      summary: API Anime/Hoạt hình hot
+      description: |
+        Lấy danh sách anime/hoạt hình nổi bật với logic đặc trưng.
+        **Fontend sử dụng cho:**
+        - Section "Anime hot"
+        - Grid layout hoạt hình
+        - Hiển thị poster anime với tỉ lệ đặc biệt
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 8
+            minimum: 1
+            maximum: 20
+          description: Số lượng anime hot (mặc định 8)
+          example: 8
+      responses:
+        '200':
+          description: Lấy dữ liệu thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    type: object
+                    properties:
+                      title:
+                        type: string
+                        example: "Anime hot"
+                      type:
+                        type: string
+                        example: "grid"
+                      movies:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/GridMovie'
+              example:
+                status: "success"
+                data:
+                  title: "Anime hot"
+                  type: "grid"
+                  movies: []
+        '500':
+          description: Lỗi server
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "error"
+                message: "Lỗi khi lấy anime hot"
+
+  /api/home/vietnamese:
+    get:
+      tags:
+        - Home
+      summary: API Phim Việt đặc sắc
+      description: |
+        Lấy danh sách phim Việt Nam với logic tìm kiếm đặc trưng.
+        
+        **Logic đặc trưng:**
+        - Sắp xếp theo rating (phim có rating cao nhất)
+        - Tính toán rating/viewCount        
+        **Fontend sử dụng cho:**
+        - Section "Phim Việt đặc sắc"
+        - Grid layout phim Việt
+        - Hiển thị poster phim Việt Nam
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 8
+            minimum: 1
+            maximum: 20
+          description: Số lượng phim Việt (mặc định 8)
+          example: 8
+      responses:
+        '200':
+          description: Lấy dữ liệu thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    type: object
+                    properties:
+                      title:
+                        type: string
+                        example: "Phim Việt đặc sắc"
+                      type:
+                        type: string
+                        example: "grid"
+                      movies:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/GridMovie'
+              example:
+                status: "success"
+                data:
+                  title: "Phim Việt đặc sắc"
+                  type: "grid"
+                  movies:
+                    - movieId: "683fb55d88e880e019875aa7"
+                      title: "Mình Yêu Nhau, Bình Yên Thôi"
+                      poster: "https://locdev-bucket.s3.ap-southeast-1.amazonaws.com/assets/tinh-cam/minh-yeu-nhau-binh-yen-thoi.jpg"
+                      movieType: "Phim bộ"
+                      producer: "SK Pictures, VTV3"
+                    - movieId: "683e6774602b36157f1c7b18"
+                      title: "Gặp Lại Chị Bầu"
+                      poster: "https://locdev-bucket.s3.ap-southeast-1.amazonaws.com/assets/hai/gap-lai-chi-bau-500_1707203931098.jpg"
+                      movieType: "Phim lẻ"
+                      producer: "CJ Entertainment Vietnam"
+                    - movieId: "683fb6e188e880e019875ac3"
+                      title: "Ngày Xưa Có Một Chuyện Tình"
+                      poster: "https://locdev-bucket.s3.ap-southeast-1.amazonaws.com/assets/tinh-cam/ngay-xua-co-cau-chuyen-tinh.jpg"
+                      movieType: "Phim lẻ"
+                      producer: "HK Film, Hãng phim Anh Tễu"
+        '500':
+          description: Lỗi server
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "error"
+                message: "Lỗi khi lấy phim Việt"
+
+  /api/home/coming-soon:
+    get:
+      tags:
+        - Home
+      summary: API Phim sắp chiếu (đặt lịch sẽ phát triển trong tương lai)
+      description: |
+        Lấy danh sách phim sắp chiếu với logic đặc trưng.
+        **Fontend sử dụng cho:**
+        - Section "Sắp chiếu"
+        - Grid layout phim sắp chiếu
+        - Hiển thị poster + thông tin cơ bản
+        - Có thể thêm countdown timer đến ngày chiếu
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 8
+            minimum: 1
+            maximum: 20
+          description: Số lượng phim sắp chiếu (mặc định 8)
+          example: 8
+        - name: days
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 30
+            minimum: 1
+            maximum: 365
+          description: Lấy phim sắp chiếu trong X ngày tới (mặc định 30 ngày)
+          example: 15
+      responses:
+        '200':
+          description: Lấy dữ liệu thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    type: object
+                    properties:
+                      title:
+                        type: string
+                        example: "Sắp chiếu"
+                      type:
+                        type: string
+                        example: "grid"
+                      movies:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/GridMovie'
+              example:
+                status: "success"
+                data:
+                  title: "Sắp chiếu"
+                  type: "grid"
+                  movies:
+                    - movieId: "683fb76c88e880e019875acb"
+                      title: "Avatar: The Way of Water 2"
+                      poster: "https://locdev-bucket.s3.ap-southeast-1.amazonaws.com/assets/hanh-dong/avatar-way-of-water-2.jpg"
+                      movieType: "Phim lẻ"
+                      producer: "20th Century Studios"
+                    - movieId: "683e922d88e880e019875a1f"
+                      title: "World Cup 2026 Final"
+                      poster: "https://locdev-bucket.s3.ap-southeast-1.amazonaws.com/assets/sports/world-cup-2026.jpg"
+                      movieType: "Thể thao"
+                      producer: "FIFA"
+        '500':
+          description: Lỗi server
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: "error"
+                message: "Lỗi khi lấy phim sắp chiếu"
+
+components:
+  schemas:
+    PhoneRequest:
+      type: object
+      required:
+        - phone
+      properties:
+        phone:
+          type: string
+          example: "0912345678"
+          description: |
+            Số điện thoại của người dùng
+            - Format: 0xxxxxxxxx hoặc +84xxxxxxxxx
+            - Phải là số điện thoại Việt Nam hợp lệ
+            - Không được chứa ký tự đặc biệt hoặc khoảng trắng
+
+    VerifyOTPRequest:
+      type: object
+      required:
+        - phone
+        - otp
+      properties:
+        phone:
+          type: string
+          example: "0912345678"
+          description: Số điện thoại đã dùng để nhận OTP
+        otp:
+          type: string
+          example: "123456"
+          description: Mã OTP 6 số nhận được qua SMS
+
+    RegisterRequest:
+      type: object
+      required:
+        - full_name
+        - email
+        - gender
+      properties:
+        full_name:
+          type: string
+          example: "Nguyễn Văn A"
+          description: Họ và tên người dùng
+        email:
+          type: string
+          format: email
+          example: "example@gmail.com"
+          description: Email người dùng (phải là email hợp lệ và chưa được sử dụng)
+        gender:
+          type: string
+          enum: [male, female]
+          example: "male"
+          description: Giới tính (male = Nam, female = Nữ)
+
+    UpdateProfileRequest:
+      type: object
+      description: "🔄 Schema for multipart/form-data profile update with avatar upload"
+      properties:
+        full_name:
+          type: string
+          example: "Đạt Thiện"
+          description: "Họ và tên người dùng (có thể update)"
+        gender:
+          type: string
+          enum: [male, female, other]
+          example: "male"
+          description: "Giới tính (male=Nam, female=Nữ, other=Khác) - có thể update"
+        avatar:
+          type: string
+          format: binary
+          description: "File ảnh đại diện (JPEG/PNG/GIF, max 2MB) - optional, upload lên S3"
+      additionalProperties: false
+      example:
+        full_name: "Đạt Thiện Updated"
+        gender: "male"
+        avatar: "[BINARY_FILE_DATA]"
+
+    UpdateProfileTextOnlyRequest:
+      type: object
+      description: "Schema for text-only profile update (no avatar)"
+      properties:
+        full_name:
+          type: string
+          example: "Đạt Thiện"
+          description: "Họ và tên người dùng"
+        gender:
+          type: string
+          enum: [male, female, other]
+          example: "male"
+          description: "Giới tính (male=Nam, female=Nữ, other=Khác)"
+      additionalProperties: false
+
+    AuthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        message:
+          type: string
+          example: "Đăng nhập thành công"
+        data:
+          type: object
+          properties:
+            userId:
+              type: string
+              example: "683d7b63d0ee4aeb15a11369"
+              description: "⚠️ LƯU LẠI CÁI NÀY! Dùng cho tất cả APIs cần authentication"
+            user:
+              $ref: '#/components/schemas/UserInfo'
+          description: "Không còn trả về tokens nữa, chỉ có userId và user info"
+
+    ProfileResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        message:
+          type: string
+          example: "Lấy thông tin thành công"
+        data:
+          type: object
+          properties:
+            user:
+              $ref: '#/components/schemas/UserInfo'
+
+    UserInfo:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "683d7b63d0ee4aeb15a11369"
+        uid:
+          type: string
+          example: "683d7b63d0ee4aeb15a11369"
+          description: "UID để hiển thị trên màn hình (giống _id)"
+        full_name:
+          type: string
+          example: "Nguyễn Văn A"
+        email:
+          type: string
+          example: "example@gmail.com"
+        phone:
+          type: string
+          example: "0912345678"
+        gender:
+          type: string
+          enum: [male, female, other]
+          example: "male"
+          description: "Giới tính: male=Nam, female=Nữ, other=Khác"
+        avatar:
+          type: string
+          example: "https://example.com/avatar.jpg"
+        is_phone_verified:
+          type: boolean
+          example: true
+
+    SuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        message:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "error"
+        message:
+          type: string
+
+    BannerMovie:
+      type: object
+      description: Schema cho phim trong banner section
+      properties:
+        movieId:
+          type: string
+          example: "683fb76c88e880e019875aca"
+          description: ID của phim
+        title:
+          type: string
+          example: "1000 Years Old"
+          description: Tên phim
+        poster:
+          type: string
+          example: "https://locdev-bucket.s3.ap-southeast-1.amazonaws.com/assets/tinh-cam/phimbo-1000-years-old.jpg"
+          description: URL poster phim
+        description:
+          type: string
+          nullable: true
+          example: "Phim lẻ Việt Nam dựa trên truyện dài cùng tên của Nguyễn Nhật Ánh..."
+          description: Mô tả phim (có thể null)
+        releaseYear:
+          type: integer
+          nullable: true
+          example: 2024
+          description: Năm phát hành (có thể null)
+        movieType:
+          type: string
+          example: "Phim bộ"
+          description: Loại phim (Phim bộ, Phim lẻ, Thể thao)
+        producer:
+          type: string
+          example: "WeTV Thailand"
+          description: Nhà sản xuất
+        genres:
+          type: array
+          items:
+            type: string
+          example: ["Tình cảm", "Kinh dị"]
+          description: Danh sách thể loại (tối đa 3)
+
+    GridMovie:
+      type: object
+      description: Schema cho phim trong grid section
+      properties:
+        movieId:
+          type: string
+          example: "683fb76c88e880e019875aca"
+          description: ID của phim
+        title:
+          type: string
+          example: "1000 Years Old"
+          description: Tên phim
+        poster:
+          type: string
+          example: "https://locdev-bucket.s3.ap-southeast-1.amazonaws.com/assets/tinh-cam/phimbo-1000-years-old.jpg"
+          description: URL poster phim
+        movieType:
+          type: string
+          example: "Phim bộ"
+          description: Loại phim (Phim bộ, Phim lẻ, Thể thao)
+        producer:
+          type: string
+          example: "WeTV Thailand"
+          description: Nhà sản xuất
