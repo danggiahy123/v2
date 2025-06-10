@@ -103,7 +103,7 @@ export default function ExploreScreen() {
         <View style={styles.section}>
           
           {/* Người dùng */}
-          <TouchableOpacity
+          <TouchableOpacity onPress={() => router.push('/profile')}
             style={styles.userHeader}
             // onPress={handleProfile}
           >
