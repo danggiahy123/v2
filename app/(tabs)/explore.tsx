@@ -99,15 +99,10 @@ export default function ExploreScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
 
-        {/* Phần Người dùng */}
         <View style={styles.section}>
-          
-          {/* Người dùng */}
           <TouchableOpacity onPress={() => router.push('/profile')}
             style={styles.userHeader}
-            // onPress={handleProfile}
           >
-            {/* User Avatar or Default Icon */}
             <View style={styles.userAvatarContainer}>
               {user?.avatar ? (
                 <Image 
@@ -228,8 +223,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
   },
   headerTitle: {
     fontSize: 20,

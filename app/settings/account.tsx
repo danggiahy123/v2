@@ -298,7 +298,7 @@ export default function AccountInfoScreen() {
         <TouchableOpacity onPress={handleGoBack} style={styles.backButton}>
           <Ionicons name="chevron-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Thông tin tài khoản</Text>
+        <Text style={styles.headerTitle}>Chỉnh sửa prolife</Text>
         <View style={styles.placeholder} />
       </View>
 
@@ -450,10 +450,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+    backgroundColor: '#000',
+
   },
   backButton: {
     padding: 8,
@@ -464,18 +465,28 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   placeholder: {
-    width: 40,
+    width: 24,
   },
   scrollContent: {
-    paddingVertical: 30,
     paddingHorizontal: 20,
+    paddingVertical: 24,
   },
   avatarSection: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 36,
   },
   avatarContainer: {
     position: 'relative',
+    borderRadius: 60,
+    borderWidth: 2,
+    borderColor: '#fff',
+    padding: 4,
+    backgroundColor: '#222',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.5,
+    shadowRadius: 6,
+    elevation: 8,
   },
   avatar: {
     width: 100,
@@ -492,12 +503,12 @@ const styles = StyleSheet.create({
   },
   cameraIcon: {
     position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: '#007AFF',
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    bottom: -2,
+    right: -2,
+    backgroundColor: '#E50914',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
@@ -511,12 +522,12 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    color: '#fff',
-    marginBottom: 8,
+    color: '#aaa',
+    marginBottom: 6,
   },
   input: {
-    backgroundColor: '#333',
-    borderRadius: 8,
+    backgroundColor: '#1c1c1e',
+    borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
@@ -530,23 +541,27 @@ const styles = StyleSheet.create({
   },
   readonlyInput: {
     backgroundColor: '#2a2a2a',
-    color: '#999',
+    color: '#888',
   },
   buttonSection: {
     paddingHorizontal: 20,
-    paddingVertical: 20,
-    paddingBottom: 30,
+    paddingVertical: 24,
+    backgroundColor: '#000',
   },
   saveButton: {
-    backgroundColor: '#FF3B30',
-    borderRadius: 8,
+    backgroundColor: '#D11030',
+    borderRadius: 10,
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 50,
+    shadowColor: '#D11030',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 5,
   },
   saveButtonDisabled: {
-    backgroundColor: '#666',
+    backgroundColor: '#444',
   },
   saveButtonText: {
     fontSize: 16,
@@ -562,30 +577,29 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#999',
   },
-  // Modal styles
   modalOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#1c1c1e',
-    borderRadius: 12,
-    padding: 20,
+    backgroundColor: '#1f1f1f',
+    borderRadius: 14,
+    paddingVertical: 20,
     width: '80%',
-    maxWidth: 300,
+    maxWidth: 320,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#fff',
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   modalOption: {
     paddingVertical: 16,
@@ -601,10 +615,9 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     marginTop: 10,
   },
-  modalCancelText: {
-    fontSize: 16,
-    color: '#FF3B30',
-    textAlign: 'center',
-    fontWeight: '600',
-  },
-}); 
+ modalCancelText: {
+  fontSize: 16,
+  color: '#ff4d4f',
+  textAlign: 'center',
+},
+});

@@ -68,7 +68,7 @@ export default function SettingsScreen() {
             onPress={handleAccountInfo}
           >
             <Ionicons name="person-outline" size={24} color="#fff" style={styles.menuIcon} />
-            <Text style={styles.menuItemText}>Thông tin tài khoản</Text>
+            <Text style={styles.menuItemText}>Chỉnh sửa profile </Text>
             <Ionicons name="chevron-forward" size={20} color="#ccc" />
           </TouchableOpacity>
 
