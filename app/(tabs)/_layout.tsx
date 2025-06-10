@@ -50,11 +50,7 @@ export default function TabLayout() {
         options={{
           title: 'Hoạt hình',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons 
-              name={focused ? 'game-controller' : 'game-controller-outline'} 
-              size={24} 
-              color={color} 
-            />
+            <Ionicons name={focused ? 'happy' : 'happy-outline'} size={24} color={color} />
           ),
         }}
       />
