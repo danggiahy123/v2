@@ -1,4 +1,4 @@
-// Refactored HomeScreen UI for improved header clarity and professional appearance
+
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
@@ -8,7 +8,6 @@ import {
   Image,
   RefreshControl,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -54,7 +53,9 @@ export default function HomeScreen() {
       if (userId) {
         try {
           const continueResponse = await movieService.getContinueWatching(userId, 6);
-          if (continueResponse.status === 'success') setContinueWatching(continueResponse.data?.data || []);
+          if (continueResponse.status === 'success') {
+            setContinueWatching(continueResponse.data?.data || []);
+          }
         } catch {}
       }
 
@@ -64,7 +65,7 @@ export default function HomeScreen() {
         movieService.getSports({ limit: 8, status: 'released' }),
         movieService.getAnime(8),
         movieService.getVietnamese(8),
-        movieService.getComingSoon({ limit: 8, days: 30 })
+        movieService.getComingSoon({ limit: 8, days: 30 }),
       ]);
 
       const newSections: MovieSection[] = results.map((res, i) => {
@@ -72,7 +73,7 @@ export default function HomeScreen() {
         if (res.status === 'fulfilled' && res.value.status === 'success') {
           return {
             title: res.value.data?.title || titles[i],
-            movies: res.value.data?.movies || []
+            movies: res.value.data?.movies || [],
           };
         }
         return null;
@@ -99,16 +100,13 @@ export default function HomeScreen() {
       <View style={styles.bannerContainer}>
         <Image source={{ uri: current.poster }} style={styles.bannerImage} resizeMode="cover" />
         <View style={styles.bannerOverlay} />
-
         <View style={styles.headerBar}>
           <Text style={styles.logoText}>TECH5 PLAY</Text>
           <View style={styles.headerIcons}>
             <Ionicons name="search" size={24} color="#fff" style={styles.iconSpacing} />
-            
-            <Ionicons name="person-circle" size={24} color="#fff" />
+            <Ionicons name="person-circle" size={28} color="#fff" />
           </View>
         </View>
-
         <View style={styles.bannerContent}>
           <Text style={styles.bannerTitle}>{current.title}</Text>
           <View style={styles.bannerButtons}>
@@ -170,212 +168,174 @@ export default function HomeScreen() {
     )
   );
 
-  if (loading) return <View style={styles.loadingContainer}><ActivityIndicator size="large" color="#fff" /><Text style={styles.loadingText}>Đang tải...</Text></View>;
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#fff" />
+        <Text style={styles.loadingText}>Đang tải...</Text>
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#000" />
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />}
+      >
         {renderBanner()}
         {renderMovieGrid(recommendedMovies, 'Phim dành cho bạn')}
         {renderContinueWatching()}
-        {sections.map((section, index) => <React.Fragment key={index}>{renderMovieGrid(section.movies, section.title)}</React.Fragment>)}
+        {sections.map((section, index) => (
+          <React.Fragment key={index}>
+            {renderMovieGrid(section.movies, section.title)}
+          </React.Fragment>
+        ))}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#000' 
-  },
+  container: { flex: 1, backgroundColor: '#000' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000' },
+  loadingText: { color: '#fff', marginTop: 16, fontSize: 16 },
+  scrollView: { flex: 1 },
 
-  loadingContainer: { 
-    flex: 1, 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    backgroundColor: '#000' 
-  },
-
-  loadingText: { 
-    color: '#fff', 
-    marginTop: 16, 
-    fontSize: 16 
-  },
-
-  scrollView: { 
-    flex: 1
-
-  },
-
-  bannerContainer: { 
-    height: 400, 
-    position: 'relative' 
-  },
-
-  bannerImage: { 
-    width: '100%', 
-    height: '100%' 
-  },
-
-  bannerOverlay: { 
-    ...StyleSheet.absoluteFillObject, 
-    backgroundColor: 'rgba(0, 0, 0, 0.4)' 
-  },
+  bannerContainer: { height: 400, position: 'relative' },
+  bannerImage: { width: '100%', height: '100%' },
+  bannerOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0, 0, 0, 0.4)' },
 
   headerBar: {
-  position: 'absolute',
-  top: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 40,
-  left: 20,
-  right: 20,
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-},
-logoText: {
-  color: '#fff',
-  fontSize: 22,
-  fontWeight: 'bold',
-  letterSpacing: 0.5,
-},
-
- headerIcons: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  gap: 16,
-},
-
-  iconSpacing: { 
-    marginRight: 16 
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    right: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-
-  bannerContent: { 
-    position: 'absolute', 
-    bottom: 20, 
-    left: 20, 
-    right: 20, 
-    alignItems: 'center' 
+  logoText: {
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
   },
-
-  bannerTitle: { 
-    color: '#fff', 
-    fontSize: 26, 
-    fontWeight: 'bold', 
-    marginBottom: 10, 
-    textAlign: 'center' 
+  headerIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
   },
+  iconSpacing: { marginRight: 16 },
 
+  bannerContent: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    alignItems: 'center',
+  },
+  bannerTitle: {
+    color: '#fff',
+    fontSize: 26,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
   bannerButtons: {
-  flexDirection: 'row',
-  gap: 12,
-  justifyContent: 'center',
-},
-
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'center',
+  },
   playButton: {
-  backgroundColor: '#fff',
-  paddingHorizontal: 20,
-  paddingVertical: 10,
-  borderRadius: 30,
-  flexDirection: 'row',
-  alignItems: 'center',
-  gap: 6,
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.25,
-  shadowRadius: 3.84,
-  elevation: 5,
-},
-
-playButtonText: {
-  color: '#000',
-  fontWeight: '600',
-  fontSize: 16,
-},
-
-moreButton: {
-  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-  paddingHorizontal: 20,
-  paddingVertical: 10,
-  borderRadius: 30,
-  flexDirection: 'row',
-  alignItems: 'center',
-  gap: 6,
-  borderWidth: 1,
-  borderColor: 'rgba(255, 255, 255, 0.3)',
-},
-
-moreButtonText: {
-  color: '#fff',
-  fontWeight: '600',
-  fontSize: 16,
-},
-
-  section: { 
-    paddingHorizontal: 20, 
-    marginTop: 32 
+    backgroundColor: '#fff',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 30,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  playButtonText: {
+    color: '#000',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  moreButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 30,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  moreButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 16,
   },
 
+  section: { paddingHorizontal: 20, marginTop: 32 },
   sectionHeader: {
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    marginBottom: 12 
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  seeAllText: {
+    color: '#aaa',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  movieGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  movieItem: {
+    width: POSTER_WIDTH,
+    marginBottom: 16,
+  },
+  moviePoster: {
+    width: '100%',
+    height: POSTER_WIDTH * 1.5,
+    borderRadius: 10,
+    backgroundColor: '#222',
   },
 
-sectionTitle: {
-  color: '#fff',
-  fontSize: 20,
-  fontWeight: '700',
-  letterSpacing: 0.3,
-},
-  seeAllText: {
-  color: '#aaa',
-  fontSize: 14,
-  fontWeight: '500',
-},
-movieGrid: { 
-  flexDirection: 'row', 
-    flexWrap: 'wrap', 
-  justifyContent: 'space-between' 
-},
-movieItem: { 
-  width: POSTER_WIDTH, 
-  marginBottom: 16 
-},
-moviePoster: {
-  width: '100%',
-  height: POSTER_WIDTH * 1.5,
-  borderRadius: 10,
-  backgroundColor: '#222',
-},
-continueList: { 
-  paddingRight: 20 
-},
-
-continueItem: { 
-  width: 120, 
-  marginRight: 12 
-},
-
-continuePoster: {
-  width: 120,
-  height: 180,
-  borderRadius: 8,
-  backgroundColor: '#222',
-},
+  continueList: { paddingRight: 20 },
+  continueItem: { width: 120, marginRight: 12 },
+  continuePoster: {
+    width: 120,
+    height: 180,
+    borderRadius: 8,
+    backgroundColor: '#222',
+  },
   progressBar: {
-  height: 4,
-  backgroundColor: '#333',
-  marginTop: 6,
-  borderRadius: 2,
-  overflow: 'hidden',
-},
-
-progressFill: {
-  height: '100%',
-  backgroundColor: '#E53935',
-  borderRadius: 2,
-},
-
+    height: 4,
+    backgroundColor: '#333',
+    marginTop: 6,
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#E53935',
+    borderRadius: 2,
+  },
 });
