@@ -11,22 +11,22 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { clearError, clearMessage, getProfile } from '../../store/slices/authSlice';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { clearError, clearMessage, getProfile } from '../../../store/slices/authSlice';
+import { Ionicons } from '@expo/vector-icons'; 
 
 export default function ProfileScreen() {
   const { user, userId, loading, error, message } = useAppSelector((state) => state.auth);
   const dispatch = useAppDispatch();
   const router = useRouter();
 
-  // Load profile data when screen loads
+  
   useEffect(() => {
     if (userId) {
       dispatch(getProfile(userId));
     }
   }, [userId, dispatch]);
-
-  // Show error if exists
+  
   useEffect(() => {
     if (error) {
       Alert.alert('Lỗi', error);
@@ -34,7 +34,6 @@ export default function ProfileScreen() {
     }
   }, [error, dispatch]);
 
-  // Show message if exists
   useEffect(() => {
     if (message) {
       Alert.alert('Thông báo', message);
@@ -49,7 +48,11 @@ export default function ProfileScreen() {
   };
 
   const handleEditProfile = () => {
-    router.push('/profile/edit' as any);
+    router.push('/settings/account');
+  };
+
+  const handleGoBack = () => {
+    router.back();
   };
 
   if (!user) {
@@ -63,84 +66,61 @@ export default function ProfileScreen() {
   }
 
   return (
-    <ScrollView 
+    <ScrollView
       style={styles.container}
-      refreshControl={
-        <RefreshControl refreshing={loading} onRefresh={handleRefresh} />
-      }
+      refreshControl={<RefreshControl refreshing={loading} onRefresh={handleRefresh} />}
     >
+      <View style={styles.topBar}>
+        <TouchableOpacity onPress={() => router.push('/(tabs)/explore')}style={styles.backButton}>
+          <Ionicons name="chevron-back" size={24} color="white" />
+        </TouchableOpacity>
+        <Text style={styles.topBarTitle}>Profile</Text>
+      </View>
+
       <View style={styles.header}>
         <View style={styles.avatarContainer}>
           {user.avatar ? (
             <Image source={{ uri: user.avatar }} style={styles.avatar} />
           ) : (
             <View style={styles.avatarPlaceholder}>
-              <Text style={styles.avatarText}>
-                {user.full_name.charAt(0).toUpperCase()}
-              </Text>
+              <Text style={styles.avatarText}>{user.full_name.charAt(0).toUpperCase()}</Text>
             </View>
           )}
         </View>
-        
+
         <Text style={styles.userName}>{user.full_name}</Text>
         <Text style={styles.userPhone}>{user.phone}</Text>
-        
+
         <TouchableOpacity style={styles.editButton} onPress={handleEditProfile}>
-          <Text style={styles.editButtonText}>✏️ Chỉnh sửa profile</Text>
+          <Text style={styles.editButtonText}>Chỉnh sửa profile</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.infoSection}>
         <Text style={styles.sectionTitle}>Thông tin cá nhân</Text>
-        
+
         <View style={styles.infoItem}>
           <Text style={styles.infoLabel}>Email:</Text>
           <Text style={styles.infoValue}>{user.email}</Text>
         </View>
-        
+
         <View style={styles.infoItem}>
           <Text style={styles.infoLabel}>Số điện thoại:</Text>
           <Text style={styles.infoValue}>{user.phone}</Text>
-          {user.is_phone_verified && (
-            <Text style={styles.verifiedBadge}>✅ Đã xác thực</Text>
-          )}
+          {user.is_phone_verified && <Text style={styles.verifiedBadge}>Đã xác thực</Text>}
         </View>
-        
+
         <View style={styles.infoItem}>
           <Text style={styles.infoLabel}>Giới tính:</Text>
           <Text style={styles.infoValue}>
             {user.gender === 'male' ? 'Nam' : user.gender === 'female' ? 'Nữ' : 'Khác'}
           </Text>
         </View>
-        
+
         <View style={styles.infoItem}>
           <Text style={styles.infoLabel}>ID:</Text>
           <Text style={styles.infoValue}>{user._id}</Text>
         </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Cài đặt</Text>
-        
-        <TouchableOpacity style={styles.settingItem}>
-          <Text style={styles.settingText}>🔔 Thông báo</Text>
-          <Text style={styles.settingArrow}>›</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.settingItem}>
-          <Text style={styles.settingText}>🔒 Quyền riêng tư</Text>
-          <Text style={styles.settingArrow}>›</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.settingItem}>
-          <Text style={styles.settingText}>❓ Trợ giúp</Text>
-          <Text style={styles.settingArrow}>›</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={styles.settingItem}>
-          <Text style={styles.settingText}>📋 Điều khoản sử dụng</Text>
-          <Text style={styles.settingArrow}>›</Text>
-        </TouchableOpacity>
       </View>
     </ScrollView>
   );
@@ -149,7 +129,25 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#000',
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#000',
+    paddingTop: 50,
+    paddingBottom: 10,
+    paddingHorizontal: 16,
+    
+  },
+  backButton: {
+    padding: 4,
+    marginRight: 8,
+  },
+  topBarTitle: {
+    fontSize: 20,
+    color: '#ffffff',
+    fontWeight: '600',
   },
   emptyContainer: {
     flex: 1,
@@ -159,126 +157,92 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#666',
+    color: '#999999',
     textAlign: 'center',
   },
   header: {
-    backgroundColor: '#fff',
+    backgroundColor: '#1c1c1e',
     alignItems: 'center',
     paddingVertical: 30,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#333',
+    margin: 16,
+    borderRadius: 12,
   },
   avatarContainer: {
     marginBottom: 16,
   },
   avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
   },
   avatarPlaceholder: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#007AFF',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#2c2c2e',
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarText: {
-    color: '#fff',
-    fontSize: 40,
+    color: '#ffffff',
+    fontSize: 32,
     fontWeight: 'bold',
   },
   userName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#ffffff',
     marginBottom: 4,
   },
   userPhone: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 20,
+    fontSize: 14,
+    color: '#999999',
+    marginBottom: 16,
   },
   editButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
   editButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '500',
+    color: '#D11030',
+    fontSize: 14,
+
   },
   infoSection: {
-    backgroundColor: '#fff',
-    margin: 20,
+    backgroundColor: '#1c1c1e',
+    marginHorizontal: 16,
     padding: 20,
     borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  section: {
-    backgroundColor: '#fff',
-    marginHorizontal: 20,
-    marginBottom: 20,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-    marginBottom: 16,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
+    marginBottom: 12,
   },
   infoItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: '#2c2c2e',
   },
   infoLabel: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: 14,
+    color: '#cccccc',
     width: 120,
-    fontWeight: '500',
   },
   infoValue: {
-    fontSize: 16,
-    color: '#1a1a1a',
+    fontSize: 14,
+    color: '#ffffff',
     flex: 1,
   },
   verifiedBadge: {
     fontSize: 12,
     color: '#4CAF50',
     fontWeight: '500',
-  },
-  settingItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  settingText: {
-    fontSize: 16,
-    color: '#1a1a1a',
-  },
-  settingArrow: {
-    fontSize: 18,
-    color: '#666',
   },
 });

@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
 
+
 export default function TabLayout() {
   return (
     <Tabs
@@ -10,10 +11,7 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: '#000',
           borderTopColor: '#333',
-          borderTopWidth: 1,
-          height: 60,
-          paddingBottom: 8,
-          paddingTop: 8,
+          height: 80,
         },
         tabBarActiveTintColor: '#D32F2F',
         tabBarInactiveTintColor: '#888',
@@ -53,11 +51,7 @@ export default function TabLayout() {
         options={{
           title: 'Hoạt hình',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons 
-              name={focused ? 'game-controller' : 'game-controller-outline'} 
-              size={24} 
-              color={color} 
-            />
+            <Ionicons name={focused ? 'happy' : 'happy-outline'} size={24} color={color} />
           ),
         }}
       />
@@ -65,13 +59,20 @@ export default function TabLayout() {
         name="explore"
         options={{
           title: 'Mở rộng',
-          tabBarIcon: ({ color, focused }) => (
+          tabBarIcon: ({ color, focused }) => ( 
             <Ionicons 
               name={focused ? 'ellipsis-horizontal' : 'ellipsis-horizontal-outline'} 
               size={24} 
               color={color} 
             />
+            
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          href: null, 
         }}
       />
     </Tabs>

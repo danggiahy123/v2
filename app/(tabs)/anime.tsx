@@ -21,7 +21,7 @@ export default function AnimeScreen() {
       
       <ScrollView style={styles.content}>
         <View style={styles.comingSoon}>
-          <Ionicons name="game-controller" size={64} color="#888" />
+          <Ionicons name="happy-outline" size={64} color="#888" />
           <Text style={styles.comingSoonTitle}>Hoạt hình</Text>
           <Text style={styles.comingSoonText}>
             Tính năng này sẽ sớm được cập nhật với danh sách hoạt hình và anime mới nhất
@@ -43,8 +43,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
+ 
   },
   headerTitle: {
     fontSize: 20,
