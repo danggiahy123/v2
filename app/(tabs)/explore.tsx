@@ -20,37 +20,34 @@ export default function ExploreScreen() {
   const router = useRouter();
 
   const handleSettings = () => {
-    // TODO: Navigate to settings screen
+  
     router.push('/settings' as any);
   };
 
   const handleDownloads = () => {
-    // TODO: Implement downloads functionality
+  
     Alert.alert('Thông báo', 'Tính năng đang phát triển');
   };
 
   const handleHelp = () => {
-    // TODO: Navigate to help center
+ 
     Alert.alert('Trợ giúp', 'Liên hệ hỗ trợ: support@example.com');
   };
 
   const handleContact = () => {
-    // TODO: Navigate to contact info
+
     Alert.alert('Thông tin liên hệ', 'Email: contact@fptplay.com\nHotline: 1900-xxxx');
   };
 
   const handleAbout = () => {
-    // TODO: Navigate to about page
     Alert.alert('Thông tin về FPT Play', 'Ứng dụng xem phim FPT Play v1.0.0');
   };
 
   const handlePrivacyPolicy = () => {
-    // TODO: Navigate to privacy policy
     Alert.alert('Chính sách bảo mật', 'Chính sách bảo mật đang được cập nhật');
   };
 
   const handleTerms = () => {
-    // TODO: Navigate to terms of service
     Alert.alert('Điều khoản sử dụng', 'Điều khoản sử dụng đang được cập nhật');
   };
 
@@ -163,7 +160,7 @@ export default function ExploreScreen() {
             onPress={handleAbout}
           >
             <Ionicons name="information-circle-outline" size={24} color="#fff" style={styles.menuIcon} />
-            <Text style={styles.menuItemText}>Thông tin về FPT Play</Text>
+            <Text style={styles.menuItemText}>Thông tin về FPT </Text>
             <Ionicons name="chevron-forward" size={20} color="#ccc" />
           </TouchableOpacity>
 
@@ -195,7 +192,6 @@ export default function ExploreScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* User Info Footer */}
         {user && (
           <View style={styles.footer}>
             <Text style={styles.footerText}>
@@ -249,7 +245,7 @@ const styles = StyleSheet.create({
   userHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1c1c1e', // Nền tối hơn cho phần header người dùng
+    backgroundColor: '#1c1c1e', 
     padding: 15,
     borderRadius: 8,
     marginBottom: 10,
