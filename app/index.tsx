@@ -17,7 +17,7 @@ export default function Index() {
         if (result.payload) {
           console.log('✅ Auth restored for user:', result.payload.user.full_name);
         } else {
-          console.log('🔑 No auth data found, showing login');
+          console.log('🔑 No auth data found, showing login...');
         }
       }
       
