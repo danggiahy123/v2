@@ -1,16 +1,17 @@
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  ImageBackground,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { clearError, clearMessage, completeRegistration } from '../../store/slices/authSlice';
@@ -23,197 +24,170 @@ export default function RegisterScreen() {
   const dispatch = useAppDispatch();
   const { loading, error, message } = useAppSelector((state) => state.auth);
 
-  const validateEmail = (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
+  const validateEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-  // Show error if exists
   useEffect(() => {
     if (error) {
       Alert.alert('Lỗi', error);
       dispatch(clearError());
     }
-  }, [error, dispatch]);
+  }, [error]);
 
-  // Show message if exists (e.g., registration completed successfully)
   useEffect(() => {
     if (message) {
       Alert.alert('Thông báo', message);
       dispatch(clearMessage());
     }
-  }, [message, dispatch]);
+  }, [message]);
 
   const handleCompleteRegistration = async () => {
-    if (!fullName.trim()) {
-      Alert.alert('Lỗi', 'Vui lòng nhập họ và tên');
-      return;
-    }
-
-    if (!email.trim()) {
-      Alert.alert('Lỗi', 'Vui lòng nhập email');
-      return;
-    }
-
-    if (!validateEmail(email)) {
-      Alert.alert('Lỗi', 'Email không hợp lệ');
-      return;
-    }
+    if (!fullName.trim()) return Alert.alert('Lỗi', 'Vui lòng nhập họ và tên');
+    if (!email.trim()) return Alert.alert('Lỗi', 'Vui lòng nhập email');
+    if (!validateEmail(email)) return Alert.alert('Lỗi', 'Email không hợp lệ');
 
     try {
       const result = await dispatch(completeRegistration({
         full_name: fullName.trim(),
         email: email.trim(),
-        gender: gender,
+        gender,
       }));
 
       if (completeRegistration.fulfilled.match(result)) {
-        Alert.alert(
-          'Chào mừng!',
-          'Đăng ký thành công. Chào mừng bạn đến với ứng dụng!',
-          [
-            {
-              text: 'OK',
-              onPress: () => router.replace('/(tabs)' as any)
-            }
-          ]
-        );
+        Alert.alert('Chào mừng!', 'Đăng ký thành công!', [
+          { text: 'OK', onPress: () => router.replace('/(tabs)' as any) },
+        ]);
       }
     } catch (error) {
-      console.error('Complete registration error:', error);
+      console.error('Registration error:', error);
     }
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <ImageBackground
+      source={{ uri: 'https://i.pinimg.com/564x/e9/9d/fb/e99dfb62a2c167e7062fb9efcd3cf2f3.jpg' }}
+      style={styles.background}
+      blurRadius={6}
     >
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
+      <KeyboardAvoidingView
+        style={styles.overlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <View style={styles.content}>
-          <Text style={styles.title}>Hoàn tất đăng ký</Text>
-          <Text style={styles.subtitle}>
-            Vui lòng nhập thông tin để hoàn tất quá trình đăng ký
-          </Text>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.content}>
+            <Text style={styles.title}>Hoàn tất đăng ký</Text>
+            <Text style={styles.subtitle}>
+              Vui lòng nhập thông tin để hoàn tất quá trình đăng ký
+            </Text>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Họ và tên *</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Nguyễn Văn A"
-              placeholderTextColor="#888"
-              value={fullName}
-              onChangeText={setFullName}
-              editable={!loading}
-              autoCapitalize="words"
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email *</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="example@gmail.com"
-              placeholderTextColor="#888"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              editable={!loading}
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Giới tính</Text>
-            <View style={styles.genderContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.genderButton,
-                  gender === 'male' && styles.genderButtonActive
-                ]}
-                onPress={() => setGender('male')}
-                disabled={loading}
-              >
-                <Text style={[
-                  styles.genderButtonText,
-                  gender === 'male' && styles.genderButtonTextActive
-                ]}>
-                  Nam
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[
-                  styles.genderButton,
-                  gender === 'female' && styles.genderButtonActive
-                ]}
-                onPress={() => setGender('female')}
-                disabled={loading}
-              >
-                <Text style={[
-                  styles.genderButtonText,
-                  gender === 'female' && styles.genderButtonTextActive
-                ]}>
-                  Nữ
-                </Text>
-              </TouchableOpacity>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Họ và tên *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Nguyễn Văn A"
+                placeholderTextColor="#888"
+                value={fullName}
+                onChangeText={setFullName}
+                editable={!loading}
+                autoCapitalize="words"
+              />
             </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Email *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="example@gmail.com"
+                placeholderTextColor="#888"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                editable={!loading}
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Giới tính</Text>
+              <View style={styles.genderContainer}>
+                <TouchableOpacity
+                  style={[styles.genderButton, gender === 'male' && styles.genderButtonActive]}
+                  onPress={() => setGender('male')}
+                  disabled={loading}
+                >
+                  <Text style={[styles.genderButtonText, gender === 'male' && styles.genderButtonTextActive]}>
+                    Nam
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.genderButton, gender === 'female' && styles.genderButtonActive]}
+                  onPress={() => setGender('female')}
+                  disabled={loading}
+                >
+                  <Text style={[styles.genderButtonText, gender === 'female' && styles.genderButtonTextActive]}>
+                    Nữ
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={handleCompleteRegistration}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.buttonText}>Hoàn tất đăng ký</Text>
+              )}
+            </TouchableOpacity>
+
+            <Text style={styles.note}>
+              Bằng việc đăng ký, bạn đồng ý với điều khoản sử dụng và chính sách bảo mật của chúng tôi
+            </Text>
           </View>
-
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleCompleteRegistration}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>Hoàn tất đăng ký</Text>
-            )}
-          </TouchableOpacity>
-
-          <Text style={styles.note}>
-            Bằng việc đăng ký, bạn đồng ý với điều khoản sử dụng và chính sách bảo mật của chúng tôi
-          </Text>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  background: {
     flex: 1,
-    backgroundColor: '#000',
+    resizeMode: 'cover',
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
   },
   scrollContent: {
     flexGrow: 1,
-  },
-  content: {
-    flex: 1,
     justifyContent: 'center',
     paddingHorizontal: 24,
     paddingVertical: 40,
+  },
+  content: {
+    gap: 20,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 8,
     color: '#fff',
   },
   subtitle: {
     fontSize: 16,
     textAlign: 'center',
-    color: '#888',
-    marginBottom: 40,
+    color: '#ccc',
     lineHeight: 22,
   },
   inputContainer: {
-    marginBottom: 24,
+    marginBottom: 12,
   },
   label: {
     fontSize: 16,
@@ -227,7 +201,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    backgroundColor: '#222',
+    backgroundColor: '#1e1e1e',
     color: '#fff',
   },
   genderContainer: {
@@ -241,7 +215,7 @@ const styles = StyleSheet.create({
     borderColor: '#444',
     borderRadius: 12,
     alignItems: 'center',
-    backgroundColor: '#222',
+    backgroundColor: '#1e1e1e',
   },
   genderButtonActive: {
     borderColor: '#D32F2F',
@@ -249,7 +223,7 @@ const styles = StyleSheet.create({
   },
   genderButtonText: {
     fontSize: 16,
-    color: '#888',
+    color: '#aaa',
     fontWeight: '500',
   },
   genderButtonTextActive: {
@@ -260,11 +234,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
-    marginBottom: 24,
     shadowColor: '#D32F2F',
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.7,
-    shadowRadius: 5,
+    shadowRadius: 6,
     elevation: 5,
   },
   buttonDisabled: {
@@ -279,7 +252,8 @@ const styles = StyleSheet.create({
   note: {
     fontSize: 12,
     textAlign: 'center',
-    color: '#888',
+    color: '#bbb',
     lineHeight: 18,
+    marginTop: 8,
   },
-}); 
+});
