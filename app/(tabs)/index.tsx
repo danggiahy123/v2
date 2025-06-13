@@ -333,9 +333,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#0A0A0A', 
   },
    logoImage: {
-    width: 140,  
-    height: 60,  
-    resizeMode: 'contain', 
+   width: 160,  // Adjusted size for better prominence
+    height: 70,  // Adjusted height
+    resizeMode: 'contain',
+    shadowColor: '#00000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.8,
+    shadowRadius: 8,
+    elevation: 8,
   },
   loadingContainer: {
     flex: 1,
@@ -353,7 +358,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   bannerContainer: {
-    height: 480, 
+    height: 460, 
     position: 'relative',
     marginBottom: 8, 
   },
@@ -425,7 +430,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   playButton: {
-    backgroundColor: '#E50914',
+    backgroundColor: '#D32F2F',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 25,
