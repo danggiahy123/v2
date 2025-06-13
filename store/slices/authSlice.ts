@@ -1,4 +1,4 @@
-//Xử lý đăng nhập, đăng xuất, lưu trữ thông tin người dùng
+
 
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type { UpdateProfileRequest } from '../../types/auth';

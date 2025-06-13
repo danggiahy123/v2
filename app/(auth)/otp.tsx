@@ -13,15 +13,16 @@ import {
 } from 'react-native';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { clearError, clearMessage, sendOTP, verifyOTP } from '../../store/slices/authSlice';
-import Notification from '../../components/ui/Notification';
+import Notification from '../../components/ui/Notification'; // Import Notification component
 
 export default function OTPScreen() {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
-  const [countdown, setCountdown] = useState(300); 
+  const [countdown, setCountdown] = useState(300); // 5 minutes
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { phone, loading, error, message } = useAppSelector(state => state.auth);
   const inputRefs = useRef<(TextInput | null)[]>([]);
+
   const [notification, setNotification] = useState({
     visible: false,
     message: '',
@@ -30,7 +31,7 @@ export default function OTPScreen() {
 
   useEffect(() => {
     if (!phone) {
-      router.replace('/(auth)/login' as any);  
+      router.replace('/(auth)/login' as any);
       return;
     }
 
@@ -38,15 +39,16 @@ export default function OTPScreen() {
       setCountdown(prev => {
         if (prev <= 1) {
           clearInterval(timer);
-          return 0;  
+          return 0;
         }
-        return prev - 1; 
+        return prev - 1;
       });
     }, 1000);
 
-    return () => clearInterval(timer); 
+    return () => clearInterval(timer);
   }, [phone, router]);
 
+  // Show error if exists
   useEffect(() => {
     if (error) {
       setNotification({ visible: true, message: error, type: 'error' });
@@ -54,6 +56,7 @@ export default function OTPScreen() {
     }
   }, [error, dispatch]);
 
+  // Show message if exists (e.g., OTP sent successfully)
   useEffect(() => {
     if (message) {
       setNotification({ visible: true, message: message, type: 'success' });
@@ -62,12 +65,13 @@ export default function OTPScreen() {
   }, [message, dispatch]);
 
   const handleOtpChange = (value: string, index: number) => {
-    if (value.length > 1) return; 
-    
+    if (value.length > 1) return;
+
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
 
+    // Auto focus next input
     if (value && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
@@ -81,26 +85,35 @@ export default function OTPScreen() {
 
   const handleVerifyOTP = async () => {
     const otpString = otp.join('');
-
     if (otpString.length !== 6) {
       setNotification({ visible: true, message: 'Vui lòng nhập đầy đủ mã OTP', type: 'error' });
       return;
     }
 
     if (!phone) {
-      setNotification({ visible: true, message: 'Số điện thoại không hợp lệ', type: 'error' });
+      setNotification({ visible: true, message: 'Không tìm thấy số điện thoại', type: 'error' });
       return;
     }
 
     try {
-      const result = await dispatch(verifyOTP({ phone: phone as string, otp: otpString }));
+      const result = await dispatch(verifyOTP({ phone, otp: otpString }));
+
       if (verifyOTP.fulfilled.match(result)) {
-        setNotification({ visible: true, message: 'Đăng nhập thành công! Chào mừng bạn trở lại.', type: 'success' });
-        router.replace('/(tabs)' as any); 
-      } else {
-        setNotification({ visible: true, message: 'Mã OTP không đúng. Vui lòng thử lại.', type: 'error' });
+        if (result.payload.data.needsRegistration) {
+          // User mới - chuyển đến màn hình nhập thông tin
+          router.push('/(auth)/register' as any);
+        } else {
+          // User đã đăng ký - đăng nhập thành công
+          setNotification({
+            visible: true,
+            message: 'Đăng nhập thành công! Chào mừng bạn trở lại.',
+            type: 'success',
+          });
+          router.replace('/(tabs)' as any);
+        }
       }
     } catch (error) {
+      console.error('Verify OTP error:', error);
       setNotification({ visible: true, message: 'Có lỗi xảy ra, vui lòng thử lại', type: 'error' });
     }
   };
@@ -110,9 +123,10 @@ export default function OTPScreen() {
 
     try {
       const result = await dispatch(sendOTP(phone));
+      
       if (sendOTP.fulfilled.match(result)) {
         setCountdown(300);
-        setOtp(['', '', '', '', '', '']); 
+        setOtp(['', '', '', '', '', '']);
         setNotification({ visible: true, message: 'Đã gửi lại mã OTP', type: 'success' });
       }
     } catch (error) {
