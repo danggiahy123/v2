@@ -7,10 +7,10 @@ interface NotificationProps {
   type: 'success' | 'error';
   onClose: () => void;
   autoClose?: boolean;
-  duration?: number;
+  duration?: number; 
 }
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get('window'); 
 
 const Notification: React.FC<NotificationProps> = ({
   visible,
@@ -18,10 +18,11 @@ const Notification: React.FC<NotificationProps> = ({
   type,
   onClose,
   autoClose = true,
-  duration = 3000,
+  duration = 3000, 
 }) => {
   const translateAnim = new Animated.Value(-100); 
   const opacityAnim = new Animated.Value(0); 
+
 
   useEffect(() => {
     if (visible) {
@@ -32,11 +33,13 @@ const Notification: React.FC<NotificationProps> = ({
           useNativeDriver: true,
         }),
         Animated.timing(opacityAnim, {
-          toValue: 1, 
+          toValue: 1,
           duration: 250,
           useNativeDriver: true,
         }),
       ]).start();
+
+
       if (autoClose) {
         const timer = setTimeout(() => {
           handleClose();
@@ -49,22 +52,22 @@ const Notification: React.FC<NotificationProps> = ({
   const handleClose = () => {
     Animated.parallel([
       Animated.timing(translateAnim, {
-        toValue: -100, 
+        toValue: -100,
         duration: 400,
         useNativeDriver: true,
       }),
       Animated.timing(opacityAnim, {
-        toValue: 0, 
+        toValue: 0,
         duration: 250,
         useNativeDriver: true,
       }),
     ]).start(() => {
-      onClose();
+      onClose(); 
     });
   };
 
   const getIcon = () => {
-    return type === 'success' ? '✓' : '✕';
+    return type === 'success' ? '✔' : '✘'; 
   };
 
   return (
@@ -73,7 +76,7 @@ const Notification: React.FC<NotificationProps> = ({
         style={[
           styles.overlay,
           { opacity: opacityAnim },
-          { transform: [{ translateY: translateAnim }] },
+          { transform: [{ translateY: translateAnim }] }, 
         ]}
       >
         <Animated.View
@@ -83,7 +86,12 @@ const Notification: React.FC<NotificationProps> = ({
             { transform: [{ translateY: translateAnim }] },
           ]}
         >
-          <View style={[styles.iconContainer, type === 'success' ? styles.successIcon : styles.errorIcon]}>
+          <View
+            style={[
+              styles.iconContainer,
+              type === 'success' ? styles.successIcon : styles.errorIcon,
+            ]}
+          >
             <Text style={styles.icon}>{getIcon()}</Text>
           </View>
           <Text style={styles.message}>{message}</Text>
@@ -102,19 +110,18 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)', 
     justifyContent: 'flex-start',
     alignItems: 'center',
     paddingTop: 50, 
     zIndex: 9999,
   },
   container: {
-    width: Math.min(width - 40, 350),
+    width: Math.min(width - 40, 350), 
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 12,
     alignItems: 'center',
-    backgroundColor: '#1c1c1e',
+    backgroundColor: '#1c1c1e', 
     flexDirection: 'row',
     marginBottom: 10,
     shadowColor: '#000',
@@ -124,11 +131,11 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   success: {
-    borderColor: '#000',
+    borderColor: '#4CAF50', 
     borderWidth: 1,
   },
   error: {
-    borderColor: '#000',
+    borderColor: '#F44336', 
     borderWidth: 1,
   },
   iconContainer: {
@@ -141,7 +148,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#444',
   },
   successIcon: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#4CAF50', 
   },
   errorIcon: {
     backgroundColor: '#F44336',

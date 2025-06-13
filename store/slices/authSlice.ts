@@ -222,7 +222,7 @@ export const updateProfile = createAsyncThunk(
 
       const response = await fetch(url, {
         method: 'PUT',
-        body: formData, // Don't set Content-Type header, let browser set it with boundary
+        body: formData, 
       });
       
       console.log('📡 Response status:', response.status);
@@ -237,7 +237,6 @@ export const updateProfile = createAsyncThunk(
       const data = await response.json();
       console.log('✅ Response data:', data);
       
-      // Update auth data in storage with new user info
       if (data.data.user) {
         const authData = {
           userId,
@@ -269,7 +268,7 @@ const authSlice = createSlice({
     clearMessage(state) {
       state.message = null;
     },
-    // Pure action to set login state - used after successful auth data save
+
     loginSuccess(state, action: PayloadAction<AuthData>) {
       state.userId = action.payload.userId;
       state.user = action.payload.user;
@@ -324,15 +323,12 @@ const authSlice = createSlice({
         state.loading = false;
         state.message = action.payload.message || 'OTP verified successfully';
         
-        // Don't set login state here - it's handled by saveAuthDataThunk.fulfilled
-        // or in the component for registration flow
       })
       .addCase(verifyOTP.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       });
 
-    // Complete Registration
     builder
       .addCase(completeRegistration.pending, (state) => {
         state.loading = true;
@@ -343,7 +339,7 @@ const authSlice = createSlice({
         state.loading = false;
         state.message = action.payload.message || 'Registration completed successfully';
         
-        // Don't set login state here - it's handled by saveAuthDataThunk.fulfilled
+
       })
       .addCase(completeRegistration.rejected, (state, action) => {
         state.loading = false;

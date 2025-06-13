@@ -1,19 +1,21 @@
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { clearError, clearMessage, completeRegistration } from '../../store/slices/authSlice';
+import Notification from '../../components/ui/Notification';
+import { Keyboard, TouchableWithoutFeedback } from 'react-native';
 
 export default function RegisterScreen() {
   const [fullName, setFullName] = useState('');
@@ -23,40 +25,44 @@ export default function RegisterScreen() {
   const dispatch = useAppDispatch();
   const { loading, error, message } = useAppSelector((state) => state.auth);
 
+  const [notification, setNotification] = useState({
+    visible: false,
+    message: '',
+    type: 'success' as 'success' | 'error',
+  });
+
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   };
 
-  // Show error if exists
   useEffect(() => {
     if (error) {
-      Alert.alert('Lỗi', error);
+      setNotification({ visible: true, message: error, type: 'error' });
       dispatch(clearError());
     }
   }, [error, dispatch]);
 
-  // Show message if exists (e.g., registration completed successfully)
   useEffect(() => {
     if (message) {
-      Alert.alert('Thông báo', message);
+      setNotification({ visible: true, message: message, type: 'success' });
       dispatch(clearMessage());
     }
   }, [message, dispatch]);
 
   const handleCompleteRegistration = async () => {
     if (!fullName.trim()) {
-      Alert.alert('Lỗi', 'Vui lòng nhập họ và tên');
+      setNotification({ visible: true, message: 'Vui lòng nhập họ và tên', type: 'error' });
       return;
     }
 
     if (!email.trim()) {
-      Alert.alert('Lỗi', 'Vui lòng nhập email');
+      setNotification({ visible: true, message: 'Vui lòng nhập email', type: 'error' });
       return;
     }
 
     if (!validateEmail(email)) {
-      Alert.alert('Lỗi', 'Email không hợp lệ');
+      setNotification({ visible: true, message: 'Email không hợp lệ', type: 'error' });
       return;
     }
 
@@ -68,16 +74,12 @@ export default function RegisterScreen() {
       }));
 
       if (completeRegistration.fulfilled.match(result)) {
-        Alert.alert(
-          'Chào mừng!',
-          'Đăng ký thành công. Chào mừng bạn đến với ứng dụng!',
-          [
-            {
-              text: 'OK',
-              onPress: () => router.replace('/(tabs)' as any)
-            }
-          ]
-        );
+        setNotification({
+          visible: true,
+          message: 'Đăng ký thành công. Chào mừng bạn đến với ứng dụng!',
+          type: 'success',
+        });
+        router.replace('/(tabs)' as any);
       }
     } catch (error) {
       console.error('Complete registration error:', error);
@@ -85,10 +87,8 @@ export default function RegisterScreen() {
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
+       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
@@ -130,33 +130,21 @@ export default function RegisterScreen() {
             <Text style={styles.label}>Giới tính</Text>
             <View style={styles.genderContainer}>
               <TouchableOpacity
-                style={[
-                  styles.genderButton,
-                  gender === 'male' && styles.genderButtonActive
-                ]}
+                style={[styles.genderButton, gender === 'male' && styles.genderButtonActive]}
                 onPress={() => setGender('male')}
                 disabled={loading}
               >
-                <Text style={[
-                  styles.genderButtonText,
-                  gender === 'male' && styles.genderButtonTextActive
-                ]}>
+                <Text style={[styles.genderButtonText, gender === 'male' && styles.genderButtonTextActive]}>
                   Nam
                 </Text>
               </TouchableOpacity>
               
               <TouchableOpacity
-                style={[
-                  styles.genderButton,
-                  gender === 'female' && styles.genderButtonActive
-                ]}
+                style={[styles.genderButton, gender === 'female' && styles.genderButtonActive]}
                 onPress={() => setGender('female')}
                 disabled={loading}
               >
-                <Text style={[
-                  styles.genderButtonText,
-                  gender === 'female' && styles.genderButtonTextActive
-                ]}>
+                <Text style={[styles.genderButtonText, gender === 'female' && styles.genderButtonTextActive]}>
                   Nữ
                 </Text>
               </TouchableOpacity>
@@ -180,7 +168,18 @@ export default function RegisterScreen() {
           </Text>
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+
+      {/* Notification Component */}
+      <Notification
+        visible={notification.visible}
+        message={notification.message}
+        type={notification.type}
+        onClose={() => setNotification({ ...notification, visible: false })}
+        autoClose={true}
+        duration={3000}
+      />
+       </KeyboardAvoidingView>
+     </TouchableWithoutFeedback>
   );
 }
 
@@ -282,4 +281,4 @@ const styles = StyleSheet.create({
     color: '#888',
     lineHeight: 18,
   },
-}); 
+});
