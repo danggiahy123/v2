@@ -1,4 +1,3 @@
-
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
@@ -17,6 +16,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { movieService } from '../../services/movieService';
 import { useAppSelector } from '../../store/hooks';
 import { BannerMovie, ContinueWatchingItem, GridMovie } from '../../types/movie';
+import SearchModal from '../../components/SearchModal';
+import MovieListModal from '../../components/MovieListModal';
+import { useRouter } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 const POSTER_WIDTH = (width - 60) / 3;
@@ -29,6 +31,7 @@ interface MovieSection {
 export default function HomeScreen() {
   const authState = useAppSelector((state) => state.auth);
   const { user, userId } = authState || { user: null, userId: null };
+  const router = useRouter();
 
   const [bannerMovies, setBannerMovies] = useState<BannerMovie[]>([]);
   const [recommendedMovies, setRecommendedMovies] = useState<GridMovie[]>([]);
@@ -37,6 +40,10 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
+  const [searchModalVisible, setSearchModalVisible] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedTitle, setSelectedTitle] = useState('');
 
   useEffect(() => {
     if (authState) loadHomeData();
@@ -93,6 +100,12 @@ export default function HomeScreen() {
     loadHomeData();
   };
 
+  const handleViewAll = (category: string, title: string) => {
+    setSelectedCategory(category);
+    setSelectedTitle(title);
+    setModalVisible(true);
+  };
+
   const renderBanner = () => {
     if (!bannerMovies.length) return null;
     const current = bannerMovies[currentBannerIndex];
@@ -103,7 +116,9 @@ export default function HomeScreen() {
         <View style={styles.headerBar}>
           <Text style={styles.logoText}>TECH5 PLAY</Text>
           <View style={styles.headerIcons}>
-            <Ionicons name="search" size={24} color="#fff" style={styles.iconSpacing} />
+            <TouchableOpacity onPress={() => setSearchModalVisible(true)}>
+              <Ionicons name="search" size={24} color="#fff" style={styles.iconSpacing} />
+            </TouchableOpacity>
             <Ionicons name="person-circle" size={28} color="#fff" />
           </View>
         </View>
@@ -124,20 +139,27 @@ export default function HomeScreen() {
     );
   };
 
-  const renderMovieGrid = (movies: GridMovie[], title: string) => (
+  const renderMovieGrid = (movies: GridMovie[], title: string, category?: string) => (
     !!movies.length && (
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>{title}</Text>
-          <TouchableOpacity><Text style={styles.seeAllText}>Xem tất cả</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => handleViewAll(category || 'recommended', title)}>
+            <Text style={styles.seeAllText}>Xem tất cả</Text>
+          </TouchableOpacity>
         </View>
-        <View style={styles.movieGrid}>
-          {movies.slice(0, 6).map((movie) => (
-            <TouchableOpacity key={movie.movieId} style={styles.movieItem}>
-              <Image source={{ uri: movie.poster }} style={styles.moviePoster} resizeMode="cover" />
+        <FlatList
+          data={movies.slice(0, 6)}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(item, index) => `${category}-${item.movieId}-${index}`}
+          contentContainerStyle={styles.movieList}
+          renderItem={({ item }) => (
+            <TouchableOpacity style={styles.movieItem}>
+              <Image source={{ uri: item.poster }} style={styles.moviePoster} resizeMode="cover" />
             </TouchableOpacity>
-          ))}
-        </View>
+          )}
+        />
       </View>
     )
   );
@@ -147,7 +169,9 @@ export default function HomeScreen() {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Đang xem</Text>
-          <TouchableOpacity><Text style={styles.seeAllText}>Xem tất cả</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => handleViewAll('continue', 'Đang xem')}>
+            <Text style={styles.seeAllText}>Xem tất cả</Text>
+          </TouchableOpacity>
         </View>
         <FlatList
           data={continueWatching}
@@ -185,14 +209,26 @@ export default function HomeScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />}
       >
         {renderBanner()}
-        {renderMovieGrid(recommendedMovies, 'Phim dành cho bạn')}
+        {renderMovieGrid(recommendedMovies, 'Phim dành cho bạn', 'recommended')}
         {renderContinueWatching()}
         {sections.map((section, index) => (
           <React.Fragment key={index}>
-            {renderMovieGrid(section.movies, section.title)}
+            {renderMovieGrid(section.movies, section.title, ['trending', 'toprated', 'sports', 'anime', 'vietnamese', 'comingsoon'][index])}
           </React.Fragment>
         ))}
       </ScrollView>
+
+      <SearchModal
+        visible={searchModalVisible}
+        onClose={() => setSearchModalVisible(false)}
+      />
+
+      <MovieListModal
+        visible={modalVisible}
+        category={selectedCategory}
+        title={selectedTitle}
+        onClose={() => setModalVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -284,7 +320,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 
-  section: { paddingHorizontal: 20, marginTop: 32 },
+  section: { 
+    paddingLeft: 20,
+    marginTop: 32 
+  },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -302,18 +341,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
-  movieGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+  movieList: {
+    paddingRight: 20,
   },
   movieItem: {
-    width: POSTER_WIDTH,
-    marginBottom: 16,
+    width: 140,
+    marginRight: 12,
   },
   moviePoster: {
     width: '100%',
-    height: POSTER_WIDTH * 1.5,
+    height: 200,
     borderRadius: 10,
     backgroundColor: '#222',
   },
