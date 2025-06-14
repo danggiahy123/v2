@@ -53,7 +53,7 @@ export const sendOTP = createAsyncThunk(
       });
       
       if (!response.ok) {
-        throw new Error('Failed to send OTP');
+        throw new Error('Không gửi được OTP');
       }
       
       const data: SendOTPResponse = await response.json();
@@ -78,7 +78,7 @@ export const verifyOTP = createAsyncThunk(
       });
       
       if (!response.ok) {
-        throw new Error('Failed to verify OTP');
+        throw new Error('Không gửi được OTP');
       }
       
       const data: VerifyOTPResponse = await response.json();
@@ -118,7 +118,7 @@ export const completeRegistration = createAsyncThunk(
       });
       
       if (!response.ok) {
-        throw new Error('Failed to complete registration');
+        throw new Error('Không thể hoàn tất đăng ký');
       }
       
       const data: CompleteRegistrationResponse = await response.json();
@@ -149,7 +149,7 @@ export const restoreAuthState = createAsyncThunk(
       const authData = await getAuthData();
       return authData;
     } catch (error) {
-      return rejectWithValue('Failed to restore auth state');
+      return rejectWithValue('Không khôi phục được trạng thái xác thực');
     }
   }
 );
@@ -163,7 +163,7 @@ export const logout = createAsyncThunk(
       console.log('🚪 User logged out successfully');
       return true;
     } catch (error) {
-      return rejectWithValue('Failed to logout');
+      return rejectWithValue('Không thể đăng xuất');
     }
   }
 );
@@ -181,7 +181,7 @@ export const getProfile = createAsyncThunk(
       });
       
       if (!response.ok) {
-        throw new Error('Failed to get profile');
+        throw new Error('Không lấy được hồ sơ');
       }
       
       const data = await response.json();
@@ -380,7 +380,7 @@ const authSlice = createSlice({
         state.phone = null;
         state.isLoggedIn = false;
         state.error = null;
-        state.message = 'Logged out successfully';
+        state.message = 'Đăng xuất thành công';
       })
       .addCase(logout.rejected, (state, action) => {
         state.loading = false;
@@ -396,7 +396,7 @@ const authSlice = createSlice({
       })
       .addCase(getProfile.fulfilled, (state, action) => {
         state.loading = false;
-        state.message = action.payload.message || 'Profile loaded successfully';
+        state.message = action.payload.message || 'Đã tải hồ sơ thành công';
         // Update user data if available
         if (action.payload.data?.user) {
           state.user = action.payload.data.user;
@@ -416,7 +416,7 @@ const authSlice = createSlice({
       })
       .addCase(updateProfile.fulfilled, (state, action) => {
         state.loading = false;
-        state.message = action.payload.message || 'Profile updated successfully';
+        state.message = action.payload.message || 'Đã tải hồ sơ thành công';
         // Don't update user here - it's handled by saveAuthDataThunk.fulfilled
       })
       .addCase(updateProfile.rejected, (state, action) => {

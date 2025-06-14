@@ -131,11 +131,9 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   success: {
-    borderColor: '#4CAF50', 
     borderWidth: 1,
   },
   error: {
-    borderColor: '#F44336', 
     borderWidth: 1,
   },
   iconContainer: {

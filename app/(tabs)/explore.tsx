@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useState } from 'react';
+import { Alert } from 'react-native';
 import {
-  Alert,
   Image,
   SafeAreaView,
   ScrollView,
@@ -10,6 +10,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Modal,
 } from 'react-native';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { logout } from '../../store/slices/authSlice';
@@ -19,23 +20,22 @@ export default function ExploreScreen() {
   const dispatch = useAppDispatch();
   const router = useRouter();
 
+  const [isLogoutModalVisible, setIsLogoutModalVisible] = useState(false); 
+  const [notificationMessage, setNotificationMessage] = useState('');
+
   const handleSettings = () => {
-  
     router.push('/settings' as any);
   };
 
   const handleDownloads = () => {
-  
     Alert.alert('Thông báo', 'Tính năng đang phát triển');
   };
 
   const handleHelp = () => {
- 
     Alert.alert('Trợ giúp', 'Liên hệ hỗ trợ: support@example.com');
   };
 
   const handleContact = () => {
-
     Alert.alert('Thông tin liên hệ', 'Email: contact@fptplay.com\nHotline: 1900-xxxx');
   };
 
@@ -51,62 +51,49 @@ export default function ExploreScreen() {
     Alert.alert('Điều khoản sử dụng', 'Điều khoản sử dụng đang được cập nhật');
   };
 
+
   const handleLogout = () => {
-    Alert.alert(
-      'Đăng xuất',
-      'Bạn có chắc chắn muốn đăng xuất?',
-      [
-        {
-          text: 'Hủy',
-          style: 'cancel',
-        },
-        {
-          text: 'Đăng xuất',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const result = await dispatch(logout());
-              
-              if (logout.fulfilled.match(result)) {
-                router.replace('/(auth)/login' as any);
-              } else if (logout.rejected.match(result)) {
-                Alert.alert('Lỗi', 'Không thể đăng xuất. Vui lòng thử lại.');
-              }
-            } catch (error) {
-              Alert.alert('Lỗi', 'Có lỗi xảy ra khi đăng xuất');
-            }
-          },
-        },
-      ]
-    );
+    setNotificationMessage('Bạn có chắc chắn muốn đăng xuất?');
+    setIsLogoutModalVisible(true);
+  };
+
+ 
+  const confirmLogout = async () => {
+    try {
+      const result = await dispatch(logout());
+      if (logout.fulfilled.match(result)) {
+        router.replace('/(auth)/login' as any);
+      } else if (logout.rejected.match(result)) {
+        setNotificationMessage('Không thể đăng xuất. Vui lòng thử lại.');
+        setIsLogoutModalVisible(true);
+      }
+    } catch (error) {
+      setNotificationMessage('Có lỗi xảy ra khi đăng xuất');
+      setIsLogoutModalVisible(true);
+    }
+  };
+
+
+  const cancelLogout = () => {
+    setIsLogoutModalVisible(false);
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header with Settings Icon */}
+ 
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Mở rộng</Text>
-        <TouchableOpacity 
-          style={styles.settingsButton}
-          onPress={handleSettings}
-        >
+        <TouchableOpacity style={styles.settingsButton} onPress={handleSettings}>
           <Ionicons name="settings-outline" size={24} color="#fff" />
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-
         <View style={styles.section}>
-          <TouchableOpacity onPress={() => router.push('/profile')}
-            style={styles.userHeader}
-          >
+          <TouchableOpacity onPress={() => router.push('/profile')} style={styles.userHeader}>
             <View style={styles.userAvatarContainer}>
               {user?.avatar ? (
-                <Image 
-                  source={{ uri: user.avatar }} 
-                  style={styles.userAvatar}
-                  resizeMode="cover"
-                />
+                <Image source={{ uri: user.avatar }} style={styles.userAvatar} resizeMode="cover" />
               ) : (
                 <View style={styles.userAvatarPlaceholder}>
                   <Ionicons name="person" size={24} color="#666" />
@@ -117,75 +104,54 @@ export default function ExploreScreen() {
             <Ionicons name="chevron-forward" size={20} color="#ccc" />
           </TouchableOpacity>
 
-          {/* Nội dung tải xuống */}
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={handleDownloads}
-          >
+
+          <TouchableOpacity style={styles.menuItem} onPress={handleDownloads}>
             <Ionicons name="download-outline" size={24} color="#fff" style={styles.menuIcon} />
             <Text style={styles.menuItemText}>Nội dung tải xuống</Text>
             <Ionicons name="chevron-forward" size={20} color="#ccc" />
           </TouchableOpacity>
         </View>
 
-        {/* Phần Trợ giúp */}
+   
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Trợ giúp</Text>
 
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={handleHelp}
-          >
+          <TouchableOpacity style={styles.menuItem} onPress={handleHelp}>
             <Ionicons name="help-circle-outline" size={24} color="#fff" style={styles.menuIcon} />
             <Text style={styles.menuItemText}>Trung tâm hỗ trợ</Text>
             <Ionicons name="chevron-forward" size={20} color="#ccc" />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={handleContact}
-          >
+          <TouchableOpacity style={styles.menuItem} onPress={handleContact}>
             <Ionicons name="mail-outline" size={24} color="#fff" style={styles.menuIcon} />
             <Text style={styles.menuItemText}>Thông tin liên hệ</Text>
             <Ionicons name="chevron-forward" size={20} color="#ccc" />
           </TouchableOpacity>
         </View>
 
-        {/* Giới thiệu */}
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Giới thiệu</Text>
 
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={handleAbout}
-          >
+          <TouchableOpacity style={styles.menuItem} onPress={handleAbout}>
             <Ionicons name="information-circle-outline" size={24} color="#fff" style={styles.menuIcon} />
             <Text style={styles.menuItemText}>Thông tin về FPT </Text>
             <Ionicons name="chevron-forward" size={20} color="#ccc" />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={handleTerms}
-          >
+          <TouchableOpacity style={styles.menuItem} onPress={handleTerms}>
             <Ionicons name="document-text-outline" size={24} color="#fff" style={styles.menuIcon} />
             <Text style={styles.menuItemText}>Điều khoản sử dụng</Text>
             <Ionicons name="chevron-forward" size={20} color="#ccc" />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={handlePrivacyPolicy}
-          >
+          <TouchableOpacity style={styles.menuItem} onPress={handlePrivacyPolicy}>
             <Ionicons name="shield-checkmark-outline" size={24} color="#fff" style={styles.menuIcon} />
             <Text style={styles.menuItemText}>Chính sách bảo mật</Text>
             <Ionicons name="chevron-forward" size={20} color="#ccc" />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.menuItem, styles.logoutButton]}
-            onPress={handleLogout}
-          >
+          <TouchableOpacity style={[styles.menuItem, styles.logoutButton]} onPress={handleLogout}>
             <Ionicons name="log-out-outline" size={24} color="#fff" style={styles.menuIcon} />
             <Text style={styles.menuItemText}>Đăng xuất</Text>
             <Ionicons name="chevron-forward" size={20} color="#ccc" />
@@ -202,8 +168,24 @@ export default function ExploreScreen() {
             </Text>
           </View>
         )}
-
       </ScrollView>
+
+
+      <Modal transparent={true} visible={isLogoutModalVisible} animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalMessage}>{notificationMessage}</Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={styles.cancelButton} onPress={cancelLogout}>
+                <Text style={styles.buttonText}>Hủy</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.confirmButton} onPress={confirmLogout}>
+                <Text style={styles.buttonText}>Đăng xuất</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -211,7 +193,7 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000', // Nền đen
+    backgroundColor: '#000',
   },
   header: {
     flexDirection: 'row',
@@ -245,7 +227,7 @@ const styles = StyleSheet.create({
   userHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1c1c1e', 
+    backgroundColor: '#1c1c1e',
     padding: 15,
     borderRadius: 8,
     marginBottom: 10,
@@ -279,7 +261,7 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     paddingHorizontal: 15,
     borderRadius: 8,
-    marginBottom: 8, // Khoảng cách giữa các item
+    marginBottom: 8,
   },
   menuIcon: {
     marginRight: 15,
@@ -290,8 +272,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   logoutButton: {
-    marginTop: 20, // Khoảng cách trên nút Đăng xuất
-    justifyContent: 'center', // Căn giữa nội dung trong nút
+    marginTop: 20,
+    justifyContent: 'center',
   },
   footer: {
     padding: 20,
@@ -309,5 +291,48 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     marginTop: 4,
+  },
+
+  // Custom Modal styles
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: '#1c1c1e',
+    padding: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  modalMessage: {
+    color: '#fff',
+    fontSize: 16,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'center', 
+    width: '60%', 
+    gap: 10, 
+  },
+  cancelButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    backgroundColor: '#4CAF50',
+    borderRadius: 8,
+  },
+  confirmButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    backgroundColor: '#F44336',
+    borderRadius: 8,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
