@@ -1,5 +1,5 @@
-
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -12,11 +12,16 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Modal,
+  ImageBackground,
+  Platform,
+  Alert, // Thêm Alert để thông báo lỗi khi fetch API
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { movieService } from '../../services/movieService';
 import { useAppSelector } from '../../store/hooks';
-import { BannerMovie, ContinueWatchingItem, GridMovie } from '../../types/movie';
+import { BannerMovie, ContinueWatchingItem, GridMovie } from '../../types/movie'; // Giả sử GridMovie có poster (string)
 
 const { width } = Dimensions.get('window');
 const POSTER_WIDTH = (width - 60) / 3;
@@ -26,7 +31,20 @@ interface MovieSection {
   movies: GridMovie[];
 }
 
+// Định nghĩa kiểu dữ liệu cho thể loại từ API
+interface GenreFromApi {
+    id: string; // Sử dụng id hoặc _id tùy thuộc API trả về
+    title: string; // Tên thể loại
+    description: string;
+    poster: string; // URL ảnh của thể loại
+    movie_count: number;
+    has_children: boolean;
+    children_count: number;
+    sort_order: number;
+}
+
 export default function HomeScreen() {
+  const router = useRouter();
   const authState = useAppSelector((state) => state.auth);
   const { user, userId } = authState || { user: null, userId: null };
 
@@ -37,10 +55,30 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
+  const [genres, setGenres] = useState<GenreFromApi[]>([]); // State để lưu trữ danh sách thể loại từ API
+  const [showGenreModal, setShowGenreModal] = useState(false); // State để điều khiển hiển thị modal
 
   useEffect(() => {
     if (authState) loadHomeData();
+    fetchGenres(); // Tải danh sách thể loại khi component mount
   }, [userId, authState]);
+
+  const fetchGenres = async () => {
+    try {
+      const res = await fetch('https://backend-app-lou3.onrender.com/api/genres/home-categories');
+      const json = await res.json();
+      console.log('Dữ liệu API thể loại:', json); // Dùng để debug
+      if (json.status === 'success' && json.data && Array.isArray(json.data.categories)) {
+        setGenres(json.data.categories);
+      } else {
+        console.warn('Dữ liệu thể loại không đúng định dạng:', json);
+        Alert.alert('Lỗi', 'Không thể tải danh sách thể loại.');
+      }
+    } catch (error) {
+      console.error('Lỗi khi tải thể loại:', error);
+      Alert.alert('Lỗi', 'Kết nối thất bại. Không thể tải thể loại.');
+    }
+  };
 
   const loadHomeData = async () => {
     try {
@@ -81,7 +119,8 @@ export default function HomeScreen() {
 
       setSections(newSections);
     } catch (e) {
-      console.error('Error loading home data:', e);
+      console.error('Lỗi khi tải dữ liệu trang chủ:', e);
+      Alert.alert('Lỗi', 'Không thể tải dữ liệu trang chủ.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -91,6 +130,7 @@ export default function HomeScreen() {
   const onRefresh = () => {
     setRefreshing(true);
     loadHomeData();
+    fetchGenres(); // Thêm fetchGenres vào refresh để cập nhật nếu có thay đổi
   };
 
   const renderBanner = () => {
@@ -100,13 +140,7 @@ export default function HomeScreen() {
       <View style={styles.bannerContainer}>
         <Image source={{ uri: current.poster }} style={styles.bannerImage} resizeMode="cover" />
         <View style={styles.bannerOverlay} />
-        <View style={styles.headerBar}>
-          <Text style={styles.logoText}>TECH5 PLAY</Text>
-          <View style={styles.headerIcons}>
-            <Ionicons name="search" size={24} color="#fff" style={styles.iconSpacing} />
-            <Ionicons name="person-circle" size={28} color="#fff" />
-          </View>
-        </View>
+        {/* Banner Content nằm trên banner, phía dưới cùng */}
         <View style={styles.bannerContent}>
           <Text style={styles.bannerTitle}>{current.title}</Text>
           <View style={styles.bannerButtons}>
@@ -123,6 +157,28 @@ export default function HomeScreen() {
       </View>
     );
   };
+
+  // Hàm render từng item thể loại trong Modal
+  const renderGenreItem = ({ item }: { item: GenreFromApi }) => (
+    <TouchableOpacity
+      style={styles.genreItemInModal}
+      onPress={() => {
+        setShowGenreModal(false); // Đóng modal
+        console.log(`Đã chọn thể loại: ${item.title} (ID: ${item.id})`);
+        // TẠI ĐÂY, bạn có thể thêm logic để hiển thị phim theo thể loại,
+        // ví dụ: router.push(`/theloai/${item.id}`) hoặc cập nhật state để lọc phim trên màn hình hiện tại.
+      }}
+    >
+      <ImageBackground source={{ uri: item.poster }} style={styles.genreImageBg} imageStyle={{ borderRadius: 8 }}>
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.7)']}
+          style={styles.genreGradientOverlay}
+        >
+          <Text style={styles.genreText}>{item.title}</Text>
+        </LinearGradient>
+      </ImageBackground>
+    </TouchableOpacity>
+  );
 
   const renderMovieGrid = (movies: GridMovie[], title: string) => (
     !!movies.length && (
@@ -179,11 +235,37 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* FIXED HEADER Ở TRÊN CÙNG */}
+      <View style={styles.fixedHeader}>
+        <View style={styles.headerBar}>
+          {/* NÚT MENU (3 GẠCH NGANG) - Mở modal thể loại */}
+          <TouchableOpacity onPress={() => setShowGenreModal(true)} style={styles.menuButtonHeader}>
+           
+          </TouchableOpacity>
+          {/* LOGO ở giữa */}
+          <Text style={styles.logoText}>TECH5 PLAY</Text>
+          {/* ICON SEARCH VÀ USER */}
+          <View style={styles.headerIcons}>
+            <Ionicons name="search" size={24} color="#fff" style={styles.iconSpacing} />
+            <Ionicons name="person-circle" size={28} color="#fff" />
+          </View>
+        </View>
+        {/* NÚT "Thể loại" DƯỚI LOGO TRÊN MÀN HÌNH CHÍNH */}
+        <TouchableOpacity style={styles.genreButtonBelowLogo} onPress={() => setShowGenreModal(true)}>
+          <Text style={styles.genreButtonTextBelowLogo}>Thể loại</Text>
+          <Ionicons name="chevron-down" size={16} color="#fff" style={{ marginLeft: 4 }} />
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />}
       >
+        {/* Đảm bảo khoảng trống cho header cố định */}
+        {/* Điều chỉnh chiều cao này để phù hợp với chiều cao tổng của fixedHeader */}
+        <View style={{ height: Platform.OS === 'ios' ? 100 : 80 }} /> 
+        
         {renderBanner()}
         {renderMovieGrid(recommendedMovies, 'Phim dành cho bạn')}
         {renderContinueWatching()}
@@ -192,7 +274,38 @@ export default function HomeScreen() {
             {renderMovieGrid(section.movies, section.title)}
           </React.Fragment>
         ))}
+        {/* Đệm cuối cùng cho ScrollView */}
+        <View style={{ height: 30 }} />
       </ScrollView>
+
+      {/* MODAL HIỂN THỊ DANH MỤC THỂ LOẠI NGAY TRONG HOMESCREEN */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={showGenreModal}
+        onRequestClose={() => setShowGenreModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              {/* Nút đóng modal */}
+              <View style={{ width: 24 }} /> {/* View trống để cân bằng vị trí tiêu đề */}
+              <Text style={styles.modalTitle}>Thể loại</Text>
+              <TouchableOpacity onPress={() => setShowGenreModal(false)} style={styles.closeModalButton}>
+                <Ionicons name="close" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={genres}
+              keyExtractor={(item: any) => item.id} // Dùng item.id (từ API)
+              renderItem={renderGenreItem}
+              numColumns={2} // Hiển thị 2 cột như ảnh bạn gửi
+              contentContainerStyle={styles.genreListInModal}
+              showsVerticalScrollIndicator={false}
+            />
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -203,24 +316,35 @@ const styles = StyleSheet.create({
   loadingText: { color: '#fff', marginTop: 16, fontSize: 16 },
   scrollView: { flex: 1 },
 
-  bannerContainer: { height: 400, position: 'relative' },
-  bannerImage: { width: '100%', height: '100%' },
-  bannerOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0, 0, 0, 0.4)' },
-
-  headerBar: {
+  // --- STYLES CHO HEADER CỐ ĐỊNH ---
+  fixedHeader: {
     position: 'absolute',
-    top: 50,
-    left: 20,
-    right: 20,
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    backgroundColor: '#000',
+    paddingTop: Platform.OS === 'ios' ? 40 : 10,
+    paddingBottom: 10,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#333',
+  },
+  headerBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  menuButtonHeader: {
+    padding: 5,
   },
   logoText: {
     color: '#fff',
     fontSize: 22,
     fontWeight: 'bold',
     letterSpacing: 0.5,
+    flex: 1,
+    textAlign: 'center',
   },
   headerIcons: {
     flexDirection: 'row',
@@ -228,6 +352,27 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   iconSpacing: { marginRight: 16 },
+
+  // NÚT "Thể loại" DƯỚI LOGO TRÊN MÀN HÌNH CHÍNH
+genreButtonBelowLogo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    // --- Bắt đầu phần cần thay đổi ---
+    justifyContent: 'flex-start', // Đẩy nội dung sang trái
+    paddingLeft: 20, // Thêm padding bên trái để căn lề với các icon header
+    // --- Kết thúc phần cần thay đổi ---
+    marginTop: 10,
+  },
+  genreButtonTextBelowLogo: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // --- KẾT THÚC STYLES CHO HEADER CỐ ĐỊNH ---
+
+  bannerContainer: { height: 400, position: 'relative' },
+  bannerImage: { width: '100%', height: '100%' },
+  bannerOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0, 0, 0, 0.4)' },
 
   bannerContent: {
     position: 'absolute',
@@ -337,5 +482,74 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: '#E53935',
     borderRadius: 2,
+  },
+
+  // STYLES CHO MODAL THỂ LOẠI
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'flex-end', // Để modal trượt từ dưới lên
+  },
+  modalContent: {
+    backgroundColor: '#1a1a1a', // Nền đen đậm hơn
+    width: '100%',
+    height: '80%', // Chiếm 80% chiều cao màn hình
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: 'bold',
+    flex: 1, // Để tiêu đề nằm giữa
+    textAlign: 'center',
+  },
+  closeModalButton: {
+    padding: 5,
+  },
+  genreListInModal: {
+    paddingBottom: 20, // Để có khoảng trống dưới cùng
+    // paddingHorizontal: 10, // Giảm padding ở đây để phù hợp với itemWidth
+    justifyContent: 'space-between', // Canh lề các cột
+  },
+  genreItemInModal: {
+    width: (width - 40 - 20) / 2, // 2 cột, trừ padding ngang của modalContent (40) và khoảng cách giữa 2 cột (20)
+    marginVertical: 10, // Khoảng cách dọc giữa các item
+    marginHorizontal: 5, // Khoảng cách ngang giữa các item
+    borderRadius: 8,
+    overflow: 'hidden',
+    height: (width - 40 - 20) / 2 * (120 / 170), // Tỷ lệ ảnh trong ảnh mẫu, giả sử ảnh có tỷ lệ 170x120
+    backgroundColor: '#333', // Màu nền khi ảnh chưa load
+  },
+  genreImageBg: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'flex-end',
+    alignItems: 'flex-start',
+    resizeMode: 'cover', // Đảm bảo ảnh bao phủ toàn bộ vùng
+  },
+  genreGradientOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'flex-end',
+    alignItems: 'flex-start',
+    padding: 10,
+    // Thêm gradient từ trên xuống dưới
+    backgroundColor: 'rgba(0,0,0,0.3)', // Nền tối nhẹ
+  },
+  genreText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: -1, height: 1 },
+    textShadowRadius: 10,
   },
 });
