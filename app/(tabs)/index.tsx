@@ -17,7 +17,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { movieService } from '../../services/movieService';
 import { useAppSelector } from '../../store/hooks';
 import { BannerMovie, ContinueWatchingItem, GridMovie } from '../../types/movie';
-import SearchModal from '../../components/SearchModal';
 import MovieListModal from '../../components/MovieListModal';
 import { useRouter } from 'expo-router';
 
@@ -31,10 +30,8 @@ interface MovieSection {
 
 export default function HomeScreen() {
   const authState = useAppSelector((state) => state.auth);
-
   const { user, userId } = authState || { user: null, userId: null };
   const router = useRouter();
-
 
   const [bannerMovies, setBannerMovies] = useState<BannerMovie[]>([]);
   const [recommendedMovies, setRecommendedMovies] = useState<GridMovie[]>([]);
@@ -200,13 +197,22 @@ export default function HomeScreen() {
         <View style={styles.headerBar}>
           <Image source={require('../../assets/anh/logo.png')} style={styles.logoImage} />
           <View style={styles.headerIcons}>
-
-            <TouchableOpacity onPress={() => setSearchModalVisible(true)}>
-              <Ionicons name="search" size={24} color="#fff" style={styles.iconSpacing} />
+            <TouchableOpacity onPress={() => setSearchModalVisible(true)} >
+              <Ionicons name="search" size={24} color="#fff" />
             </TouchableOpacity>
-            <Ionicons name="person-circle" size={28} color="#fff" />
-
           </View>
+        </View>
+
+        <View style={styles.bannerIndicators}>
+          {bannerMovies.map((_, index) => (
+            <View
+              key={index}
+              style={[
+                styles.indicator,
+                index === currentBannerIndex && styles.activeIndicator,
+              ]}
+            />
+          ))}
         </View>
 
         <View style={styles.bannerContent}>
@@ -224,26 +230,13 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
         </View>
-
-        {/* Pagination Dots */}
-        <View style={styles.paginationDotsContainer}>
-          {bannerMovies.map((_, index) => (
-            <View
-              key={index}
-              style={[
-                styles.paginationDot,
-                { opacity: currentBannerIndex === index ? 1 : 0.4 },
-              ]}
-            />
-          ))}
-        </View>
       </View>
     );
   };
 
-
-  const renderMovieGrid = (movies: GridMovie[], title: string, category?: string) => (
-    !!movies.length && (
+  const renderMovieGrid = (movies: GridMovie[], title: string, category?: string) => {
+    if (!movies.length) return null;
+    return (
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>{title}</Text>
@@ -260,7 +253,6 @@ export default function HomeScreen() {
           renderItem={({ item }) => (
             <TouchableOpacity style={styles.movieItem}>
               <Image source={{ uri: item.poster }} style={styles.moviePoster} resizeMode="cover" />
-
             </TouchableOpacity>
           )}
         />
@@ -275,9 +267,7 @@ export default function HomeScreen() {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Đang xem</Text>
-
           <TouchableOpacity onPress={() => handleViewAll('continue', 'Đang xem')}>
-
             <Text style={styles.seeAllText}>Xem tất cả</Text>
           </TouchableOpacity>
         </View>
@@ -310,51 +300,41 @@ export default function HomeScreen() {
     );
   };
 
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#fff" />
-          <Text style={styles.loadingText}>Đang tải...</Text>
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <View style={styles.container}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#fff" />
+          </View>
         </View>
-      </SafeAreaView>
+      );
+    }
+
+    return (
+      <View style={styles.container}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollViewContent}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          showsVerticalScrollIndicator={false}
+        >
+          {renderBanner()}
+          {renderMovieGrid(recommendedMovies, 'Đề xuất cho bạn', 'recommended')}
+          {userId && continueWatching.length > 0 && renderContinueWatching()}
+          {sections.map((section, index) => (
+            <View key={index}>
+              {renderMovieGrid(section.movies, section.title)}
+            </View>
+          ))}
+        </ScrollView>
+      </View>
     );
-  }
+  };
 
-  return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollViewContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#fff" />
-        }
-      >
-        {renderBanner()}
-        {renderMovieGrid(recommendedMovies, 'Phim dành cho bạn', 'recommended')}
-        {renderContinueWatching()}
-        {sections.map((section, index) => (
-
-          <React.Fragment key={index}>
-            {renderMovieGrid(section.movies, section.title, ['trending', 'toprated', 'sports', 'anime', 'vietnamese', 'comingsoon'][index])}
-          </React.Fragment>
-        ))}
-      </ScrollView>
-
-      <SearchModal
-        visible={searchModalVisible}
-        onClose={() => setSearchModalVisible(false)}
-      />
-
-      <MovieListModal
-        visible={modalVisible}
-        category={selectedCategory}
-        title={selectedTitle}
-        onClose={() => setModalVisible(false)}
-      />
-    </SafeAreaView>
-  );
+  return renderContent();
 }
 
 const styles = StyleSheet.create({
@@ -362,9 +342,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0A0A0A', 
   },
-   logoImage: {
-   width: 160,  // Adjusted size for better prominence
-    height: 70,  // Adjusted height
+  logoImage: {
+    width: 160,
+    height: 70,
     resizeMode: 'contain',
     shadowColor: '#00000',
     shadowOffset: { width: 0, height: 4 },
@@ -387,6 +367,10 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  scrollViewContent: {
+    flexGrow: 1,
+    paddingBottom: 20, // Reduced padding to prevent extra space
+  },
   bannerContainer: {
     height: 460, 
     position: 'relative',
@@ -398,16 +382,32 @@ const styles = StyleSheet.create({
   },
   bannerOverlay: {
     ...StyleSheet.absoluteFillObject,
-   
   },
-  scrollViewContent: {
-    flexGrow: 1,
-    paddingBottom: 100, 
+  bannerIndicators: {
+    position: 'absolute',
+    bottom: 16,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 3,
   },
- 
+  indicator: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    marginHorizontal: 5,
+  },
+  activeIndicator: {
+    backgroundColor: '#E50914',
+    width: 14,
+    height: 14,
+  },
   headerBar: {
     position: 'absolute',
-    top: 10, 
+    top: 40, 
     left: 20,
     right: 20,
     flexDirection: 'row',
@@ -433,7 +433,6 @@ const styles = StyleSheet.create({
   iconSpacing: { 
     marginRight: 0, 
   },
-  
   bannerContent: {
     position: 'absolute',
     bottom: 40, 
@@ -492,19 +491,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1.5,
     borderColor: 'rgba(255, 255, 255, 0.4)',
-    backdropFilter: 'blur(10px)', // Glass effect
+    backdropFilter: 'blur(10px)',
   },
   moreButtonText: {
     color: '#FFFFFF',
     fontWeight: '600',
     fontSize: 16,
   },
-
-
   section: { 
     paddingLeft: 20,
     marginTop: 32 
-
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -526,7 +522,6 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
     textDecorationColor: 'transparent', 
   },
-
   movieList: {
     paddingRight: 20,
   },
@@ -539,7 +534,6 @@ const styles = StyleSheet.create({
     height: 200,
     borderRadius: 10,
     backgroundColor: '#222',
-
   },
   continuePoster: {
     width: 130,
@@ -576,5 +570,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginTop: 32,
     marginBottom: 32, 
+  },
+  paginationDotsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 12,
+    marginBottom: 8,
+    gap: 6,
+  },
+  paginationDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#fff',
+    marginHorizontal: 4,
+  },
+  continueList: {
+    paddingRight: 20,
+  },
+  continueItem: {
+    width: 130,
+    marginRight: 12,
   },
 });
