@@ -7,6 +7,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface HeaderProps {
   title: string;
@@ -22,6 +23,7 @@ export default function Header({
   rightComponent
 }: HeaderProps) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const handleBackPress = () => {
     if (onBackPress) {
@@ -32,15 +34,17 @@ export default function Header({
   };
 
   return (
-    <View style={styles.topBar}>
-      {showBackButton && (
-        <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={24} color="white" />
-        </TouchableOpacity>
-      )}
-      <Text style={styles.topBarTitle}>{title}</Text>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={styles.leftSection}>
+        {showBackButton && (
+          <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
+            <Ionicons name="chevron-back" size={24} color="white" />
+          </TouchableOpacity>
+        )}
+        <Text style={styles.title} numberOfLines={1}>{title}</Text>
+      </View>
       {rightComponent && (
-        <View style={styles.rightComponent}>
+        <View style={styles.rightSection}>
           {rightComponent}
         </View>
       )}
@@ -49,25 +53,34 @@ export default function Header({
 }
 
 const styles = StyleSheet.create({
-  topBar: {
+  container: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: '#000',
-    paddingTop: 50,
     paddingBottom: 10,
     paddingHorizontal: 16,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    borderBottomWidth: 1,
+  },
+  leftSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
   backButton: {
-    padding: 4,
+    padding: 8,
     marginRight: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 20,
   },
-  topBarTitle: {
+  title: {
     fontSize: 20,
     color: '#ffffff',
     fontWeight: '600',
     flex: 1,
   },
-  rightComponent: {
-    marginLeft: 'auto',
+  rightSection: {
+    marginLeft: 16,
   },
 }); 

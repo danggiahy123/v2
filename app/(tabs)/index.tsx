@@ -11,6 +11,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -19,9 +20,11 @@ import { useAppSelector } from '../../store/hooks';
 import { BannerMovie, ContinueWatchingItem, GridMovie } from '../../types/movie';
 import MovieListModal from '../../components/MovieListModal';
 import { useRouter } from 'expo-router';
+import TabHeader from '../../components/ui/TabHeader';
 
 const { width } = Dimensions.get('window');
 const POSTER_WIDTH = (width - 60) / 3;
+const HEADER_HEIGHT = 120; // Approximate header height including safe area
 
 interface MovieSection {
   title: string;
@@ -32,6 +35,9 @@ export default function HomeScreen() {
   const authState = useAppSelector((state) => state.auth);
   const { user, userId } = authState || { user: null, userId: null };
   const router = useRouter();
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const lastScrollY = useRef(0);
+  const headerOpacity = useRef(new Animated.Value(1)).current;
 
   const [bannerMovies, setBannerMovies] = useState<BannerMovie[]>([]);
   const [recommendedMovies, setRecommendedMovies] = useState<GridMovie[]>([]);
@@ -152,6 +158,26 @@ export default function HomeScreen() {
     setModalVisible(true);
   };
 
+  const handleScroll = Animated.event(
+    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+    { 
+      useNativeDriver: true,
+      listener: (event: any) => {
+        const currentScrollY = event.nativeEvent.contentOffset.y;
+        const scrollDiff = currentScrollY - lastScrollY.current;
+        
+        // Detect even slight scroll movements
+        if (scrollDiff > 2 && currentScrollY > 0) { // Scrolling up slightly
+          headerOpacity.setValue(0);
+        } else if (scrollDiff < -2 || currentScrollY <= 0) { // Scrolling down slightly or at top
+          headerOpacity.setValue(1);
+        }
+        
+        lastScrollY.current = currentScrollY;
+      }
+    }
+  );
+
   const renderBanner = () => {
     if (!bannerMovies.length) return null;
 
@@ -187,21 +213,13 @@ export default function HomeScreen() {
                 onError={() => console.log('Banner image load error')}
               />
               <LinearGradient
-                colors={['transparent', 'rgba(0,0,0,0.8)']}
+                colors={['transparent', 'rgba(0, 0, 0, 0.8)', 'rgba(0, 0, 0, 0.99)', '#000']}
                 style={styles.bannerOverlay}
+                locations={[0, 0.5, 0.85, 1]}
               />
             </View>
           )}
         />
-
-        <View style={styles.headerBar}>
-          <Image source={require('../../assets/anh/logo.png')} style={styles.logoImage} />
-          <View style={styles.headerIcons}>
-            <TouchableOpacity onPress={() => setSearchModalVisible(true)} >
-              <Ionicons name="search" size={24} color="#fff" />
-            </TouchableOpacity>
-          </View>
-        </View>
 
         <View style={styles.bannerIndicators}>
           {bannerMovies.map((_, index) => (
@@ -214,7 +232,6 @@ export default function HomeScreen() {
             />
           ))}
         </View>
-
         <View style={styles.bannerContent}>
           <Text style={styles.bannerTitle} numberOfLines={2}>
             {currentBannerMovie.title || 'Untitled'}
@@ -303,33 +320,38 @@ export default function HomeScreen() {
   const renderContent = () => {
     if (loading) {
       return (
-        <View style={styles.container}>
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#fff" />
-          </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#E50914" />
+          <Text style={styles.loadingText}>Đang tải...</Text>
         </View>
       );
     }
 
     return (
       <View style={styles.container}>
-        <ScrollView
+        <Animated.ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollViewContent}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-          showsVerticalScrollIndicator={false}
-        >
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FFFFFF" />
+          }>
           {renderBanner()}
+          {renderContinueWatching()}
           {renderMovieGrid(recommendedMovies, 'Đề xuất cho bạn', 'recommended')}
-          {userId && continueWatching.length > 0 && renderContinueWatching()}
           {sections.map((section, index) => (
             <View key={index}>
               {renderMovieGrid(section.movies, section.title)}
             </View>
           ))}
-        </ScrollView>
+        </Animated.ScrollView>
+        <TabHeader 
+          title=""
+          onSearchPress={() => setSearchModalVisible(true)}
+          onNotificationPress={() => {}}
+          opacity={headerOpacity}
+        />
       </View>
     );
   };
@@ -340,7 +362,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0A0A', 
+    backgroundColor: '#000',
   },
   logoImage: {
     width: 160,
@@ -366,22 +388,28 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+    position: 'relative',
+    zIndex: 1,
   },
   scrollViewContent: {
     flexGrow: 1,
-    paddingBottom: 20, // Reduced padding to prevent extra space
+    paddingBottom: 20,
   },
   bannerContainer: {
-    height: 460, 
+    height: 570,
     position: 'relative',
-    marginBottom: 8, 
+   
   },
   bannerImage: {
     width: '100%',
     height: '100%',
   },
   bannerOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '50%',
   },
   bannerIndicators: {
     position: 'absolute',
