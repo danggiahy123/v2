@@ -31,25 +31,26 @@ export default function ExploreScreen() {
     Alert.alert('Thông báo', 'Tính năng đang phát triển');
   };
 
-  const handleHelp = () => {
-    Alert.alert('Trợ giúp', 'Liên hệ hỗ trợ: support@example.com');
-  };
+const handleHelp = () => {
+  router.push('/settings/help');
+};
 
-  const handleContact = () => {
-    Alert.alert('Thông tin liên hệ', 'Email: contact@fptplay.com\nHotline: 1900-xxxx');
-  };
+const handleContact = () => {
+  router.push('/settings/contact');
+};
 
-  const handleAbout = () => {
-    Alert.alert('Thông tin về FPT Play', 'Ứng dụng xem phim FPT Play v1.0.0');
-  };
+const handleAbout = () => {
+  router.push('/settings/about');
+};
 
-  const handlePrivacyPolicy = () => {
-    Alert.alert('Chính sách bảo mật', 'Chính sách bảo mật đang được cập nhật');
-  };
+const handlePrivacyPolicy = () => {
+  router.push('/settings/privacy');
+};
 
-  const handleTerms = () => {
-    Alert.alert('Điều khoản sử dụng', 'Điều khoản sử dụng đang được cập nhật');
-  };
+const handleTerms = () => {
+  router.push('/settings/terms');
+};
+
 
 
   const handleLogout = () => {

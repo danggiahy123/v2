@@ -17,6 +17,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { movieService } from '../../services/movieService';
 import { useAppSelector } from '../../store/hooks';
 import { BannerMovie, ContinueWatchingItem, GridMovie } from '../../types/movie';
+import SearchModal from '../../components/SearchModal';
+import MovieListModal from '../../components/MovieListModal';
+import { useRouter } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 const POSTER_WIDTH = (width - 60) / 3;
@@ -28,8 +31,10 @@ interface MovieSection {
 
 export default function HomeScreen() {
   const authState = useAppSelector((state) => state.auth);
-  const user = authState?.user;
-  const userId = authState?.userId;
+
+  const { user, userId } = authState || { user: null, userId: null };
+  const router = useRouter();
+
 
   const [bannerMovies, setBannerMovies] = useState<BannerMovie[]>([]);
   const [recommendedMovies, setRecommendedMovies] = useState<GridMovie[]>([]);
@@ -38,6 +43,10 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
+  const [searchModalVisible, setSearchModalVisible] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedTitle, setSelectedTitle] = useState('');
 
   const bannerFlatListRef = useRef<FlatList>(null);
 
@@ -140,6 +149,12 @@ export default function HomeScreen() {
     loadHomeData();
   };
 
+  const handleViewAll = (category: string, title: string) => {
+    setSelectedCategory(category);
+    setSelectedTitle(title);
+    setModalVisible(true);
+  };
+
   const renderBanner = () => {
     if (!bannerMovies.length) return null;
 
@@ -185,12 +200,12 @@ export default function HomeScreen() {
         <View style={styles.headerBar}>
           <Image source={require('../../assets/anh/logo.png')} style={styles.logoImage} />
           <View style={styles.headerIcons}>
-            <TouchableOpacity>
+
+            <TouchableOpacity onPress={() => setSearchModalVisible(true)}>
               <Ionicons name="search" size={24} color="#fff" style={styles.iconSpacing} />
             </TouchableOpacity>
-            <TouchableOpacity>
-              <Ionicons name="person-circle" size={28} color="#fff" />
-            </TouchableOpacity>
+            <Ionicons name="person-circle" size={28} color="#fff" />
+
           </View>
         </View>
 
@@ -226,29 +241,29 @@ export default function HomeScreen() {
     );
   };
 
-  const renderMovieGrid = (movies: GridMovie[], title: string) => {
-    if (!movies || movies.length === 0) return null;
 
-    return (
+  const renderMovieGrid = (movies: GridMovie[], title: string, category?: string) => (
+    !!movies.length && (
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>{title}</Text>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => handleViewAll(category || 'recommended', title)}>
             <Text style={styles.seeAllText}>Xem tất cả</Text>
           </TouchableOpacity>
         </View>
-        <View style={styles.movieGrid}>
-          {movies.slice(0, 6).map((movie, index) => (
-            <TouchableOpacity key={movie.movieId || `movie-${index}`} style={styles.movieItem}>
-              <Image
-                source={{ uri: movie.poster }}
-                style={styles.moviePoster}
-                resizeMode="cover"
-                onError={() => console.log('Movie poster load error')}
-              />
+        <FlatList
+          data={movies.slice(0, 6)}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(item, index) => `${category}-${item.movieId}-${index}`}
+          contentContainerStyle={styles.movieList}
+          renderItem={({ item }) => (
+            <TouchableOpacity style={styles.movieItem}>
+              <Image source={{ uri: item.poster }} style={styles.moviePoster} resizeMode="cover" />
+
             </TouchableOpacity>
-          ))}
-        </View>
+          )}
+        />
       </View>
     );
   };
@@ -260,7 +275,9 @@ export default function HomeScreen() {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Đang xem</Text>
-          <TouchableOpacity>
+
+          <TouchableOpacity onPress={() => handleViewAll('continue', 'Đang xem')}>
+
             <Text style={styles.seeAllText}>Xem tất cả</Text>
           </TouchableOpacity>
         </View>
@@ -315,14 +332,27 @@ export default function HomeScreen() {
         }
       >
         {renderBanner()}
-        {renderMovieGrid(recommendedMovies, 'Phim dành cho bạn')}
+        {renderMovieGrid(recommendedMovies, 'Phim dành cho bạn', 'recommended')}
         {renderContinueWatching()}
         {sections.map((section, index) => (
-          <React.Fragment key={`section-${index}`}>
-            {renderMovieGrid(section.movies, section.title)}
+
+          <React.Fragment key={index}>
+            {renderMovieGrid(section.movies, section.title, ['trending', 'toprated', 'sports', 'anime', 'vietnamese', 'comingsoon'][index])}
           </React.Fragment>
         ))}
       </ScrollView>
+
+      <SearchModal
+        visible={searchModalVisible}
+        onClose={() => setSearchModalVisible(false)}
+      />
+
+      <MovieListModal
+        visible={modalVisible}
+        category={selectedCategory}
+        title={selectedTitle}
+        onClose={() => setModalVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -469,34 +499,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 16,
   },
-  
-  // Pagination
-  paginationDotsContainer: {
-    position: 'absolute',
-    bottom: 140, // Better positioning
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 2,
-  },
-  paginationDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.3,
-    shadowRadius: 2,
-  },
-  
-  section: {
-    paddingHorizontal: 20,
-    marginTop: 32,
-    marginBottom: 8,
+
+
+  section: { 
+    paddingLeft: 20,
+    marginTop: 32 
+
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -518,38 +526,20 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
     textDecorationColor: 'transparent', 
   },
-  
- 
-  movieGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: 8, 
+
+  movieList: {
+    paddingRight: 20,
   },
   movieItem: {
-    width: POSTER_WIDTH,
-    marginBottom: 20, 
+    width: 140,
+    marginRight: 12,
   },
   moviePoster: {
     width: '100%',
-    height: POSTER_WIDTH * 1.5,
-    borderRadius: 12, 
-    backgroundColor: '#1A1A1A',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  
- 
-  continueList: {
-    paddingRight: 20,
-    paddingLeft: 4, 
-  },
-  continueItem: {
-    width: 130,
-    marginRight: 16, 
+    height: 200,
+    borderRadius: 10,
+    backgroundColor: '#222',
+
   },
   continuePoster: {
     width: 130,
