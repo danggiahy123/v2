@@ -1,5 +1,3 @@
-
-
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type { UpdateProfileRequest } from '../../types/auth';
 import {
@@ -396,7 +394,7 @@ const authSlice = createSlice({
       })
       .addCase(getProfile.fulfilled, (state, action) => {
         state.loading = false;
-        state.message = action.payload.message || 'Đã tải hồ sơ thành công';
+        state.message = action.payload.message || 'Cập nhật hồ sơ thành công';
         // Update user data if available
         if (action.payload.data?.user) {
           state.user = action.payload.data.user;
@@ -416,8 +414,7 @@ const authSlice = createSlice({
       })
       .addCase(updateProfile.fulfilled, (state, action) => {
         state.loading = false;
-        state.message = action.payload.message || 'Đã tải hồ sơ thành công';
-        // Don't update user here - it's handled by saveAuthDataThunk.fulfilled
+        state.message = action.payload.message || 'Cập nhật hồ sơ thành công';
       })
       .addCase(updateProfile.rejected, (state, action) => {
         state.loading = false;

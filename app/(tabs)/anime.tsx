@@ -43,7 +43,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
- 
   },
   headerTitle: {
     fontSize: 20,

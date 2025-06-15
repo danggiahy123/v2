@@ -19,7 +19,7 @@ import {
 } from 'react-native';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { clearError, clearMessage, updateProfile } from '../../store/slices/authSlice';
-import Notification from '../../components/ui/Notification'; // Import component notification
+import Notification from '../../components/ui/Notification'; 
 
 export default function AccountInfoScreen() {
   const { user, userId, loading, error, message } = useAppSelector((state) => state.auth);
@@ -59,47 +59,40 @@ export default function AccountInfoScreen() {
     }
   }, [error, dispatch]);
 
-  // Updated useEffect to handle success and other messages
 useEffect(() => {
   if (message) {
-    console.log('📢 Message received:', message); // Debug log
-
-    // Check for success messages
+    console.log('📢 Message received:', message); 
     const isSuccess = message.includes('updated successfully') || 
                       message.includes('thành công') ||
-                      message.includes('success') ||
-                      message.toLowerCase().includes('update');
+                      message.includes('cập nhật thành công');
     
     if (isSuccess) {
       setNotification({
         visible: true,
-        message: 'Cập nhật thông tin thành công!',
+        message: 'Cập nhật hồ sơ thành công',
         type: 'success'
       });
 
-      // Delay to let user see the notification before hiding it
+  
       setTimeout(() => {
         setNotification(prev => ({ ...prev, visible: false }));
-        dispatch(clearMessage()); // Clear message after some time
-      }, 2500); // Increase the time the notification is shown
+        dispatch(clearMessage());
+        router.replace('/(tabs)/profile');
+      }, 1000); 
     } else {
-      // Show original message if not success
       setNotification({
         visible: true,
         message: message,
-        type: 'success'
+        type: 'error'
       });
-      dispatch(clearMessage());
     }
   }
 }, [message, dispatch, router]);
 
-  // Close notification handler
   const handleCloseNotification = () => {
     setNotification(prev => ({ ...prev, visible: false }));
   };
 
-  // Compress image to reduce file size
   const compressImage = async (uri: string) => {
     try {
       console.log('🔄 Compressing image:', uri);
@@ -110,7 +103,7 @@ useEffect(() => {
           { resize: { width: 800, height: 800 } }
         ],
         {
-          compress: 0.7, // 70% quality
+          compress: 0.7, 
           format: ImageManipulator.SaveFormat.JPEG,
         }
       );
@@ -335,7 +328,7 @@ useEffect(() => {
   };
 
   const handleGoBack = () => {
-    router.push('/settings');
+    router.back();
   };
 
   if (!user) {

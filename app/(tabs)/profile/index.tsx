@@ -1,7 +1,6 @@
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
   Image,
   RefreshControl,
   ScrollView,
@@ -12,8 +11,8 @@ import {
 } from 'react-native';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import { clearError, clearMessage, getProfile } from '../../../store/slices/authSlice';
-import { Ionicons } from '@expo/vector-icons'; 
-import Notification from '../../../components/ui/Notification'; 
+import { Ionicons } from '@expo/vector-icons';
+import Notification from '../../../components/ui/Notification';
 
 export default function ProfileScreen() {
   const { user, userId, loading, error, message } = useAppSelector((state) => state.auth);
@@ -30,7 +29,6 @@ export default function ProfileScreen() {
     }
   }, [userId, dispatch]);
 
-  // Handle errors and messages properly without alerting multiple times
   useEffect(() => {
     if (error) {
       setNotificationMessage(error);
@@ -59,12 +57,8 @@ export default function ProfileScreen() {
     router.push('/settings/account');
   };
 
-  const handleGoBack = () => {
-    router.back();
-  };
-
   const handleCloseNotification = () => {
-    setNotificationVisible(false); 
+    setNotificationVisible(false);
   };
 
   if (!user) {
@@ -83,7 +77,7 @@ export default function ProfileScreen() {
       refreshControl={<RefreshControl refreshing={loading} onRefresh={handleRefresh} />}
     >
       <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => router.push('/(tabs)/explore')} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.replace('/(tabs)/explore')} style={styles.backButton}>
           <Ionicons name="chevron-back" size={24} color="white" />
         </TouchableOpacity>
         <Text style={styles.topBarTitle}>Hồ sơ</Text>
@@ -134,6 +128,7 @@ export default function ProfileScreen() {
           <Text style={styles.infoValue}>{user._id}</Text>
         </View>
       </View>
+
       <Notification
         visible={notificationVisible}
         message={notificationMessage}

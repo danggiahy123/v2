@@ -9,22 +9,22 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-export default function AnimeScreen() {
+export default function SeriesScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#000" />
       
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Phim bo</Text>
+        <Text style={styles.headerTitle}>Phim bộ</Text>
         <Ionicons name="search" size={24} color="#fff" />
       </View>
       
       <ScrollView style={styles.content}>
         <View style={styles.comingSoon}>
           <Ionicons name="happy-outline" size={64} color="#888" />
-          <Text style={styles.comingSoonTitle}>Hoạt hình</Text>
+          <Text style={styles.comingSoonTitle}>Phim bộ</Text>
           <Text style={styles.comingSoonText}>
-            Tính năng này sẽ sớm được cập nhật với danh sách hoạt hình và anime mới nhất
+            Tính năng này sẽ sớm được cập nhật với danh sách phim bộ mới nhất
           </Text>
         </View>
       </ScrollView>
@@ -43,7 +43,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
- 
   },
   headerTitle: {
     fontSize: 20,
