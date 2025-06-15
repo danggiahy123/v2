@@ -15,32 +15,32 @@ export default function SettingsScreen() {
   const router = useRouter();
 
   const handleAccountInfo = () => {
-    // Navigate to account info screen
+   
     router.push('/settings/account' as any);
   };
 
   const handleNotifications = () => {
-    // TODO: Navigate to notifications settings
+ 
     Alert.alert('Thông báo', 'Tính năng đang phát triển');
   };
 
   const handleFavoriteMovies = () => {
-    // TODO: Navigate to favorite movies
+   
     Alert.alert('Phim yêu thích', 'Tính năng đang phát triển');
   };
 
   const handleSubscribedMovies = () => {
-    // TODO: Navigate to subscribed movies
+
     Alert.alert('Phim đăng ký', 'Tính năng đang phát triển');
   };
 
   const handleTransactionHistory = () => {
-    // TODO: Navigate to transaction history
+  
     Alert.alert('Lịch sử giao dịch', 'Tính năng đang phát triển');
   };
 
   const handleDeviceManagement = () => {
-    // TODO: Navigate to device management
+
     Alert.alert('Quản lý thiết bị', 'Tính năng đang phát triển');
   };
 
@@ -50,7 +50,6 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.push('/(tabs)/explore')} style={styles.backButton}>
           <Ionicons name="chevron-back" size={24} color="#fff" />
@@ -60,7 +59,6 @@ export default function SettingsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Settings Menu Items */}
         <View style={styles.section}>
           
           <TouchableOpacity
@@ -68,7 +66,7 @@ export default function SettingsScreen() {
             onPress={handleAccountInfo}
           >
             <Ionicons name="person-outline" size={24} color="#fff" style={styles.menuIcon} />
-            <Text style={styles.menuItemText}>Chỉnh sửa profile </Text>
+            <Text style={styles.menuItemText}>Chỉnh sửa hồ sơ </Text>
             <Ionicons name="chevron-forward" size={20} color="#ccc" />
           </TouchableOpacity>
 
@@ -144,7 +142,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   placeholder: {
-    width: 40, // Same width as back button for centering
+    width: 40, 
   },
   scrollContent: {
     paddingVertical: 20,
@@ -160,7 +158,7 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     paddingHorizontal: 15,
     borderRadius: 8,
-    marginBottom: 8, // Khoảng cách giữa các item
+    marginBottom: 8, 
   },
   menuIcon: {
     marginRight: 15,

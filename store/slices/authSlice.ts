@@ -1,4 +1,4 @@
-//Xử lý đăng nhập, đăng xuất, lưu trữ thông tin người dùng
+
 
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type { UpdateProfileRequest } from '../../types/auth';
@@ -53,7 +53,7 @@ export const sendOTP = createAsyncThunk(
       });
       
       if (!response.ok) {
-        throw new Error('Failed to send OTP');
+        throw new Error('Không gửi được OTP');
       }
       
       const data: SendOTPResponse = await response.json();
@@ -78,7 +78,7 @@ export const verifyOTP = createAsyncThunk(
       });
       
       if (!response.ok) {
-        throw new Error('Failed to verify OTP');
+        throw new Error('Không gửi được OTP');
       }
       
       const data: VerifyOTPResponse = await response.json();
@@ -118,7 +118,7 @@ export const completeRegistration = createAsyncThunk(
       });
       
       if (!response.ok) {
-        throw new Error('Failed to complete registration');
+        throw new Error('Không thể hoàn tất đăng ký');
       }
       
       const data: CompleteRegistrationResponse = await response.json();
@@ -149,7 +149,7 @@ export const restoreAuthState = createAsyncThunk(
       const authData = await getAuthData();
       return authData;
     } catch (error) {
-      return rejectWithValue('Failed to restore auth state');
+      return rejectWithValue('Không khôi phục được trạng thái xác thực');
     }
   }
 );
@@ -163,7 +163,7 @@ export const logout = createAsyncThunk(
       console.log('🚪 User logged out successfully');
       return true;
     } catch (error) {
-      return rejectWithValue('Failed to logout');
+      return rejectWithValue('Không thể đăng xuất');
     }
   }
 );
@@ -181,7 +181,7 @@ export const getProfile = createAsyncThunk(
       });
       
       if (!response.ok) {
-        throw new Error('Failed to get profile');
+        throw new Error('Không lấy được hồ sơ');
       }
       
       const data = await response.json();
@@ -222,7 +222,7 @@ export const updateProfile = createAsyncThunk(
 
       const response = await fetch(url, {
         method: 'PUT',
-        body: formData, // Don't set Content-Type header, let browser set it with boundary
+        body: formData, 
       });
       
       console.log('📡 Response status:', response.status);
@@ -237,7 +237,6 @@ export const updateProfile = createAsyncThunk(
       const data = await response.json();
       console.log('✅ Response data:', data);
       
-      // Update auth data in storage with new user info
       if (data.data.user) {
         const authData = {
           userId,
@@ -269,7 +268,7 @@ const authSlice = createSlice({
     clearMessage(state) {
       state.message = null;
     },
-    // Pure action to set login state - used after successful auth data save
+
     loginSuccess(state, action: PayloadAction<AuthData>) {
       state.userId = action.payload.userId;
       state.user = action.payload.user;
@@ -324,15 +323,12 @@ const authSlice = createSlice({
         state.loading = false;
         state.message = action.payload.message || 'OTP verified successfully';
         
-        // Don't set login state here - it's handled by saveAuthDataThunk.fulfilled
-        // or in the component for registration flow
       })
       .addCase(verifyOTP.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       });
 
-    // Complete Registration
     builder
       .addCase(completeRegistration.pending, (state) => {
         state.loading = true;
@@ -343,7 +339,7 @@ const authSlice = createSlice({
         state.loading = false;
         state.message = action.payload.message || 'Registration completed successfully';
         
-        // Don't set login state here - it's handled by saveAuthDataThunk.fulfilled
+
       })
       .addCase(completeRegistration.rejected, (state, action) => {
         state.loading = false;
@@ -384,7 +380,7 @@ const authSlice = createSlice({
         state.phone = null;
         state.isLoggedIn = false;
         state.error = null;
-        state.message = 'Logged out successfully';
+        state.message = 'Đăng xuất thành công';
       })
       .addCase(logout.rejected, (state, action) => {
         state.loading = false;
@@ -400,7 +396,7 @@ const authSlice = createSlice({
       })
       .addCase(getProfile.fulfilled, (state, action) => {
         state.loading = false;
-        state.message = action.payload.message || 'Profile loaded successfully';
+        state.message = action.payload.message || 'Đã tải hồ sơ thành công';
         // Update user data if available
         if (action.payload.data?.user) {
           state.user = action.payload.data.user;
@@ -420,7 +416,7 @@ const authSlice = createSlice({
       })
       .addCase(updateProfile.fulfilled, (state, action) => {
         state.loading = false;
-        state.message = action.payload.message || 'Profile updated successfully';
+        state.message = action.payload.message || 'Đã tải hồ sơ thành công';
         // Don't update user here - it's handled by saveAuthDataThunk.fulfilled
       })
       .addCase(updateProfile.rejected, (state, action) => {

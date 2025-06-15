@@ -1,6 +1,5 @@
-// app/(tabs)/profile.tsx
 import { useRouter } from 'expo-router';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Image,
@@ -14,29 +13,38 @@ import {
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import { clearError, clearMessage, getProfile } from '../../../store/slices/authSlice';
 import { Ionicons } from '@expo/vector-icons'; 
+import Notification from '../../../components/ui/Notification'; 
 
 export default function ProfileScreen() {
   const { user, userId, loading, error, message } = useAppSelector((state) => state.auth);
   const dispatch = useAppDispatch();
   const router = useRouter();
 
-  
+  const [notificationVisible, setNotificationVisible] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState('');
+  const [notificationType, setNotificationType] = useState<'success' | 'error'>('success');
+
   useEffect(() => {
     if (userId) {
       dispatch(getProfile(userId));
     }
   }, [userId, dispatch]);
-  
+
+  // Handle errors and messages properly without alerting multiple times
   useEffect(() => {
     if (error) {
-      Alert.alert('Lỗi', error);
+      setNotificationMessage(error);
+      setNotificationType('error');
+      setNotificationVisible(true);
       dispatch(clearError());
     }
   }, [error, dispatch]);
 
   useEffect(() => {
     if (message) {
-      Alert.alert('Thông báo', message);
+      setNotificationMessage(message);
+      setNotificationType('success');
+      setNotificationVisible(true);
       dispatch(clearMessage());
     }
   }, [message, dispatch]);
@@ -55,6 +63,10 @@ export default function ProfileScreen() {
     router.back();
   };
 
+  const handleCloseNotification = () => {
+    setNotificationVisible(false); 
+  };
+
   if (!user) {
     return (
       <View style={styles.container}>
@@ -71,10 +83,10 @@ export default function ProfileScreen() {
       refreshControl={<RefreshControl refreshing={loading} onRefresh={handleRefresh} />}
     >
       <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => router.push('/(tabs)/explore')}style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.push('/(tabs)/explore')} style={styles.backButton}>
           <Ionicons name="chevron-back" size={24} color="white" />
         </TouchableOpacity>
-        <Text style={styles.topBarTitle}>Profile</Text>
+        <Text style={styles.topBarTitle}>Hồ sơ</Text>
       </View>
 
       <View style={styles.header}>
@@ -122,6 +134,12 @@ export default function ProfileScreen() {
           <Text style={styles.infoValue}>{user._id}</Text>
         </View>
       </View>
+      <Notification
+        visible={notificationVisible}
+        message={notificationMessage}
+        type={notificationType}
+        onClose={handleCloseNotification}
+      />
     </ScrollView>
   );
 }
@@ -138,7 +156,6 @@ const styles = StyleSheet.create({
     paddingTop: 50,
     paddingBottom: 10,
     paddingHorizontal: 16,
-    
   },
   backButton: {
     padding: 4,
@@ -209,7 +226,6 @@ const styles = StyleSheet.create({
   editButtonText: {
     color: '#D11030',
     fontSize: 14,
-
   },
   infoSection: {
     backgroundColor: '#1c1c1e',

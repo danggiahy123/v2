@@ -1,16 +1,19 @@
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from 'react-native';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { clearError, clearMessage, sendOTP, verifyOTP } from '../../store/slices/authSlice';
+import Notification from '../../components/ui/Notification'; // Import Notification component
 
 export default function OTPScreen() {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -19,6 +22,12 @@ export default function OTPScreen() {
   const dispatch = useAppDispatch();
   const { phone, loading, error, message } = useAppSelector(state => state.auth);
   const inputRefs = useRef<(TextInput | null)[]>([]);
+
+  const [notification, setNotification] = useState({
+    visible: false,
+    message: '',
+    type: 'success' as 'success' | 'error',
+  });
 
   useEffect(() => {
     if (!phone) {
@@ -42,7 +51,7 @@ export default function OTPScreen() {
   // Show error if exists
   useEffect(() => {
     if (error) {
-      Alert.alert('Lỗi', error);
+      setNotification({ visible: true, message: error, type: 'error' });
       dispatch(clearError());
     }
   }, [error, dispatch]);
@@ -50,14 +59,14 @@ export default function OTPScreen() {
   // Show message if exists (e.g., OTP sent successfully)
   useEffect(() => {
     if (message) {
-      Alert.alert('Thông báo', message);
+      setNotification({ visible: true, message: message, type: 'success' });
       dispatch(clearMessage());
     }
   }, [message, dispatch]);
 
   const handleOtpChange = (value: string, index: number) => {
     if (value.length > 1) return;
-    
+
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
@@ -77,12 +86,12 @@ export default function OTPScreen() {
   const handleVerifyOTP = async () => {
     const otpString = otp.join('');
     if (otpString.length !== 6) {
-      Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ mã OTP');
+      setNotification({ visible: true, message: 'Vui lòng nhập đầy đủ mã OTP', type: 'error' });
       return;
     }
 
     if (!phone) {
-      Alert.alert('Lỗi', 'Không tìm thấy số điện thoại');
+      setNotification({ visible: true, message: 'Không tìm thấy số điện thoại', type: 'error' });
       return;
     }
 
@@ -95,20 +104,17 @@ export default function OTPScreen() {
           router.push('/(auth)/register' as any);
         } else {
           // User đã đăng ký - đăng nhập thành công
-          Alert.alert(
-            'Đăng nhập thành công!',
-            'Chào mừng bạn trở lại',
-            [
-              {
-                text: 'OK',
-                onPress: () => router.replace('/(tabs)' as any)
-              }
-            ]
-          );
+          setNotification({
+            visible: true,
+            message: 'Đăng nhập thành công! Chào mừng bạn trở lại.',
+            type: 'success',
+          });
+          router.replace('/(tabs)' as any);
         }
       }
     } catch (error) {
       console.error('Verify OTP error:', error);
+      setNotification({ visible: true, message: 'Có lỗi xảy ra, vui lòng thử lại', type: 'error' });
     }
   };
 
@@ -121,10 +127,10 @@ export default function OTPScreen() {
       if (sendOTP.fulfilled.match(result)) {
         setCountdown(300);
         setOtp(['', '', '', '', '', '']);
-        Alert.alert('Thành công', 'Đã gửi lại mã OTP');
+        setNotification({ visible: true, message: 'Đã gửi lại mã OTP', type: 'success' });
       }
     } catch (error) {
-      Alert.alert('Lỗi', 'Không thể gửi lại mã OTP');
+      setNotification({ visible: true, message: 'Không thể gửi lại mã OTP', type: 'error' });
     }
   };
 
@@ -135,70 +141,70 @@ export default function OTPScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Xác thực OTP</Text>
-        <Text style={styles.subtitle}>
-          Nhập mã 6 số đã được gửi đến {phone}
-        </Text>
-
-        <View style={styles.otpContainer}>
-          {otp.map((digit, index) => (
-            <TextInput
-              key={index}
-              ref={ref => { inputRefs.current[index] = ref; }}
-              style={[styles.otpInput, digit && styles.otpInputFilled]}
-              value={digit}
-              onChangeText={value => handleOtpChange(value, index)}
-              onKeyPress={({ nativeEvent }) => handleKeyPress(nativeEvent.key, index)}
-              keyboardType="number-pad"
-              maxLength={1}
-              editable={!loading}
-              textAlign="center"
-            />
-          ))}
-        </View>
-
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleVerifyOTP}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Xác thực</Text>
-          )}
-        </TouchableOpacity>
-
-        <View style={styles.resendContainer}>
-          <Text style={styles.timerText}>
-            Mã OTP sẽ hết hạn sau: {formatTime(countdown)}
+    <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
+      <View style={styles.container}>
+        <View style={styles.content}>
+          <Text style={styles.title}>Xác thực OTP</Text>
+          <Text style={styles.subtitle}>
+            Nhập mã 6 số đã được gửi đến {phone}
           </Text>
-          
-          {countdown === 0 ? (
-            <TouchableOpacity onPress={handleResendOTP} disabled={loading}>
-              <Text style={[styles.resendText, loading && styles.resendDisabled]}>
-                Gửi lại mã OTP
-              </Text>
-            </TouchableOpacity>
-          ) : (
-            <Text style={styles.resendDisabled}>
-              Có thể gửi lại sau {formatTime(countdown)}
+
+          <View style={styles.otpContainer}>
+            {otp.map((digit, index) => (
+              <TextInput
+                key={index}
+                ref={ref => { inputRefs.current[index] = ref; }}
+                style={[styles.otpInput, digit && styles.otpInputFilled]}
+                value={digit}
+                onChangeText={value => handleOtpChange(value, index)}
+                onKeyPress={({ nativeEvent }) => handleKeyPress(nativeEvent.key, index)}
+                keyboardType="number-pad"
+                maxLength={1}
+                editable={!loading}
+                textAlign="center"
+              />
+            ))}
+          </View>
+
+          <TouchableOpacity
+            style={[styles.button, loading && styles.buttonDisabled]}
+            onPress={handleVerifyOTP}
+            disabled={loading}
+          >
+            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Xác thực</Text>}
+          </TouchableOpacity>
+
+          <View style={styles.resendContainer}>
+            <Text style={styles.timerText}>
+              Mã OTP sẽ hết hạn sau: {formatTime(countdown)}
             </Text>
-          )}
+            {countdown === 0 ? (
+              <TouchableOpacity onPress={handleResendOTP} disabled={loading}>
+                <Text style={[styles.resendText, loading && styles.resendDisabled]}>Gửi lại mã OTP</Text>
+              </TouchableOpacity>
+            ) : (
+              <Text style={styles.resendDisabled}>Có thể gửi lại sau {formatTime(countdown)}</Text>
+            )}
+          </View>
+
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Text style={styles.backButtonText}>← Thay đổi số điện thoại</Text>
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.backButtonText}>
-            ← Thay đổi số điện thoại
-          </Text>
-        </TouchableOpacity>
+        <Notification
+          visible={notification.visible}
+          message={notification.message}
+          type={notification.type}
+          onClose={() => setNotification({ ...notification, visible: false })}
+          autoClose={true}
+          duration={3000}
+        />
       </View>
-    </View>
+    </TouchableWithoutFeedback>
   );
 }
 
@@ -292,4 +298,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#888',
   },
-}); 
+});

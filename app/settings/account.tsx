@@ -19,6 +19,7 @@ import {
 } from 'react-native';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { clearError, clearMessage, updateProfile } from '../../store/slices/authSlice';
+import Notification from '../../components/ui/Notification'; // Import component notification
 
 export default function AccountInfoScreen() {
   const { user, userId, loading, error, message } = useAppSelector((state) => state.auth);
@@ -31,6 +32,13 @@ export default function AccountInfoScreen() {
   const [imageFile, setImageFile] = useState<any>(null);
   const [showGenderPicker, setShowGenderPicker] = useState(false);
 
+  // Notification states
+  const [notification, setNotification] = useState({
+    visible: false,
+    message: '',
+    type: 'success' as 'success' | 'error'
+  });
+
   // Initialize form with user data
   useEffect(() => {
     if (user) {
@@ -39,34 +47,57 @@ export default function AccountInfoScreen() {
     }
   }, [user]);
 
-  // Show error if exists
+  // Show error notification if exists
   useEffect(() => {
     if (error) {
-      Alert.alert('Lỗi', error);
+      setNotification({
+        visible: true,
+        message: error,
+        type: 'error'
+      });
       dispatch(clearError());
     }
   }, [error, dispatch]);
 
-  // Show message if exists
-  useEffect(() => {
-    if (message && message.includes('updated successfully')) {
-      Alert.alert('Thành công', 'Cập nhật thông tin thành công', [
-        {
-          text: 'OK',
-          onPress: () => {
-            router.back();
-            // Clear message after navigation
-            setTimeout(() => {
-              dispatch(clearMessage());
-            }, 100);
-          }
-        }
-      ]);
-    } else if (message) {
-      Alert.alert('Thông báo', message);
+  // Updated useEffect to handle success and other messages
+useEffect(() => {
+  if (message) {
+    console.log('📢 Message received:', message); // Debug log
+
+    // Check for success messages
+    const isSuccess = message.includes('updated successfully') || 
+                      message.includes('thành công') ||
+                      message.includes('success') ||
+                      message.toLowerCase().includes('update');
+    
+    if (isSuccess) {
+      setNotification({
+        visible: true,
+        message: 'Cập nhật thông tin thành công!',
+        type: 'success'
+      });
+
+      // Delay to let user see the notification before hiding it
+      setTimeout(() => {
+        setNotification(prev => ({ ...prev, visible: false }));
+        dispatch(clearMessage()); // Clear message after some time
+      }, 2500); // Increase the time the notification is shown
+    } else {
+      // Show original message if not success
+      setNotification({
+        visible: true,
+        message: message,
+        type: 'success'
+      });
       dispatch(clearMessage());
     }
-  }, [message, dispatch, router]);
+  }
+}, [message, dispatch, router]);
+
+  // Close notification handler
+  const handleCloseNotification = () => {
+    setNotification(prev => ({ ...prev, visible: false }));
+  };
 
   // Compress image to reduce file size
   const compressImage = async (uri: string) => {
@@ -76,12 +107,11 @@ export default function AccountInfoScreen() {
       const manipulated = await ImageManipulator.manipulateAsync(
         uri,
         [
-          // Resize if too large (max 800x800)
           { resize: { width: 800, height: 800 } }
         ],
         {
           compress: 0.7, // 70% quality
-          format: ImageManipulator.SaveFormat.JPEG, // Convert to JPEG for smaller size
+          format: ImageManipulator.SaveFormat.JPEG,
         }
       );
       
@@ -95,7 +125,6 @@ export default function AccountInfoScreen() {
       return manipulated.uri;
     } catch (error) {
       console.error('❌ Image compression failed:', error);
-      // If compression fails, return original
       return uri;
     }
   };
@@ -105,11 +134,11 @@ export default function AccountInfoScreen() {
     const cameraStatus = await ImagePicker.requestCameraPermissionsAsync();
     
     if (mediaLibraryStatus.status !== 'granted' || cameraStatus.status !== 'granted') {
-      Alert.alert(
-        'Quyền truy cập',
-        'Cần quyền truy cập máy ảnh và thư viện ảnh để thay đổi avatar',
-        [{ text: 'OK' }]
-      );
+      setNotification({
+        visible: true,
+        message: 'Cần quyền truy cập máy ảnh và thư viện ảnh để thay đổi avatar',
+        type: 'error'
+      });
       return false;
     }
     
@@ -166,7 +195,11 @@ export default function AccountInfoScreen() {
       }
     } catch (error) {
       console.error('❌ Image picker error:', error);
-      Alert.alert('Lỗi', 'Không thể chọn ảnh');
+      setNotification({
+        visible: true,
+        message: 'Không thể chọn ảnh',
+        type: 'error'
+      });
     }
   };
 
@@ -204,18 +237,30 @@ export default function AccountInfoScreen() {
       }
     } catch (error) {
       console.error('❌ Camera error:', error);
-      Alert.alert('Lỗi', 'Không thể chụp ảnh');
+      setNotification({
+        visible: true,
+        message: 'Không thể chụp ảnh',
+        type: 'error'
+      });
     }
   };
 
   const validateForm = () => {
     if (!fullName.trim()) {
-      Alert.alert('Lỗi', 'Vui lòng nhập họ và tên');
+      setNotification({
+        visible: true,
+        message: 'Vui lòng nhập họ và tên',
+        type: 'error'
+      });
       return false;
     }
     
     if (fullName.trim().length < 2) {
-      Alert.alert('Lỗi', 'Họ và tên phải có ít nhất 2 ký tự');
+      setNotification({
+        visible: true,
+        message: 'Họ và tên phải có ít nhất 2 ký tự',
+        type: 'error'
+      });
       return false;
     }
 
@@ -226,7 +271,11 @@ export default function AccountInfoScreen() {
     if (!validateForm()) return;
     
     if (!userId) {
-      Alert.alert('Lỗi', 'Không tìm thấy thông tin người dùng');
+      setNotification({
+        visible: true,
+        message: 'Không tìm thấy thông tin người dùng',
+        type: 'error'
+      });
       return;
     }
 
@@ -235,12 +284,11 @@ export default function AccountInfoScreen() {
       gender: gender,
     };
 
-    // Add avatar if selected
     if (imageFile) {
       profileData.avatar = imageFile;
     }
 
-    console.log('🔄 Sending profile update:', {
+    console.log('🔄 Gửi cập nhật hồ sơ:', {
       userId,
       profileData: {
         ...profileData,
@@ -252,14 +300,23 @@ export default function AccountInfoScreen() {
       const result = await dispatch(updateProfile({ userId, profileData }));
       
       if (updateProfile.fulfilled.match(result)) {
-        console.log('✅ Profile updated successfully:', result.payload);
+        console.log('✅ Hồ sơ được cập nhật thành công:', result.payload);
+        console.log('✅ Thông báo kết quả:', result.payload?.message);
       } else if (updateProfile.rejected.match(result)) {
         console.error('❌ Profile update failed:', result.payload);
-        console.error('❌ Full error:', result);
+        setNotification({
+          visible: true,
+          message: 'Có lỗi xảy ra khi cập nhật hồ sơ',
+          type: 'error'
+        });
       }
     } catch (error) {
-      console.error('❌ Profile update error:', error);
-      Alert.alert('Lỗi', 'Có lỗi xảy ra khi cập nhật profile');
+      console.error('❌ Lỗi cập nhật hồ sơ:', error);
+      setNotification({
+        visible: true,
+        message: 'Có lỗi xảy ra khi cập nhật hồ sơ ',
+        type: 'error'
+      });
     }
   };
 
@@ -278,7 +335,7 @@ export default function AccountInfoScreen() {
   };
 
   const handleGoBack = () => {
-    router.back();
+    router.push('/settings');
   };
 
   if (!user) {
@@ -298,7 +355,7 @@ export default function AccountInfoScreen() {
         <TouchableOpacity onPress={handleGoBack} style={styles.backButton}>
           <Ionicons name="chevron-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Chỉnh sửa prolife</Text>
+        <Text style={styles.headerTitle}>Chỉnh sửa hồ sơ</Text>
         <View style={styles.placeholder} />
       </View>
 
@@ -321,7 +378,7 @@ export default function AccountInfoScreen() {
                 <View style={styles.avatarPlaceholder}>
                   <Ionicons name="person" size={40} color="#666" />
                 </View>
-              )}
+              )} 
               {/* Camera Icon */}
               <View style={styles.cameraIcon}>
                 <Ionicons name="camera" size={16} color="#fff" />
@@ -434,10 +491,19 @@ export default function AccountInfoScreen() {
           </View>
         </View>
       )}
+
+      {/* Notification Component */}
+      <Notification
+        visible={notification.visible}
+        message={notification.message}
+        type={notification.type}
+        onClose={handleCloseNotification}
+        autoClose={true}
+        duration={3000}
+      />
     </SafeAreaView>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -615,9 +681,9 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     marginTop: 10,
   },
- modalCancelText: {
-  fontSize: 16,
-  color: '#ff4d4f',
-  textAlign: 'center',
-},
+  modalCancelText: {
+    fontSize: 16,
+    color: '#ff4d4f',
+    textAlign: 'center',
+  },
 });

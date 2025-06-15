@@ -1,78 +1,124 @@
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  ImageBackground,
-  KeyboardAvoidingView,
-  Platform,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+import { 
+  ActivityIndicator, 
+  Alert, 
+  Image, 
+  ImageBackground, 
+  KeyboardAvoidingView, 
+  Platform, 
+  StyleSheet, 
+  Text, 
+  TextInput, 
+  TouchableOpacity, 
+  View, 
 } from 'react-native';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { clearError, clearMessage, sendOTP } from '../../store/slices/authSlice';
+import Notification from '../../components/ui/Notification';
+import { Keyboard, TouchableWithoutFeedback } from 'react-native';
 
 export default function BannerLogin() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { loading, error, message } = useAppSelector((state) => state.auth);
-  
   const [phone, setPhone] = useState('');
   const [isAgreed, setIsAgreed] = useState(false);
 
-  // Show error if exists
+  const [notification, setNotification] = useState({
+    visible: false,
+    message: '',
+    type: 'success' as 'success' | 'error',
+  });
+
+
   useEffect(() => {
     if (error) {
-      Alert.alert('Lỗi', error);
+      setNotification({
+        visible: true,
+        message: error,
+        type: 'error',
+      });
       dispatch(clearError());
     }
   }, [error, dispatch]);
 
+
+  useEffect(() => {
+    if (message) {
+      setNotification({
+        visible: true,
+        message: message,
+        type: 'success',
+      });
+      dispatch(clearMessage());
+    }
+  }, [message, dispatch]);
+
   const validatePhoneNumber = (phoneNumber: string) => {
-    // Validate Vietnamese phone number
     const phoneRegex = /^(0|\+84)[0-9]{9}$/;
     return phoneRegex.test(phoneNumber.replace(/\s/g, ''));
   };
 
   const onContinue = async () => {
     if (phone.trim() === '') {
-      Alert.alert('Lỗi', 'Vui lòng nhập số điện thoại');
-      return;
-    }
-    
-    if (!validatePhoneNumber(phone)) {
-      Alert.alert('Lỗi', 'Số điện thoại không hợp lệ');
-      return;
-    }
-    
-    if (!isAgreed) {
-      Alert.alert('Thông báo', 'Bạn cần đồng ý với điều kiện và điều khoản sử dụng');
+      setNotification({
+        visible: true,
+        message: 'Vui lòng nhập số điện thoại',
+        type: 'error',
+      });
       return;
     }
 
-    // Clear any previous errors/messages
+    if (!validatePhoneNumber(phone)) {
+      setNotification({
+        visible: true,
+        message: 'Số điện thoại không hợp lệ',
+        type: 'error',
+      });
+      return;
+    }
+
+    if (!isAgreed) {
+      setNotification({
+        visible: true,
+        message: 'Bạn cần đồng ý với điều kiện và điều khoản sử dụng',
+        type: 'error',
+      });
+      return;
+    }
+
+
     dispatch(clearError());
     dispatch(clearMessage());
 
     try {
       const result = await dispatch(sendOTP(phone));
-      
+
       if (sendOTP.fulfilled.match(result)) {
-        // Success - navigate to OTP screen
-        console.log('✅ OTP sent successfully, navigating to OTP screen');
+   
+        setNotification({
+          visible: true,
+          message: 'Mã OTP đã được gửi!',
+          type: 'success',
+        });
         router.push({
           pathname: '/(auth)/otp',
           params: { phone },
         });
       } else if (sendOTP.rejected.match(result)) {
-        Alert.alert('Lỗi', result.payload as string || 'Không thể gửi mã OTP');
+        setNotification({
+          visible: true,
+          message: 'Không thể gửi mã OTP',
+          type: 'error',
+        });
       }
     } catch (error) {
-      Alert.alert('Lỗi', 'Có lỗi xảy ra, vui lòng thử lại');
+      setNotification({
+        visible: true,
+        message: 'Có lỗi xảy ra, vui lòng thử lại',
+        type: 'error',
+      });
     }
   };
 
@@ -85,15 +131,11 @@ export default function BannerLogin() {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      {/* Nửa trên ảnh nền */}
+   <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
       <ImageBackground
         source={{
-          uri:
-            'https://simg.zalopay.com.vn/zlp-website/assets/nhung_bo_phim_hoat_hinh_gan_lien_voi_tuoi_tho_thumb_9d51c1a8ca.jpg',
+          uri: 'https://simg.zalopay.com.vn/zlp-website/assets/nhung_bo_phim_hoat_hinh_gan_lien_voi_tuoi_tho_thumb_9d51c1a8ca.jpg',
         }}
         style={styles.imageBackground}
         imageStyle={{ resizeMode: 'cover' }}
@@ -104,7 +146,6 @@ export default function BannerLogin() {
         </View>
       </ImageBackground>
 
-      {/* Nửa dưới nền đen */}
       <View style={styles.bottomContainer}>
         <TextInput
           style={styles.input}
@@ -116,27 +157,17 @@ export default function BannerLogin() {
           editable={!loading}
           maxLength={15}
         />
-
-        {/* Checkbox đồng ý điều khoản */}
         <View style={styles.agreeContainer}>
-          <TouchableOpacity
-            onPress={() => setIsAgreed(!isAgreed)}
-            style={styles.checkboxContainer}
-            disabled={loading}
-          >
+          <TouchableOpacity onPress={() => setIsAgreed(!isAgreed)} style={styles.checkboxContainer} disabled={loading}>
             <View style={[styles.checkbox, isAgreed && styles.checkboxChecked]} />
-            <Text style={styles.agreeText}>
-              Tôi đã đọc và đồng ý với{' '}
+            <Text style={styles.agreeText}> Tôi đã đọc và đồng ý với{' '}
               <Text style={styles.linkText}>Điều kiện và điều khoản sử dụng của Tech5 Play</Text>
             </Text>
           </TouchableOpacity>
         </View>
 
         <TouchableOpacity
-          style={[
-            styles.button, 
-            (!isAgreed || loading) && styles.buttonDisabled
-          ]}
+          style={[styles.button, (!isAgreed || loading) && styles.buttonDisabled]}
           onPress={onContinue}
           disabled={!isAgreed || loading}
         >
@@ -148,11 +179,7 @@ export default function BannerLogin() {
         </TouchableOpacity>
 
         <View style={styles.socialButtonsContainer}>
-          <TouchableOpacity 
-            style={styles.socialButton} 
-            onPress={onLoginGoogle}
-            disabled={loading}
-          >
+          <TouchableOpacity style={styles.socialButton} onPress={onLoginGoogle} disabled={loading}>
             <Image
               source={{
                 uri: 'https://img.icons8.com/?size=512&id=17949&format=png',
@@ -161,11 +188,7 @@ export default function BannerLogin() {
             />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.socialButton, styles.facebookButton]}
-            onPress={onLoginFacebook}
-            disabled={loading}
-          >
+          <TouchableOpacity style={[styles.socialButton, styles.facebookButton]} onPress={onLoginFacebook} disabled={loading}>
             <Image
               source={{
                 uri: 'https://upload.wikimedia.org/wikipedia/commons/0/05/Facebook_Logo_(2019).png',
@@ -175,7 +198,17 @@ export default function BannerLogin() {
           </TouchableOpacity>
         </View>
       </View>
+
+      <Notification
+        visible={notification.visible}
+        message={notification.message}
+        type={notification.type}
+        onClose={() => setNotification({ ...notification, visible: false })}
+        autoClose={true}
+        duration={3000}
+      />
     </KeyboardAvoidingView>
+  </TouchableWithoutFeedback>
   );
 }
 
@@ -289,4 +322,3 @@ const styles = StyleSheet.create({
     shadowOpacity: 0,
   },
 });
-  
