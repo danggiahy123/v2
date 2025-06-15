@@ -30,6 +30,17 @@ export default function ProfileScreen() {
   }, [userId, dispatch]);
 
   useEffect(() => {
+    if (message) {
+      setNotificationMessage(message);
+      setNotificationType('success');
+      setNotificationVisible(true);
+      setTimeout(() => {
+        dispatch(clearMessage());
+      }, 3000);
+    }
+  }, [message, dispatch]);
+
+  useEffect(() => {
     if (error) {
       setNotificationMessage(error);
       setNotificationType('error');
@@ -37,15 +48,6 @@ export default function ProfileScreen() {
       dispatch(clearError());
     }
   }, [error, dispatch]);
-
-  useEffect(() => {
-    if (message) {
-      setNotificationMessage(message);
-      setNotificationType('success');
-      setNotificationVisible(true);
-      dispatch(clearMessage());
-    }
-  }, [message, dispatch]);
 
   const handleRefresh = () => {
     if (userId) {
