@@ -32,14 +32,14 @@ export default function AccountInfoScreen() {
   const [imageFile, setImageFile] = useState<any>(null);
   const [showGenderPicker, setShowGenderPicker] = useState(false);
 
-  // Notification states
+
   const [notification, setNotification] = useState({
     visible: false,
     message: '',
     type: 'success' as 'success' | 'error'
   });
 
-  // Initialize form with user data
+
   useEffect(() => {
     if (user) {
       setFullName(user.full_name);
@@ -47,7 +47,7 @@ export default function AccountInfoScreen() {
     }
   }, [user]);
 
-  // Show error notification if exists
+ 
   useEffect(() => {
     if (error) {
       setNotification({
@@ -78,7 +78,7 @@ useEffect(() => {
         setNotification(prev => ({ ...prev, visible: false }));
         dispatch(clearMessage());
         router.replace('/(tabs)/profile');
-      }, 1000); 
+      }, 2000); 
     } else {
       setNotification({
         visible: true,
@@ -485,7 +485,6 @@ useEffect(() => {
         </View>
       )}
 
-      {/* Notification Component */}
       <Notification
         visible={notification.visible}
         message={notification.message}
