@@ -1,34 +1,67 @@
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
+import React, { useRef } from 'react';
 import {
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    View,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import TabHeader from '../../components/ui/TabHeader';
 
 export default function SeriesScreen() {
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const headerOpacity = useRef(new Animated.Value(1)).current;
+  const lastScrollY = useRef(0);
+
+  const handleScroll = Animated.event(
+    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+    { 
+      useNativeDriver: true,
+      listener: (event: any) => {
+        const currentScrollY = event.nativeEvent.contentOffset.y;
+        const scrollDiff = currentScrollY - lastScrollY.current;
+        
+        if (scrollDiff > 2 && currentScrollY > 0) {
+          headerOpacity.setValue(0);
+        } else if (scrollDiff < -2 || currentScrollY <= 0) {
+          headerOpacity.setValue(1);
+        }
+        
+        lastScrollY.current = currentScrollY;
+      }
+    }
+  );
+
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#000" />
       
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Phim bộ</Text>
-        <Ionicons name="search" size={24} color="#fff" />
-      </View>
-      
-      <ScrollView style={styles.content}>
-        <View style={styles.comingSoon}>
-          <Ionicons name="happy-outline" size={64} color="#888" />
-          <Text style={styles.comingSoonTitle}>Phim bộ</Text>
-          <Text style={styles.comingSoonText}>
-            Tính năng này sẽ sớm được cập nhật với danh sách phim bộ mới nhất
-          </Text>
+      <Animated.ScrollView 
+        style={styles.scrollView}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+      >
+        <View style={styles.content}>
+          <View style={styles.comingSoon}>
+            <Ionicons name="tv-outline" size={64} color="#888" />
+            <Text style={styles.comingSoonTitle}>Phim bộ</Text>
+            <Text style={styles.comingSoonText}>
+              Tính năng này sẽ sớm được cập nhật với danh sách phim bộ mới nhất
+            </Text>
+          </View>
         </View>
-      </ScrollView>
-    </SafeAreaView>
+      </Animated.ScrollView>
+
+      <TabHeader 
+        title="Phim bộ"
+        onSearchPress={() => {}}
+        onNotificationPress={() => {}}
+        opacity={headerOpacity}
+      />
+    </View>
   );
 }
 
@@ -37,20 +70,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000',
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
+  scrollView: {
+    flex: 1,
   },
   content: {
     flex: 1,
+    paddingTop: 100, // Space for header
   },
   comingSoon: {
     flex: 1,
