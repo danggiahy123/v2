@@ -1,4 +1,16 @@
-import React, { useEffect } from 'react';
+/**
+ * NOTIFICATION COMPONENT - Component hiển thị thông báo toast
+ * MÔ TẢ: Toast notification với animation slide từ trên xuống
+ * TÍNH NĂNG:
+ * - 2 loại: success (xanh) và error (đỏ)
+ * - Auto close sau duration (mặc định 3s)
+ * - Manual close bằng button "Đóng"
+ * - Smooth animation với Animated API
+ * - Responsive design
+ * - Modal overlay với shadow
+ * SỬ DỤNG: Hiển thị feedback cho user actions (login, API calls, etc.)
+ */
+import React, { useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, Animated, Dimensions } from 'react-native';
 
 interface NotificationProps {
@@ -20,12 +32,17 @@ const Notification: React.FC<NotificationProps> = ({
   autoClose = true,
   duration = 3000, 
 }) => {
-  const translateAnim = new Animated.Value(-100); 
-  const opacityAnim = new Animated.Value(0); 
+  // ANIMATION VALUES - Giá trị cho animation (sử dụng useRef để stable)
+  const translateAnim = useRef(new Animated.Value(-100)).current;  // Slide từ trên xuống
+  const opacityAnim = useRef(new Animated.Value(0)).current;       // Fade in/out
 
-
+  /**
+   * ANIMATION EFFECT - Xử lý animation khi notification hiển thị
+   * FLOW: Show -> Slide down + Fade in -> Auto close (nếu enabled)
+   */
   useEffect(() => {
     if (visible) {
+      // SHOW ANIMATION - Slide down và fade in đồng thời
       Animated.parallel([
         Animated.timing(translateAnim, {
           toValue: 0,
@@ -39,7 +56,7 @@ const Notification: React.FC<NotificationProps> = ({
         }),
       ]).start();
 
-
+      // AUTO CLOSE - Tự động đóng sau duration
       if (autoClose) {
         const timer = setTimeout(() => {
           handleClose();
@@ -47,25 +64,32 @@ const Notification: React.FC<NotificationProps> = ({
         return () => clearTimeout(timer);
       }
     }
-  }, [visible]);
+  }, [visible, autoClose, duration]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /**
+   * CLOSE HANDLER - Xử lý đóng notification với animation
+   * FLOW: Slide up + Fade out -> Callback onClose
+   */
   const handleClose = () => {
     Animated.parallel([
       Animated.timing(translateAnim, {
-        toValue: -100,
+        toValue: -100,    // Slide lên trên
         duration: 400,
         useNativeDriver: true,
       }),
       Animated.timing(opacityAnim, {
-        toValue: 0,
+        toValue: 0,       // Fade out
         duration: 250,
         useNativeDriver: true,
       }),
     ]).start(() => {
-      onClose(); 
+      onClose();          // Gọi callback sau khi animation hoàn thành
     });
   };
 
+  /**
+   * ICON HELPER - Trả về icon tương ứng với type
+   */
   const getIcon = () => {
     return type === 'success' ? '✔' : '✘'; 
   };

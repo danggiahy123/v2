@@ -34,6 +34,7 @@ export const saveAuthDataThunk = createAsyncThunk(
       await saveAuthData(authData);
       return authData;
     } catch (error) {
+      console.error('Save auth data error:', error);
       return rejectWithValue('Failed to save auth data');
     }
   }
@@ -149,6 +150,7 @@ export const restoreAuthState = createAsyncThunk(
       const authData = await getAuthData();
       return authData;
     } catch (error) {
+      console.error('Restore auth state error:', error);
       return rejectWithValue('Không khôi phục được trạng thái xác thực');
     }
   }
@@ -163,6 +165,7 @@ export const logout = createAsyncThunk(
       console.log('🚪 User logged out successfully');
       return true;
     } catch (error) {
+      console.error('Logout error:', error);
       return rejectWithValue('Không thể đăng xuất');
     }
   }
@@ -253,22 +256,40 @@ export const updateProfile = createAsyncThunk(
   }
 );
 
+/**
+ * AUTH SLICE - Redux slice quản lý authentication state
+ * MÔ TẢ: Chứa tất cả logic authentication của app
+ * BAO GỒM:
+ * - Sync reducers: setPhone, clearError, clearMessage, loginSuccess
+ * - Async thunks: sendOTP, verifyOTP, completeRegistration, restoreAuthState, logout, getProfile, updateProfile
+ * - State management cho loading, error, message, user data
+ */
 const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
+    /**
+     * SYNC REDUCERS - Các action đồng bộ
+     */
+    
+    // Set số điện thoại và clear errors
     setPhone(state, action: PayloadAction<string>) {
       state.phone = action.payload;
       state.error = null;
       state.message = null;
     },
+    
+    // Clear error message
     clearError(state) {
       state.error = null;
     },
+    
+    // Clear success message
     clearMessage(state) {
       state.message = null;
     },
 
+    // Set login success state (được gọi sau khi verify OTP thành công)
     loginSuccess(state, action: PayloadAction<AuthData>) {
       state.userId = action.payload.userId;
       state.user = action.payload.user;
@@ -276,14 +297,21 @@ const authSlice = createSlice({
       state.isLoggedIn = true;
     },
   },
+  /**
+   * EXTRA REDUCERS - Xử lý async thunks
+   * MÔ TẢ: Các reducer xử lý kết quả từ async actions
+   */
   extraReducers: (builder) => {
-    // Save Auth Data - separate thunk
+    /**
+     * SAVE AUTH DATA - Lưu dữ liệu auth vào AsyncStorage
+     * FLOW: Background operation không hiển thị loading
+     */
     builder
       .addCase(saveAuthDataThunk.pending, (state) => {
-        // Don't show loading for this background operation
+        // Không hiển thị loading cho background operation
       })
       .addCase(saveAuthDataThunk.fulfilled, (state, action) => {
-        // After saving to storage, update login state
+        // Sau khi lưu vào storage, cập nhật login state
         state.userId = action.payload.userId;
         state.user = action.payload.user;
         state.phone = action.payload.user.phone;
@@ -295,7 +323,10 @@ const authSlice = createSlice({
         console.error('❌ Failed to save auth data:', action.payload);
       });
 
-    // Send OTP
+    /**
+     * SEND OTP - Gửi mã OTP đến số điện thoại
+     * FLOW: Loading -> API call -> Success/Error
+     */
     builder
       .addCase(sendOTP.pending, (state) => {
         state.loading = true;
@@ -312,7 +343,10 @@ const authSlice = createSlice({
         state.error = action.payload as string;
       });
 
-    // Verify OTP
+    /**
+     * VERIFY OTP - Xác thực mã OTP
+     * FLOW: Loading -> API call -> Success (navigate to register/home) / Error
+     */
     builder
       .addCase(verifyOTP.pending, (state) => {
         state.loading = true;
@@ -322,7 +356,7 @@ const authSlice = createSlice({
       .addCase(verifyOTP.fulfilled, (state, action) => {
         state.loading = false;
         state.message = action.payload.message || 'OTP verified successfully';
-        
+        // Không set login state ở đây - sẽ được xử lý ở screen level
       })
       .addCase(verifyOTP.rejected, (state, action) => {
         state.loading = false;
@@ -396,7 +430,7 @@ const authSlice = createSlice({
       })
       .addCase(getProfile.fulfilled, (state, action) => {
         state.loading = false;
-        state.message = action.payload.message || 'Đã tải hồ sơ thành công';
+        // state.message = action.payload.message || 'Đã tải hồ sơ thành công';
         // Update user data if available
         if (action.payload.data?.user) {
           state.user = action.payload.data.user;
@@ -416,8 +450,7 @@ const authSlice = createSlice({
       })
       .addCase(updateProfile.fulfilled, (state, action) => {
         state.loading = false;
-        state.message = action.payload.message || 'Đã tải hồ sơ thành công';
-        // Don't update user here - it's handled by saveAuthDataThunk.fulfilled
+        state.message = action.payload.message || 'Cập nhật hồ sơ thành công';
       })
       .addCase(updateProfile.rejected, (state, action) => {
         state.loading = false;

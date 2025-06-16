@@ -1,45 +1,62 @@
+/**
+ * ACCOUNT INFO SCREEN - Màn hình chỉnh sửa thông tin tài khoản
+ * MÔ TẢ: Screen cho phép user cập nhật profile (tên, giới tính, avatar)
+ * CHỨC NĂNG:
+ * - Edit full name với validation
+ * - Select gender (Nam/Nữ/Khác) với picker
+ * - Upload/change avatar từ camera hoặc gallery
+ * - Image compression để tối ưu upload
+ * - Form validation trước khi submit
+ * - Notification feedback cho user actions
+ * - Permission handling cho camera/gallery
+ * API: updateProfile với FormData cho file upload
+ */
 import { Ionicons } from '@expo/vector-icons';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { clearError, clearMessage, updateProfile } from '../../store/slices/authSlice';
-import Notification from '../../components/ui/Notification'; // Import component notification
+import { Notification } from '../../components/ui'; // Import component notification
 
 export default function AccountInfoScreen() {
+  // REDUX STATE - Lấy auth state từ store
   const { user, userId, loading, error, message } = useAppSelector((state) => state.auth);
   const dispatch = useAppDispatch();
   const router = useRouter();
 
+  // FORM STATE - Quản lý form data
   const [fullName, setFullName] = useState(user?.full_name || '');
   const [gender, setGender] = useState<'male' | 'female' | 'other'>(user?.gender as any || 'male');
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<any>(null);
-  const [showGenderPicker, setShowGenderPicker] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);  // Preview image
+  const [imageFile, setImageFile] = useState<any>(null);                   // File object for upload
+  const [showGenderPicker, setShowGenderPicker] = useState(false);         // Gender picker modal
 
-  // Notification states
+  // NOTIFICATION STATE - Quản lý thông báo
   const [notification, setNotification] = useState({
     visible: false,
     message: '',
     type: 'success' as 'success' | 'error'
   });
 
-  // Initialize form with user data
+  /**
+   * INITIALIZATION EFFECT - Khởi tạo form với dữ liệu user
+   */
   useEffect(() => {
     if (user) {
       setFullName(user.full_name);
@@ -47,7 +64,9 @@ export default function AccountInfoScreen() {
     }
   }, [user]);
 
-  // Show error notification if exists
+  /**
+   * ERROR NOTIFICATION EFFECT - Hiển thị error từ Redux
+   */
   useEffect(() => {
     if (error) {
       setNotification({
@@ -59,51 +78,65 @@ export default function AccountInfoScreen() {
     }
   }, [error, dispatch]);
 
-  // Updated useEffect to handle success and other messages
-useEffect(() => {
-  if (message) {
-    console.log('📢 Message received:', message); // Debug log
+  /**
+   * SUCCESS MESSAGE EFFECT - Xử lý success message từ Redux
+   * LOGIC: Detect success patterns và hiển thị notification phù hợp
+   */
+  useEffect(() => {
+    if (message) {
+      console.log('📢 Message received:', message); // Debug log
 
-    // Check for success messages
-    const isSuccess = message.includes('updated successfully') || 
-                      message.includes('thành công') ||
-                      message.includes('success') ||
-                      message.toLowerCase().includes('update');
-    
-    if (isSuccess) {
-      setNotification({
-        visible: true,
-        message: 'Cập nhật thông tin thành công!',
-        type: 'success'
-      });
+      // Kiểm tra các pattern success message
+      const isSuccess = message.includes('updated successfully') ||
+        message.includes('thành công') ||
+        message.includes('success') ||
+        message.toLowerCase().includes('update') ||
+        message.includes('cập nhật thành công');
+      if (isSuccess) {
+        // Hiển thị success notification
+        setNotification({
+          visible: true,
+          message: 'Cập nhật hồ sơ thành công!',
+          type: 'success'
+        });
 
-      // Delay to let user see the notification before hiding it
-      setTimeout(() => {
-        setNotification(prev => ({ ...prev, visible: false }));
-        dispatch(clearMessage()); // Clear message after some time
-      }, 2500); // Increase the time the notification is shown
-    } else {
-      // Show original message if not success
-      setNotification({
-        visible: true,
-        message: message,
-        type: 'success'
-      });
-      dispatch(clearMessage());
+        // Auto hide notification và navigate back sau 2s
+        setTimeout(() => {
+          setNotification(prev => ({ ...prev, visible: false }));
+          dispatch(clearMessage());
+          // Navigate back to previous screen - respects navigation stack
+          router.back();
+        }, 2000); // Thời gian hiển thị notification
+      } else {
+        // Hiển thị message gốc nếu không phải success
+        setNotification({
+          visible: true,
+          message: message,
+          type: 'error'
+        });
+        dispatch(clearMessage());
+      }
     }
-  }
-}, [message, dispatch, router]);
+  }, [message, dispatch, router]);
 
-  // Close notification handler
+  /**
+   * EVENT HANDLERS
+   */
+
+  // Đóng notification
   const handleCloseNotification = () => {
     setNotification(prev => ({ ...prev, visible: false }));
   };
 
-  // Compress image to reduce file size
+  /**
+   * IMAGE PROCESSING FUNCTIONS
+   */
+
+  // Nén ảnh để giảm dung lượng trước khi upload
   const compressImage = async (uri: string) => {
     try {
       console.log('🔄 Compressing image:', uri);
-      
+
       const manipulated = await ImageManipulator.manipulateAsync(
         uri,
         [
@@ -114,14 +147,14 @@ useEffect(() => {
           format: ImageManipulator.SaveFormat.JPEG,
         }
       );
-      
+
       console.log('✅ Image compressed:', {
         original: uri,
         compressed: manipulated.uri,
         width: manipulated.width,
         height: manipulated.height
       });
-      
+
       return manipulated.uri;
     } catch (error) {
       console.error('❌ Image compression failed:', error);
@@ -132,7 +165,7 @@ useEffect(() => {
   const requestMediaPermissions = async () => {
     const mediaLibraryStatus = await ImagePicker.requestMediaLibraryPermissionsAsync();
     const cameraStatus = await ImagePicker.requestCameraPermissionsAsync();
-    
+
     if (mediaLibraryStatus.status !== 'granted' || cameraStatus.status !== 'granted') {
       setNotification({
         visible: true,
@@ -141,7 +174,7 @@ useEffect(() => {
       });
       return false;
     }
-    
+
     return true;
   };
 
@@ -171,21 +204,21 @@ useEffect(() => {
 
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
-        
+
         // Compress image before setting
         const compressedUri = await compressImage(asset.uri);
         setSelectedImage(compressedUri);
-        
+
         // Create file object for upload
         const fileExtension = compressedUri.split('.').pop();
         const fileName = `avatar.${fileExtension}`;
-        
+
         setImageFile({
           uri: compressedUri,
           type: `image/${fileExtension}`,
           name: fileName,
         });
-        
+
         console.log('📸 Image selected and compressed:', {
           original: asset.uri,
           compressed: compressedUri,
@@ -213,21 +246,21 @@ useEffect(() => {
 
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
-        
+
         // Compress image before setting
         const compressedUri = await compressImage(asset.uri);
         setSelectedImage(compressedUri);
-        
+
         // Create file object for upload
         const fileExtension = compressedUri.split('.').pop();
         const fileName = `avatar.${fileExtension}`;
-        
+
         setImageFile({
           uri: compressedUri,
           type: `image/${fileExtension}`,
           name: fileName,
         });
-        
+
         console.log('📷 Camera image compressed:', {
           original: asset.uri,
           compressed: compressedUri,
@@ -254,7 +287,7 @@ useEffect(() => {
       });
       return false;
     }
-    
+
     if (fullName.trim().length < 2) {
       setNotification({
         visible: true,
@@ -269,7 +302,7 @@ useEffect(() => {
 
   const handleSave = async () => {
     if (!validateForm()) return;
-    
+
     if (!userId) {
       setNotification({
         visible: true,
@@ -298,7 +331,7 @@ useEffect(() => {
 
     try {
       const result = await dispatch(updateProfile({ userId, profileData }));
-      
+
       if (updateProfile.fulfilled.match(result)) {
         console.log('✅ Hồ sơ được cập nhật thành công:', result.payload);
         console.log('✅ Thông báo kết quả:', result.payload?.message);
@@ -335,7 +368,7 @@ useEffect(() => {
   };
 
   const handleGoBack = () => {
-    router.push('/settings');
+    router.back();
   };
 
   if (!user) {
@@ -359,11 +392,11 @@ useEffect(() => {
         <View style={styles.placeholder} />
       </View>
 
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <ScrollView 
+        <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
@@ -378,7 +411,7 @@ useEffect(() => {
                 <View style={styles.avatarPlaceholder}>
                   <Ionicons name="person" size={40} color="#666" />
                 </View>
-              )} 
+              )}
               {/* Camera Icon */}
               <View style={styles.cameraIcon}>
                 <Ionicons name="camera" size={16} color="#fff" />
@@ -388,7 +421,7 @@ useEffect(() => {
 
           {/* Form Section */}
           <View style={styles.formSection}>
-            
+
             {/* Họ và tên */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Họ và tên</Text>
@@ -404,7 +437,7 @@ useEffect(() => {
             {/* Giới tính */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Giới tính</Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.input}
                 onPress={() => setShowGenderPicker(true)}
               >
@@ -441,7 +474,7 @@ useEffect(() => {
 
         {/* Save Button */}
         <View style={styles.buttonSection}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.saveButton, loading && styles.saveButtonDisabled]}
             onPress={handleSave}
             disabled={loading}
@@ -460,29 +493,29 @@ useEffect(() => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Chọn giới tính</Text>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={styles.modalOption}
               onPress={() => handleGenderSelect('male')}
             >
               <Text style={styles.modalOptionText}>Nam</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={styles.modalOption}
               onPress={() => handleGenderSelect('female')}
             >
               <Text style={styles.modalOptionText}>Nữ</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={styles.modalOption}
               onPress={() => handleGenderSelect('other')}
             >
               <Text style={styles.modalOptionText}>Khác</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={styles.modalCancel}
               onPress={() => setShowGenderPicker(false)}
             >

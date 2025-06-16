@@ -54,7 +54,7 @@ export default function HelpScreen() {
             <Text style={styles.cardTitle}>Tải phim offline?</Text>
           </View>
           <Text style={styles.cardText}>
-            Tài khoản Premium có thể tải phim để xem không cần mạng trong phần "Tải về".
+            Tài khoản Premium có thể tải phim để xem không cần mạng trong phần &quot;Tải về&quot;.
           </Text>
         </View>
 

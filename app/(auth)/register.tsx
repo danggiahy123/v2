@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -10,12 +10,12 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { clearError, clearMessage, completeRegistration } from '../../store/slices/authSlice';
-import Notification from '../../components/ui/Notification';
-import { Keyboard, TouchableWithoutFeedback } from 'react-native';
+import { Notification } from '../../components/ui';
 
 export default function RegisterScreen() {
   const [fullName, setFullName] = useState('');
