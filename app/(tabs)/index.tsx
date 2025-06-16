@@ -18,7 +18,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { movieService } from '../../services/movieService';
 import { useAppSelector } from '../../store/hooks';
 import { BannerMovie, ContinueWatchingItem, GridMovie } from '../../types/movie';
-import MovieListModal from '../../components/MovieListModal';
 import { useRouter } from 'expo-router';
 import TabHeader from '../../components/ui/TabHeader';
 
@@ -165,14 +164,11 @@ export default function HomeScreen() {
       listener: (event: any) => {
         const currentScrollY = event.nativeEvent.contentOffset.y;
         const scrollDiff = currentScrollY - lastScrollY.current;
-        
-        // Detect even slight scroll movements
-        if (scrollDiff > 2 && currentScrollY > 0) { // Scrolling up slightly
+        if (scrollDiff > 2 && currentScrollY > 0) { 
           headerOpacity.setValue(0);
-        } else if (scrollDiff < -2 || currentScrollY <= 0) { // Scrolling down slightly or at top
+        } else if (scrollDiff < -2 || currentScrollY <= 0) { 
           headerOpacity.setValue(1);
         }
-        
         lastScrollY.current = currentScrollY;
       }
     }
@@ -526,16 +522,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 16,
   },
-  section: { 
-    paddingLeft: 20,
-    marginTop: 32 
+ section: {
+    marginTop: 32, // Khoảng cách trên các section phim
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
-    paddingHorizontal: 4, 
+    paddingHorizontal: 10, 
   },
   sectionTitle: {
     color: '#FFFFFF',
@@ -552,6 +547,7 @@ const styles = StyleSheet.create({
   },
   movieList: {
     paddingRight: 20,
+    paddingLeft: 5, 
   },
   movieItem: {
     width: 140,

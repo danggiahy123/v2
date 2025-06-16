@@ -38,7 +38,7 @@ export default function TabHeader({
       ]}
     >
       <LinearGradient
-        colors={['rgb(0, 0, 0)', 'rgba(0, 0, 0, 0.8)', 'transparent']}
+        colors={['rgba(0, 0, 0, 0.93)', 'rgba(0, 0, 0, 0.75)', 'transparent']}
         style={styles.gradient}
         pointerEvents="none"
       />

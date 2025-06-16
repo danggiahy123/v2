@@ -8,7 +8,7 @@ import {
   View,
   Animated,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+
 import TabHeader from '../../components/ui/TabHeader';
 
 export default function SeriesScreen() {

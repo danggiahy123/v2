@@ -394,7 +394,6 @@ const authSlice = createSlice({
       })
       .addCase(getProfile.fulfilled, (state, action) => {
         state.loading = false;
-        // Don't set message for normal profile loading
         if (action.payload.data?.user) {
           state.user = action.payload.data.user;
         }
