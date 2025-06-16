@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   ScrollView,
   StatusBar,
@@ -10,11 +10,13 @@ import {
 } from 'react-native';
 
 import TabHeader from '../../components/ui/TabHeader';
+import SearchModal from '../../components/ui/SearchModal';
 
 export default function SeriesScreen() {
   const scrollY = useRef(new Animated.Value(0)).current;
   const headerOpacity = useRef(new Animated.Value(1)).current;
   const lastScrollY = useRef(0);
+  const [searchVisible, setSearchVisible] = useState(false);
 
   const handleScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -57,9 +59,15 @@ export default function SeriesScreen() {
 
       <TabHeader 
         title="Phim bộ"
-        onSearchPress={() => {}}
+        onSearchPress={() => setSearchVisible(true)}
         onNotificationPress={() => {}}
         opacity={headerOpacity}
+      />
+
+      <SearchModal
+        visible={searchVisible}
+        onClose={() => setSearchVisible(false)}
+        category="series"
       />
     </View>
   );

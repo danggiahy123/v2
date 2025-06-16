@@ -1,0 +1,1 @@
+ // lúc search ra phim bấm vào vào phim sẽ ra trang này 

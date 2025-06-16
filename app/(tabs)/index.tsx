@@ -12,6 +12,8 @@ import {
   TouchableOpacity,
   View,
   Animated,
+  Modal,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,10 +22,18 @@ import { useAppSelector } from '../../store/hooks';
 import { BannerMovie, ContinueWatchingItem, GridMovie } from '../../types/movie';
 import { useRouter } from 'expo-router';
 import TabHeader from '../../components/ui/TabHeader';
+import SearchModal from '../../components/ui/SearchModal';
 
 const { width } = Dimensions.get('window');
 const POSTER_WIDTH = (width - 60) / 3;
 const HEADER_HEIGHT = 120; // Approximate header height including safe area
+
+/**
+ * Interface cho kết quả tìm kiếm phim
+ */
+interface SearchResult extends GridMovie {
+  description?: string;
+}
 
 interface MovieSection {
   title: string;
@@ -51,6 +61,13 @@ export default function HomeScreen() {
   const [selectedTitle, setSelectedTitle] = useState('');
 
   const bannerFlatListRef = useRef<FlatList>(null);
+
+  // Thêm state cho chức năng search
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchPage, setSearchPage] = useState(1);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMoreResults, setHasMoreResults] = useState(true);
 
   useEffect(() => {
     loadHomeData();
@@ -313,6 +330,62 @@ export default function HomeScreen() {
     );
   };
 
+  /**
+   * Hàm xử lý tìm kiếm phim
+   * @param resetPage - True nếu muốn reset về trang 1
+   */
+  const handleSearch = async (resetPage = true) => {
+    try {
+      if (resetPage) {
+        setSearchPage(1);
+        setSearchResults([]);
+        setHasMoreResults(true);
+      }
+
+      if (!searchQuery.trim()) {
+        setSearchResults([]);
+        return;
+      }
+
+      setIsLoadingMore(true);
+      const currentPage = resetPage ? 1 : searchPage;
+
+      // Gọi API search từ movieService
+      const response = await movieService.searchMovies({
+        tuKhoa: searchQuery,
+        page: currentPage,
+        limit: 20
+      });
+
+      if (response?.status === 'success' && response.data) {
+        const newResults = response.data.movies || [];
+        
+        if (resetPage) {
+          setSearchResults(newResults);
+        } else {
+          setSearchResults(prev => [...prev, ...newResults]);
+        }
+
+        // Kiểm tra xem còn kết quả để load more không
+        setHasMoreResults(newResults.length === 20);
+        setSearchPage(currentPage + 1);
+      }
+    } catch (error) {
+      console.error('Lỗi khi tìm kiếm phim:', error);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
+
+  /**
+   * Xử lý load thêm kết quả khi scroll đến cuối
+   */
+  const handleLoadMore = () => {
+    if (!isLoadingMore && hasMoreResults) {
+      handleSearch(false);
+    }
+  };
+
   const renderContent = () => {
     if (loading) {
       return (
@@ -335,7 +408,7 @@ export default function HomeScreen() {
           }>
           {renderBanner()}
           {renderContinueWatching()}
-          {renderMovieGrid(recommendedMovies, 'Đề xuất cho bạn', 'recommended')}
+          {renderMovieGrid(recommendedMovies, 'Đề xuất cho bạn')}
           {sections.map((section, index) => (
             <View key={index}>
               {renderMovieGrid(section.movies, section.title)}
@@ -343,10 +416,12 @@ export default function HomeScreen() {
           ))}
         </Animated.ScrollView>
         <TabHeader 
-          title=""
           onSearchPress={() => setSearchModalVisible(true)}
-          onNotificationPress={() => {}}
           opacity={headerOpacity}
+        />
+        <SearchModal
+          visible={searchModalVisible}
+          onClose={() => setSearchModalVisible(false)}
         />
       </View>
     );
@@ -616,5 +691,66 @@ const styles = StyleSheet.create({
   continueItem: {
     width: 130,
     marginRight: 12,
+  },
+  // Styles cho modal search
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  searchHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+  },
+  closeButton: {
+    padding: 8,
+  },
+  searchInput: {
+    flex: 1,
+    height: 40,
+    backgroundColor: '#333',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    marginLeft: 16,
+    color: '#FFF',
+    fontSize: 16,
+  },
+  clearButton: {
+    padding: 8,
+    marginLeft: 8,
+  },
+  searchResults: {
+    padding: 16,
+  },
+  searchResultItem: {
+    flex: 1,
+    margin: 4,
+    maxWidth: `${100 / 3}%`,
+  },
+  searchResultPoster: {
+    width: '100%',
+    aspectRatio: 2/3,
+    borderRadius: 8,
+    backgroundColor: '#222',
+  },
+  searchResultTitle: {
+    color: '#FFF',
+    fontSize: 12,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  emptyResults: {
+    padding: 32,
+    alignItems: 'center',
+  },
+  emptyResultsText: {
+    color: '#999',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  loadingMore: {
+    padding: 16,
   },
 });
