@@ -1,7 +1,18 @@
+/**
+ * PROFILE SCREEN - Màn hình hiển thị thông tin cá nhân
+ * MÔ TẢ: Screen hiển thị chi tiết profile của user đã đăng nhập
+ * CHỨC NĂNG:
+ * - Hiển thị avatar, tên, phone, email, giới tính
+ * - Pull to refresh để reload profile
+ * - Navigation đến edit profile screen
+ * - Back button về explore screen
+ * - Notification system cho feedback
+ * - Verified badge cho phone number
+ * DATA SOURCE: Redux auth state + getProfile API
+ */
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
   Image,
   RefreshControl,
   ScrollView,
@@ -13,33 +24,44 @@ import {
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import { clearError, clearMessage, getProfile } from '../../../store/slices/authSlice';
 import { Ionicons } from '@expo/vector-icons'; 
-import Notification from '../../../components/ui/Notification'; 
+import { Notification } from '../../../components/ui'; 
 
 export default function ProfileScreen() {
+  // REDUX STATE - Lấy auth state từ store
   const { user, userId, loading, error, message } = useAppSelector((state) => state.auth);
   const dispatch = useAppDispatch();
   const router = useRouter();
 
+  // NOTIFICATION STATE - Quản lý thông báo
   const [notificationVisible, setNotificationVisible] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
   const [notificationType, setNotificationType] = useState<'success' | 'error'>('success');
 
+  /**
+   * LOAD PROFILE EFFECT - Tự động load profile khi có userId
+   */
   useEffect(() => {
     if (userId) {
       dispatch(getProfile(userId));
     }
   }, [userId, dispatch]);
 
-  // Handle errors and messages properly without alerting multiple times
-  useEffect(() => {
-    if (error) {
-      setNotificationMessage(error);
-      setNotificationType('error');
-      setNotificationVisible(true);
-      dispatch(clearError());
-    }
-  }, [error, dispatch]);
+  /**
+   * NOTIFICATION EFFECTS - Xử lý hiển thị thông báo từ Redux
+   */
 
+   // Hiển thị error notification
+   useEffect(() => {
+    if (message) {
+      setNotificationMessage(message);
+      setNotificationType('success');
+      setNotificationVisible(true);
+      setTimeout(() => {
+        dispatch(clearMessage());
+      }, 3000);
+    }
+  }, [message, dispatch]);
+  // Hiển thị success notification
   useEffect(() => {
     if (message) {
       setNotificationMessage(message);
@@ -49,24 +71,37 @@ export default function ProfileScreen() {
     }
   }, [message, dispatch]);
 
+  /**
+   * EVENT HANDLERS
+   */
+  
+  // Pull to refresh - reload profile data
   const handleRefresh = () => {
     if (userId) {
       dispatch(getProfile(userId));
     }
   };
 
+  // Navigate đến edit profile screen
   const handleEditProfile = () => {
     router.push('/settings/account');
   };
 
-  const handleGoBack = () => {
-    router.back();
+  // Navigate về home screen thay vì explore
+  // const handleGoHome = () => {
+  //   router.push('/(tabs)');
+  // };
+
+  // Navigate về home screen thay vì explore
+  const handleGoExplore = () => {
+    router.push('/(tabs)/explore');
   };
 
+  // Đóng notification
   const handleCloseNotification = () => {
     setNotificationVisible(false); 
   };
-
+// ------------------------------------------------------------
   if (!user) {
     return (
       <View style={styles.container}>
@@ -83,7 +118,7 @@ export default function ProfileScreen() {
       refreshControl={<RefreshControl refreshing={loading} onRefresh={handleRefresh} />}
     >
       <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => router.push('/(tabs)/explore')} style={styles.backButton}>
+        <TouchableOpacity onPress={handleGoExplore} style={styles.backButton}>
           <Ionicons name="chevron-back" size={24} color="white" />
         </TouchableOpacity>
         <Text style={styles.topBarTitle}>Hồ sơ</Text>

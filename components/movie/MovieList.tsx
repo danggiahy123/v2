@@ -1,3 +1,18 @@
+/**
+ * MOVIE LIST COMPONENT
+ * MÔ TẢ: Component hiển thị danh sách phim dạng grid với pagination
+ * CHỨC NĂNG:
+ * - Hiển thị movies trong grid layout (2 columns)
+ * - Pagination support với infinite scroll
+ * - Loading states (initial + load more)
+ * - Error handling
+ * - Movie item click navigation
+ * - Category-based movie loading
+ * PROPS:
+ * - category: Loại phim cần load
+ * - title: Tiêu đề hiển thị
+ * - onClose: Callback khi đóng modal
+ */
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -11,9 +26,9 @@ import {
   StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { movieService } from '../services/movieService';
-import type { GridMovie } from '../types/movie';
+// import { useRouter } from 'expo-router'; // Unused for now
+import { movieService } from '../../services/movieService';
+import type { GridMovie } from '../../types/movie';
 
 const { width } = Dimensions.get('window');
 const ITEMS_PER_PAGE = 20;
@@ -27,19 +42,27 @@ interface MovieListProps {
 export default function MovieList({ category, title, onClose }: MovieListProps) {
   const [movies, setMovies] = useState<GridMovie[]>([]);
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(1); // eslint-disable-line @typescript-eslint/no-unused-vars
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   useEffect(() => {
     loadMovies();
-  }, [category]);
+  }, [category]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /**
+   * CHỨC NĂNG: Load movies theo category
+   * MÔ TẢ: Function chính để load movies từ API dựa trên category
+   * THAM SỐ: isLoadingMore - true nếu đang load thêm (pagination)
+   * LOGIC: Switch case để gọi đúng API theo category
+   */
   const loadMovies = async (isLoadingMore = false) => {
     if (!isLoadingMore) setLoading(true);
     try {
       let response;
       console.log('Loading movies for category:', category);
+      
+      // MOVIE API ROUTING - Gọi API tương ứng với category
       switch (category) {
         case 'trending':
           response = await movieService.getTrending(ITEMS_PER_PAGE);
@@ -63,6 +86,7 @@ export default function MovieList({ category, title, onClose }: MovieListProps) 
           response = await movieService.getNewReleases({ limit: ITEMS_PER_PAGE, days: 30 });
           break;
         default:
+          // Fallback - nếu category không match thì load new releases
           response = await movieService.getNewReleases({ limit: ITEMS_PER_PAGE, days: 30 });
       }
 

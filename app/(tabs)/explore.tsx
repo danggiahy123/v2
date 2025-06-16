@@ -1,80 +1,112 @@
+/**
+ * EXPLORE SCREEN - Màn hình mở rộng/menu chính
+ * MÔ TẢ: Screen chứa menu điều hướng đến các tính năng phụ và settings
+ * CHỨC NĂNG:
+ * - Hiển thị thông tin user hiện tại
+ * - Menu điều hướng đến profile, settings, help
+ * - Logout functionality với confirmation modal
+ * - Navigation đến các sub-screens
+ * - User avatar display
+ * LAYOUT: Header + ScrollView với các section menu
+ */
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert } from 'react-native';
 import {
+  Alert,
   Image,
+  Modal,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  Modal,
 } from 'react-native';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { logout } from '../../store/slices/authSlice';
 
 export default function ExploreScreen() {
+  // REDUX STATE - Lấy thông tin user từ auth state
   const { user } = useAppSelector((state) => state.auth);
   const dispatch = useAppDispatch();
   const router = useRouter();
 
+  // LOCAL STATE - Quản lý modal logout
   const [isLogoutModalVisible, setIsLogoutModalVisible] = useState(false); 
   const [notificationMessage, setNotificationMessage] = useState('');
 
+  /**
+   * NAVIGATION HANDLERS - Các function điều hướng đến screens khác
+   */
+  
+  // Điều hướng đến settings chính
   const handleSettings = () => {
     router.push('/settings' as any);
   };
 
+  // Placeholder cho tính năng download (chưa implement)
   const handleDownloads = () => {
     Alert.alert('Thông báo', 'Tính năng đang phát triển');
   };
 
-const handleHelp = () => {
-  router.push('/settings/help');
-};
+  // Điều hướng đến help center
+  const handleHelp = () => {
+    router.push('/settings/help');
+  };
 
-const handleContact = () => {
-  router.push('/settings/contact');
-};
+  // Điều hướng đến contact info
+  const handleContact = () => {
+    router.push('/settings/contact');
+  };
 
-const handleAbout = () => {
-  router.push('/settings/about');
-};
+  // Điều hướng đến about page
+  const handleAbout = () => {
+    router.push('/settings/about');
+  };
 
-const handlePrivacyPolicy = () => {
-  router.push('/settings/privacy');
-};
+  // Điều hướng đến privacy policy
+  const handlePrivacyPolicy = () => {
+    router.push('/settings/privacy');
+  };
 
-const handleTerms = () => {
-  router.push('/settings/terms');
-};
+  // Điều hướng đến terms of service
+  const handleTerms = () => {
+    router.push('/settings/terms');
+  };
 
 
 
+  /**
+   * LOGOUT HANDLERS - Xử lý đăng xuất với confirmation
+   */
+  
+  // Hiển thị modal xác nhận đăng xuất
   const handleLogout = () => {
     setNotificationMessage('Bạn có chắc chắn muốn đăng xuất?');
     setIsLogoutModalVisible(true);
   };
 
- 
+  // Xác nhận đăng xuất - gọi Redux action và điều hướng
   const confirmLogout = async () => {
     try {
-      const result = await dispatch(logout());
+      const result = await dispatch(logout()); // Gọi logout action
       if (logout.fulfilled.match(result)) {
+        // Đăng xuất thành công - chuyển về login screen
         router.replace('/(auth)/login' as any);
       } else if (logout.rejected.match(result)) {
+        // Đăng xuất thất bại - hiển thị error
         setNotificationMessage('Không thể đăng xuất. Vui lòng thử lại.');
         setIsLogoutModalVisible(true);
       }
-    } catch (error) {
+    } catch (err) {
+      console.error('Logout error:', err);
       setNotificationMessage('Có lỗi xảy ra khi đăng xuất');
       setIsLogoutModalVisible(true);
     }
   };
 
-
+  // Hủy đăng xuất - đóng modal
   const cancelLogout = () => {
     setIsLogoutModalVisible(false);
   };
@@ -91,7 +123,7 @@ const handleTerms = () => {
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.section}>
-          <TouchableOpacity onPress={() => router.push('/profile')} style={styles.userHeader}>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/profile')} style={styles.userHeader}>
             <View style={styles.userAvatarContainer}>
               {user?.avatar ? (
                 <Image source={{ uri: user.avatar }} style={styles.userAvatar} resizeMode="cover" />

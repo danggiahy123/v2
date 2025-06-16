@@ -2,18 +2,17 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
+  Keyboard,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
   TouchableWithoutFeedback,
-  Keyboard,
+  View,
 } from 'react-native';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { clearError, clearMessage, sendOTP, verifyOTP } from '../../store/slices/authSlice';
-import Notification from '../../components/ui/Notification'; // Import Notification component
+import { Notification } from '../../components/ui'; // Import Notification component
 
 export default function OTPScreen() {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -129,7 +128,8 @@ export default function OTPScreen() {
         setOtp(['', '', '', '', '', '']);
         setNotification({ visible: true, message: 'Đã gửi lại mã OTP', type: 'success' });
       }
-    } catch (error) {
+    } catch (err) {
+      console.error('Resend OTP error:', err);
       setNotification({ visible: true, message: 'Không thể gửi lại mã OTP', type: 'error' });
     }
   };
