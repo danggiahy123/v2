@@ -1,15 +1,3 @@
-/**
- * PROFILE SCREEN - Màn hình hiển thị thông tin cá nhân
- * MÔ TẢ: Screen hiển thị chi tiết profile của user đã đăng nhập
- * CHỨC NĂNG:
- * - Hiển thị avatar, tên, phone, email, giới tính
- * - Pull to refresh để reload profile
- * - Navigation đến edit profile screen
- * - Back button về explore screen
- * - Notification system cho feedback
- * - Verified badge cho phone number
- * DATA SOURCE: Redux auth state + getProfile API
- */
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -23,35 +11,25 @@ import {
 } from 'react-native';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import { clearError, clearMessage, getProfile } from '../../../store/slices/authSlice';
-import { Ionicons } from '@expo/vector-icons'; 
-import { Notification } from '../../../components/ui'; 
+import { Ionicons } from '@expo/vector-icons';
+import Notification from '../../../components/ui/Notification';
 
 export default function ProfileScreen() {
-  // REDUX STATE - Lấy auth state từ store
   const { user, userId, loading, error, message } = useAppSelector((state) => state.auth);
   const dispatch = useAppDispatch();
   const router = useRouter();
 
-  // NOTIFICATION STATE - Quản lý thông báo
   const [notificationVisible, setNotificationVisible] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
   const [notificationType, setNotificationType] = useState<'success' | 'error'>('success');
 
-  /**
-   * LOAD PROFILE EFFECT - Tự động load profile khi có userId
-   */
   useEffect(() => {
     if (userId) {
       dispatch(getProfile(userId));
     }
   }, [userId, dispatch]);
 
-  /**
-   * NOTIFICATION EFFECTS - Xử lý hiển thị thông báo từ Redux
-   */
-
-   // Hiển thị error notification
-   useEffect(() => {
+  useEffect(() => {
     if (message) {
       setNotificationMessage(message);
       setNotificationType('success');
@@ -61,47 +39,30 @@ export default function ProfileScreen() {
       }, 3000);
     }
   }, [message, dispatch]);
-  // Hiển thị success notification
-  useEffect(() => {
-    if (message) {
-      setNotificationMessage(message);
-      setNotificationType('success');
-      setNotificationVisible(true);
-      dispatch(clearMessage());
-    }
-  }, [message, dispatch]);
 
-  /**
-   * EVENT HANDLERS
-   */
-  
-  // Pull to refresh - reload profile data
+  useEffect(() => {
+    if (error) {
+      setNotificationMessage(error);
+      setNotificationType('error');
+      setNotificationVisible(true);
+      dispatch(clearError());
+    }
+  }, [error, dispatch]);
+
   const handleRefresh = () => {
     if (userId) {
       dispatch(getProfile(userId));
     }
   };
 
-  // Navigate đến edit profile screen
   const handleEditProfile = () => {
     router.push('/settings/account');
   };
 
-  // Navigate về home screen thay vì explore
-  // const handleGoHome = () => {
-  //   router.push('/(tabs)');
-  // };
-
-  // Navigate về home screen thay vì explore
-  const handleGoExplore = () => {
-    router.push('/(tabs)/explore');
-  };
-
-  // Đóng notification
   const handleCloseNotification = () => {
-    setNotificationVisible(false); 
+    setNotificationVisible(false);
   };
-// ------------------------------------------------------------
+
   if (!user) {
     return (
       <View style={styles.container}>
@@ -118,7 +79,7 @@ export default function ProfileScreen() {
       refreshControl={<RefreshControl refreshing={loading} onRefresh={handleRefresh} />}
     >
       <View style={styles.topBar}>
-        <TouchableOpacity onPress={handleGoExplore} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.replace('/(tabs)/explore')} style={styles.backButton}>
           <Ionicons name="chevron-back" size={24} color="white" />
         </TouchableOpacity>
         <Text style={styles.topBarTitle}>Hồ sơ</Text>
@@ -169,6 +130,7 @@ export default function ProfileScreen() {
           <Text style={styles.infoValue}>{user._id}</Text>
         </View>
       </View>
+
       <Notification
         visible={notificationVisible}
         message={notificationMessage}
@@ -188,18 +150,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#000',
-    paddingTop: 50,
-    paddingBottom: 10,
+    paddingTop: 70,
+    paddingBottom: 15,
     paddingHorizontal: 16,
   },
   backButton: {
-    padding: 4,
-    marginRight: 8,
+    padding: 8,
+    marginRight: 12,
+    borderRadius: 20,
   },
   topBarTitle: {
     fontSize: 20,
     color: '#ffffff',
-    fontWeight: '600',
+    fontWeight: '700',
+    flex: 1,
+    textAlign: 'center',
+    marginRight: 40,
   },
   emptyContainer: {
     flex: 1,
