@@ -1,4 +1,4 @@
-import { ContinueWatchingResponse, HomeApiResponse } from '../types/movie';
+import { ContinueWatchingResponse, HomeApiResponse, GridMovie } from '../types/movie';
 
 const API_BASE_URL = 'https://backend-app-lou3.onrender.com';
 
@@ -8,6 +8,29 @@ interface GenericMovieResponse {
     title: string;
     type: 'grid';
     movies: any[];
+  };
+}
+
+/**
+ * Interface cho tham số tìm kiếm phim
+ */
+interface SearchMoviesParams {
+  tuKhoa?: string;
+  page?: number;
+  limit?: number;
+  category?: 'series' | 'anime';
+}
+
+/**
+ * Interface cho response của API tìm kiếm
+ */
+interface SearchMoviesResponse {
+  status: string;
+  data: {
+    movies: GridMovie[];
+    total: number;
+    page: number;
+    limit: number;
   };
 }
 
@@ -175,6 +198,28 @@ export const movieService = {
 
     if (!response.ok) throw new Error(`Failed to fetch coming soon: ${response.status}`);
     return response.json();
+  },
+
+  /**
+   * Tìm kiếm phim theo từ khóa
+   * @param params Tham số tìm kiếm (từ khóa, trang, giới hạn)
+   * @returns Promise<SearchMoviesResponse>
+   */
+  async searchMovies(params?: SearchMoviesParams): Promise<SearchMoviesResponse> {
+    try {
+      const queryParams = new URLSearchParams();
+      if (params?.tuKhoa) queryParams.append('tuKhoa', params.tuKhoa);
+      if (params?.page) queryParams.append('page', params.page.toString());
+      if (params?.limit) queryParams.append('limit', params.limit.toString());
+      if (params?.category) queryParams.append('category', params.category);
+
+      const response = await fetch(`${API_BASE_URL}/api/movies/search?${queryParams.toString()}`);
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Lỗi khi tìm kiếm phim:', error);
+      throw error;
+    }
   },
 };
 

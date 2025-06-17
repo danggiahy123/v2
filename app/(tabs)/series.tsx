@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 
 import TabHeader from '../../components/ui/TabHeader';
+import SearchModal from '../../components/ui/SearchModal';
 
 type Movie = {
   movieId: string;
@@ -31,6 +32,7 @@ export default function SeriesScreen() {
   const scrollY = useRef(new Animated.Value(0)).current;
   const headerOpacity = useRef(new Animated.Value(1)).current;
   const lastScrollY = useRef(0);
+  const [searchVisible, setSearchVisible] = useState(false);
 
   const [banner, setBanner] = useState<Movie[]>([]);
   const [recommended, setRecommended] = useState<Movie[]>([]);
@@ -169,9 +171,15 @@ export default function SeriesScreen() {
 
       <TabHeader
         title="Phim bộ"
-        onSearchPress={() => {}}
+        onSearchPress={() => setSearchVisible(true)}
         onNotificationPress={() => {}}
         opacity={headerOpacity}
+      />
+
+      <SearchModal
+        visible={searchVisible}
+        onClose={() => setSearchVisible(false)}
+        category="series"
       />
     </View>
   );
