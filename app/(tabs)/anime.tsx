@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   ScrollView,
   StatusBar,
@@ -7,16 +7,24 @@ import {
   Text,
   View,
   Animated,
+  FlatList,
+  TouchableOpacity,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import TabHeader from '../../components/ui/TabHeader';
 import SearchModal from '../../components/ui/SearchModal';
+import { animeService } from '../../services/animeService';
 
 export default function AnimeScreen() {
   const scrollY = useRef(new Animated.Value(0)).current;
   const headerOpacity = useRef(new Animated.Value(1)).current;
   const lastScrollY = useRef(0);
   const [searchVisible, setSearchVisible] = useState(false);
+  const [trending, setTrending] = useState<any[]>([]);
+  const [series, setSeries] = useState<any[]>([]);
+  const [movies, setMovies] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const handleScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -37,6 +45,36 @@ export default function AnimeScreen() {
     }
   );
 
+  useEffect(() => {
+    animeService.getAllAnime().then(res => {
+      const data = res.data || {};
+      setTrending(data.trending || []);
+      setSeries(data.series || []);
+      setMovies(data.movies || []);
+      setLoading(false);
+    }).catch(() => {
+      setTrending([]); setSeries([]); setMovies([]); setLoading(false);
+    });
+  }, []);
+
+  const renderSection = (title: string, data: any[]) => (
+    <View style={{ marginBottom: 18 }}>
+      <Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold', marginBottom: 8 }}>{title}</Text>
+      <FlatList
+        data={data}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        keyExtractor={item => item._id}
+        renderItem={({ item }) => (
+          <TouchableOpacity style={{ marginRight: 12, width: 120 }}>
+            <Image source={{ uri: item.poster }} style={{ width: 120, height: 180, borderRadius: 10, backgroundColor: '#222' }} />
+            <Text style={{ color: '#fff', width: 120, marginTop: 6 }} numberOfLines={2}>{item.title}</Text>
+          </TouchableOpacity>
+        )}
+      />
+    </View>
+  );
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#000" />
@@ -47,13 +85,9 @@ export default function AnimeScreen() {
         scrollEventThrottle={16}
       >
         <View style={styles.content}>
-          <View style={styles.comingSoon}>
-            <Ionicons name="happy-outline" size={64} color="#888" />
-            <Text style={styles.comingSoonTitle}>Hoạt hình</Text>
-            <Text style={styles.comingSoonText}>
-              Tính năng này sẽ sớm được cập nhật với danh sách hoạt hình và anime mới nhất
-            </Text>
-          </View>
+          {renderSection('Anime Trending', trending)}
+          {renderSection('Anime Phim Bộ', series)}
+          {renderSection('Anime Chiếu Rạp', movies)}
         </View>
       </Animated.ScrollView>
 
