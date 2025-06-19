@@ -168,7 +168,7 @@ export default function ExploreScreen() {
 
           <TouchableOpacity style={styles.menuItem} onPress={handleAbout}>
             <Ionicons name="information-circle-outline" size={24} color="#fff" style={styles.menuIcon} />
-            <Text style={styles.menuItemText}>Thông tin về FPT </Text>
+            <Text style={styles.menuItemText}>Thông tin về Tech5 Play </Text>
             <Ionicons name="chevron-forward" size={20} color="#ccc" />
           </TouchableOpacity>
 

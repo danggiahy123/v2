@@ -96,12 +96,15 @@ export const movieService = {
   /**
    * API 3: Lấy phim trending (phim hot)
    * ENDPOINT: GET /api/home/trending
-   * THAM SỐ: limit - Số lượng phim (optional)
+   * THAM SỐ: 
+   * - limit - Số lượng phim (optional)
+   * - showAll - Hiển thị tất cả phim (optional)
    * TRẢ VỀ: { data: { title, movies: [] } }
    */
-  async getTrending(limit?: number): Promise<GenericMovieResponse> {
+  async getTrending(limit?: number, showAll?: boolean): Promise<GenericMovieResponse> {
     const queryParams = new URLSearchParams();
-    if (limit) queryParams.append('limit', limit.toString());
+    if (limit && !showAll) queryParams.append('limit', limit.toString());
+    if (showAll) queryParams.append('showAll', 'true');
 
     const url = `${API_BASE_URL}/api/home/trending${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     const response = await fetch(url, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
@@ -113,12 +116,15 @@ export const movieService = {
   /**
    * API 4: Lấy phim đánh giá cao
    * ENDPOINT: GET /api/home/top-rated
-   * THAM SỐ: limit - Số lượng phim (optional)
+   * THAM SỐ: 
+   * - limit - Số lượng phim (optional)
+   * - showAll - Hiển thị tất cả phim (optional)
    * TRẢ VỀ: { data: { title, movies: [] } }
    */
-  async getTopRated(limit?: number): Promise<GenericMovieResponse> {
+  async getTopRated(limit?: number, showAll?: boolean): Promise<GenericMovieResponse> {
     const queryParams = new URLSearchParams();
-    if (limit) queryParams.append('limit', limit.toString());
+    if (limit && !showAll) queryParams.append('limit', limit.toString());
+    if (showAll) queryParams.append('showAll', 'true');
 
     const url = `${API_BASE_URL}/api/home/top-rated${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     const response = await fetch(url, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
@@ -133,12 +139,14 @@ export const movieService = {
    * THAM SỐ:
    * - limit: Số lượng phim (optional)
    * - status: Trạng thái phim ('upcoming' | 'released' | 'ended')
+   * - showAll - Hiển thị tất cả phim (optional)
    * TRẢ VỀ: { data: { title, movies: [] } }
    */
-  async getSports(params?: { limit?: number; status?: 'upcoming' | 'released' | 'ended' }): Promise<GenericMovieResponse> {
+  async getSports(params?: { limit?: number; status?: 'upcoming' | 'released' | 'ended'; showAll?: boolean }): Promise<GenericMovieResponse> {
     const queryParams = new URLSearchParams();
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.limit && !params?.showAll) queryParams.append('limit', params.limit.toString());
     if (params?.status) queryParams.append('status', params.status);
+    if (params?.showAll) queryParams.append('showAll', 'true');
 
     const url = `${API_BASE_URL}/api/home/sports${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     const response = await fetch(url, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
@@ -150,12 +158,15 @@ export const movieService = {
   /**
    * API 6: Lấy anime/hoạt hình
    * ENDPOINT: GET /api/home/anime
-   * THAM SỐ: limit - Số lượng phim (optional)
+   * THAM SỐ: 
+   * - limit - Số lượng phim (optional)
+   * - showAll - Hiển thị tất cả phim (optional)
    * TRẢ VỀ: { data: { title, movies: [] } }
    */
-  async getAnime(limit?: number): Promise<GenericMovieResponse> {
+  async getAnime(limit?: number, showAll?: boolean): Promise<GenericMovieResponse> {
     const queryParams = new URLSearchParams();
-    if (limit) queryParams.append('limit', limit.toString());
+    if (limit && !showAll) queryParams.append('limit', limit.toString());
+    if (showAll) queryParams.append('showAll', 'true');
 
     const url = `${API_BASE_URL}/api/home/anime${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     const response = await fetch(url, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
@@ -167,12 +178,15 @@ export const movieService = {
   /**
    * API 7: Lấy phim Việt Nam
    * ENDPOINT: GET /api/home/vietnamese
-   * THAM SỐ: limit - Số lượng phim (optional)
+   * THAM SỐ: 
+   * - limit - Số lượng phim (optional)
+   * - showAll - Hiển thị tất cả phim (optional)
    * TRẢ VỀ: { data: { title, movies: [] } }
    */
-  async getVietnamese(limit?: number): Promise<GenericMovieResponse> {
+  async getVietnamese(limit?: number, showAll?: boolean): Promise<GenericMovieResponse> {
     const queryParams = new URLSearchParams();
-    if (limit) queryParams.append('limit', limit.toString());
+    if (limit && !showAll) queryParams.append('limit', limit.toString());
+    if (showAll) queryParams.append('showAll', 'true');
 
     const url = `${API_BASE_URL}/api/home/vietnamese${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     const response = await fetch(url, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
@@ -187,12 +201,14 @@ export const movieService = {
    * THAM SỐ:
    * - limit: Số lượng phim (optional)
    * - days: Phim sắp chiếu trong vòng bao nhiêu ngày (optional)
+   * - showAll - Hiển thị tất cả phim (optional)
    * TRẢ VỀ: { data: { title, movies: [] } }
    */
-  async getComingSoon(params?: { limit?: number; days?: number }): Promise<GenericMovieResponse> {
+  async getComingSoon(params?: { limit?: number; days?: number; showAll?: boolean }): Promise<GenericMovieResponse> {
     const queryParams = new URLSearchParams();
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.limit && !params?.showAll) queryParams.append('limit', params.limit.toString());
     if (params?.days) queryParams.append('days', params.days.toString());
+    if (params?.showAll) queryParams.append('showAll', 'true');
 
     const url = `${API_BASE_URL}/api/home/coming-soon${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     const response = await fetch(url, { method: 'GET', headers: { 'Content-Type': 'application/json' } });

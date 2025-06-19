@@ -10,21 +10,35 @@ import {
   FlatList,
   TouchableOpacity,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import TabHeader from '../../components/ui/TabHeader';
-import SearchModal from '../../components/ui/SearchModal';
+import { LinearGradient } from 'expo-linear-gradient';
+import { TabHeader, SearchModal, ViewAllModal } from '../../components/ui';
 import { animeService } from '../../services/animeService';
+import { AnimeBanner } from '../../components/anime';
+
+type Anime = {
+  _id: string;
+  title: string;
+  poster: string;
+  producer?: string;
+  movieType?: string;
+};
 
 export default function AnimeScreen() {
   const scrollY = useRef(new Animated.Value(0)).current;
   const headerOpacity = useRef(new Animated.Value(1)).current;
   const lastScrollY = useRef(0);
   const [searchVisible, setSearchVisible] = useState(false);
-  const [trending, setTrending] = useState<any[]>([]);
-  const [series, setSeries] = useState<any[]>([]);
-  const [movies, setMovies] = useState<any[]>([]);
+  const [viewAllModalVisible, setViewAllModalVisible] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedTitle, setSelectedTitle] = useState('');
+  const [trending, setTrending] = useState<Anime[]>([]);
+  const [series, setSeries] = useState<Anime[]>([]);
+  const [movies, setMovies] = useState<Anime[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const handleScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -45,35 +59,137 @@ export default function AnimeScreen() {
     }
   );
 
-  useEffect(() => {
-    animeService.getAllAnime().then(res => {
-      const data = res.data || {};
+  const fetchAnimeData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await animeService.getAllAnime();
+      const data = response.data || {};
       setTrending(data.trending || []);
       setSeries(data.series || []);
       setMovies(data.movies || []);
+    } catch (err) {
+      console.error('Error fetching anime data:', err);
+      setError('Có lỗi xảy ra khi tải dữ liệu');
+    } finally {
       setLoading(false);
-    }).catch(() => {
-      setTrending([]); setSeries([]); setMovies([]); setLoading(false);
-    });
+    }
+  };
+
+  useEffect(() => {
+    fetchAnimeData();
   }, []);
 
-  const renderSection = (title: string, data: any[]) => (
-    <View style={{ marginBottom: 18 }}>
-      <Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold', marginBottom: 8 }}>{title}</Text>
-      <FlatList
-        data={data}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        keyExtractor={item => item._id}
-        renderItem={({ item }) => (
-          <TouchableOpacity style={{ marginRight: 12, width: 120 }}>
-            <Image source={{ uri: item.poster }} style={{ width: 120, height: 180, borderRadius: 10, backgroundColor: '#222' }} />
-            <Text style={{ color: '#fff', width: 120, marginTop: 6 }} numberOfLines={2}>{item.title}</Text>
-          </TouchableOpacity>
-        )}
-      />
-    </View>
+  const handleViewAll = (category: string, title: string) => {
+    setSelectedCategory(category);
+    setSelectedTitle(title);
+    setViewAllModalVisible(true);
+  };
+
+  const renderMovieItem = ({ item }: { item: Anime }) => (
+    <TouchableOpacity style={styles.movieItem}>
+      <Image source={{ uri: item.poster }} style={styles.poster} />
+    </TouchableOpacity>
   );
+
+  const renderSection = (title: string, data: Anime[], category: string) => {
+    if (!data || data.length === 0) return null;
+
+    return (
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>{title}</Text>
+          <TouchableOpacity onPress={() => handleViewAll(category, title)}>
+            <Text style={styles.seeAllText}>Xem tất cả</Text>
+          </TouchableOpacity>
+        </View>
+        <FlatList
+          data={data}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={item => item._id}
+          renderItem={renderMovieItem}
+          contentContainerStyle={styles.movieList}
+        />
+      </View>
+    );
+  };
+
+  const renderTrendingSection = (data: Anime[]) => {
+    if (!data || data.length === 0) return null;
+
+    return (
+      <View style={styles.trendingSection}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Hoạt hình đang thịnh hành</Text>
+          <TouchableOpacity onPress={() => handleViewAll('trending', 'Hoạt hình đang thịnh hành')}>
+            <Text style={styles.seeAllText}>Xem tất cả</Text>
+          </TouchableOpacity>
+        </View>
+        <FlatList
+          data={data.slice(0, 10)}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.trendingList}
+          renderItem={({ item, index }) => (
+            <TouchableOpacity style={styles.trendingItem}>
+              <View style={styles.rankContainer}>
+                <Text style={styles.rankNumber}>{index + 1}</Text>
+              </View>
+              <Image source={{ uri: item.poster }} style={styles.trendingPoster} />
+              <LinearGradient
+                colors={['transparent', 'rgba(0,0,0,0.9)']}
+                style={styles.trendingGradient}
+              >
+                <Text style={styles.trendingTitle} numberOfLines={2}>{item.title}</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          )}
+          keyExtractor={(item) => item._id}
+        />
+      </View>
+    );
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#000" />
+        <TabHeader
+          title="Hoạt hình"
+          onSearchPress={() => setSearchVisible(true)}
+          onNotificationPress={() => {}}
+          opacity={headerOpacity}
+        />
+        <View style={styles.loading}>
+          <ActivityIndicator size="large" color="#fff" />
+          <Text style={styles.loadingText}>Đang tải dữ liệu...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#000" />
+        <TabHeader
+          title="Hoạt hình"
+          onSearchPress={() => setSearchVisible(true)}
+          onNotificationPress={() => {}}
+          opacity={headerOpacity}
+        />
+        <View style={styles.error}>
+          <Ionicons name="alert-circle" size={48} color="#ff6b6b" />
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={fetchAnimeData}>
+            <Text style={styles.retryButtonText}>Thử lại</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -83,11 +199,13 @@ export default function AnimeScreen() {
         style={styles.scrollView}
         onScroll={handleScroll}
         scrollEventThrottle={16}
+        showsVerticalScrollIndicator={false}
       >
         <View style={styles.content}>
-          {renderSection('Anime Trending', trending)}
-          {renderSection('Anime Phim Bộ', series)}
-          {renderSection('Anime Chiếu Rạp', movies)}
+          <AnimeBanner />
+          {renderTrendingSection(trending)}
+          {renderSection('Hoạt hình phim bộ', series, 'series')}
+          {renderSection('Hoạt hình chiếu rạp', movies, 'movies')}
         </View>
       </Animated.ScrollView>
 
@@ -103,6 +221,13 @@ export default function AnimeScreen() {
         onClose={() => setSearchVisible(false)}
         category="anime"
       />
+
+      <ViewAllModal
+        visible={viewAllModalVisible}
+        onClose={() => setViewAllModalVisible(false)}
+        category={selectedCategory}
+        title={selectedTitle}
+      />
     </View>
   );
 }
@@ -117,26 +242,137 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingTop: 100, // Space for header
+    paddingTop: 120,
   },
-  comingSoon: {
+  section: {
+    marginBottom: 24,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingHorizontal: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#fff',
+    marginBottom: 12,
+    paddingHorizontal: 16,
+  },
+  seeAllText: {
+    color: '#B0B0B0',
+    fontSize: 15,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+    textDecorationColor: 'transparent',
+  },
+  movieList: {
+    paddingLeft: 15,
+  },
+  movieItem: {
+    marginRight: 20,
+  },
+  poster: {
+    width: 120,
+    height: 180,
+    borderRadius: 8,
+    backgroundColor: '#1a1a1a',
+  },
+  loading: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 40,
-    paddingVertical: 100,
   },
-  comingSoonTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
+  loadingText: {
     color: '#fff',
-    marginTop: 20,
-    marginBottom: 12,
+    marginTop: 16,
   },
-  comingSoonText: {
+  error: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    color: '#ff6b6b',
     fontSize: 16,
-    color: '#888',
+    marginTop: 16,
     textAlign: 'center',
-    lineHeight: 24,
+  },
+  retryButton: {
+    backgroundColor: '#D32F2F',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 25,
+    marginTop: 20,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  trendingSection: {
+    marginBottom: 24,
+    paddingTop: 16,
+  },
+  trendingList: {
+    paddingLeft: 15,
+    paddingTop: 8,
+  },
+  trendingItem: {
+    width: 160,
+    height: 240,
+    marginRight: 16,
+    position: 'relative',
+  },
+  rankContainer: {
+    position: 'absolute',
+    top: -10,
+    left: -10,
+    zIndex: 2,
+    width: 40,
+    height: 40,
+    backgroundColor: '#D32F2F',
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  rankNumber: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  trendingPoster: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 12,
+  },
+  trendingGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '50%',
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+    paddingHorizontal: 12,
+    paddingBottom: 12,
+    justifyContent: 'flex-end',
+  },
+  trendingTitle: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 }); 

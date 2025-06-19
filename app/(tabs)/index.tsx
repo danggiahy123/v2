@@ -21,8 +21,7 @@ import { movieService } from '../../services/movieService';
 import { useAppSelector } from '../../store/hooks';
 import { BannerMovie, ContinueWatchingItem, GridMovie } from '../../types/movie';
 import { useRouter } from 'expo-router';
-import TabHeader from '../../components/ui/TabHeader';
-import SearchModal from '../../components/ui/SearchModal';
+import { TabHeader, SearchModal, ViewAllModal } from '../../components/ui';
 
 const { width } = Dimensions.get('window');
 const POSTER_WIDTH = (width - 60) / 3;
@@ -59,6 +58,7 @@ export default function HomeScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedTitle, setSelectedTitle] = useState('');
+  const [viewAllModalVisible, setViewAllModalVisible] = useState(false);
 
   const bannerFlatListRef = useRef<FlatList>(null);
 
@@ -168,10 +168,46 @@ export default function HomeScreen() {
     loadHomeData();
   };
 
+  const getCategoryCode = (title: string): string => {
+    // Chuẩn hóa title bằng cách loại bỏ dấu cách thừa và chuyển về chữ thường
+    const normalizedTitle = title.trim().toLowerCase();
+    
+    switch (normalizedTitle) {
+      case 'trending':
+      case 'phim đang thịnh hành':
+        return 'trending';
+      case 'top rated':
+      case 'phim được đánh giá cao':
+        return 'toprated';
+      case 'thể thao':
+      case 'phim thể thao':
+        return 'sports';
+      case 'anime':
+      case 'anime hot':
+      case 'hoạt hình':
+        return 'anime';
+      case 'việt nam':
+      case 'phim việt xuất sắc':
+      case 'phim việt nam':
+        return 'vietnamese';
+      case 'sắp chiếu':
+      case 'phim sắp chiếu':
+        return 'comingsoon';
+      case 'đề xuất cho bạn':
+      case 'phim đề xuất':
+        return 'recommended';
+      default:
+        console.log('Unknown category title:', title);
+        return 'trending';
+    }
+  };
+
   const handleViewAll = (category: string, title: string) => {
-    setSelectedCategory(category);
+    const categoryCode = getCategoryCode(title);
+    console.log('Category code for title:', title, '->', categoryCode); // Thêm log để debug
+    setSelectedCategory(categoryCode);
     setSelectedTitle(title);
-    setModalVisible(true);
+    setViewAllModalVisible(true);
   };
 
   const handleScroll = Animated.event(
@@ -408,26 +444,53 @@ export default function HomeScreen() {
           }>
           {renderBanner()}
           {renderContinueWatching()}
-          {renderMovieGrid(recommendedMovies, 'Đề xuất cho bạn')}
+          {renderMovieGrid(recommendedMovies, 'Đề xuất cho bạn', 'recommended')}
           {sections.map((section, index) => (
             <View key={index}>
-              {renderMovieGrid(section.movies, section.title)}
+              {renderMovieGrid(section.movies, section.title, getCategoryFromTitle(section.title))}
             </View>
           ))}
         </Animated.ScrollView>
         <TabHeader 
           onSearchPress={() => setSearchModalVisible(true)}
+          onNotificationPress={() => {}}
           opacity={headerOpacity}
         />
         <SearchModal
           visible={searchModalVisible}
           onClose={() => setSearchModalVisible(false)}
         />
+        <ViewAllModal
+          visible={viewAllModalVisible}
+          onClose={() => setViewAllModalVisible(false)}
+          category={selectedCategory}
+          title={selectedTitle}
+        />
       </View>
     );
   };
 
   return renderContent();
+}
+
+// Helper function to get category from title
+function getCategoryFromTitle(title: string): string {
+  switch (title.toLowerCase()) {
+    case 'trending':
+      return 'trending';
+    case 'top rated':
+      return 'toprated';
+    case 'thể thao':
+      return 'sports';
+    case 'anime':
+      return 'anime';
+    case 'việt nam':
+      return 'vietnamese';
+    case 'sắp chiếu':
+      return 'comingsoon';
+    default:
+      return 'recommended';
+  }
 }
 
 const styles = StyleSheet.create({

@@ -34,6 +34,8 @@ export interface GridMovie {
   poster: string;                 // URL poster image
   movieType: string;              // Loại phim
   producer: string;               // Nhà sản xuất
+  rating?: number;                // Rating score (optional)
+  year?: number;                  // Release year (optional)
 }
 
 /**

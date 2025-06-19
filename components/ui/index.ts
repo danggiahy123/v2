@@ -18,4 +18,6 @@
  */
 
 export { default as Notification } from './Notification';
-export { default as TabHeader } from './TabHeader'; 
+export { default as SearchModal } from './SearchModal';
+export { default as TabHeader } from './TabHeader';
+export { default as ViewAllModal } from './ViewAllModal'; 

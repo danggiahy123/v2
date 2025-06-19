@@ -60,11 +60,12 @@ interface BannerResponse {
 
 export const seriesService = {
   // Lấy banner series (banner + recommended)
-  async getBannerSeries(params?: { bannerLimit?: number; limit?: number; days?: number }) {
+  async getBannerSeries(params?: { bannerLimit?: number; limit?: number; days?: number; showAll?: boolean }) {
     const queryParams = new URLSearchParams();
     if (params?.bannerLimit) queryParams.append('bannerLimit', params.bannerLimit.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.limit && !params?.showAll) queryParams.append('limit', params.limit.toString());
     if (params?.days) queryParams.append('days', params.days.toString());
+    if (params?.showAll) queryParams.append('showAll', 'true');
     const url = `${API_BASE_URL}/api/series/banner-series${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     const response = await fetch(url);
     if (!response.ok) throw new Error('Failed to fetch banner series');
@@ -72,22 +73,31 @@ export const seriesService = {
   },
 
   // Lấy trending series
-  async getTrendingSeries() {
-    const response = await fetch(`${API_BASE_URL}/api/series/trending`);
+  async getTrendingSeries(params?: { limit?: number; showAll?: boolean }) {
+    const queryParams = new URLSearchParams();
+    if (params?.limit && !params?.showAll) queryParams.append('limit', params.limit.toString());
+    if (params?.showAll) queryParams.append('showAll', 'true');
+    const response = await fetch(`${API_BASE_URL}/api/series/trending${queryParams.toString() ? `?${queryParams.toString()}` : ''}`);
     if (!response.ok) throw new Error('Failed to fetch trending series');
     return response.json();
   },
 
   // Lấy Vietnamese series
-  async getVietnameseSeries() {
-    const response = await fetch(`${API_BASE_URL}/api/series/vietnamese`);
+  async getVietnameseSeries(params?: { limit?: number; showAll?: boolean }) {
+    const queryParams = new URLSearchParams();
+    if (params?.limit && !params?.showAll) queryParams.append('limit', params.limit.toString());
+    if (params?.showAll) queryParams.append('showAll', 'true');
+    const response = await fetch(`${API_BASE_URL}/api/series/vietnamese${queryParams.toString() ? `?${queryParams.toString()}` : ''}`);
     if (!response.ok) throw new Error('Failed to fetch Vietnamese series');
     return response.json();
   },
 
   // Lấy anime series
-  async getAnimeSeries() {
-    const response = await fetch(`${API_BASE_URL}/api/series/anime`);
+  async getAnimeSeries(params?: { limit?: number; showAll?: boolean }) {
+    const queryParams = new URLSearchParams();
+    if (params?.limit && !params?.showAll) queryParams.append('limit', params.limit.toString());
+    if (params?.showAll) queryParams.append('showAll', 'true');
+    const response = await fetch(`${API_BASE_URL}/api/series/anime${queryParams.toString() ? `?${queryParams.toString()}` : ''}`);
     if (!response.ok) throw new Error('Failed to fetch anime series');
     return response.json();
   },

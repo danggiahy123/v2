@@ -12,9 +12,9 @@
       ActivityIndicator,
       TouchableOpacity,
     } from 'react-native';
+    import { LinearGradient } from 'expo-linear-gradient';
 
-    import TabHeader from '../../components/ui/TabHeader';
-    import SearchModal from '../../components/ui/SearchModal';
+    import { TabHeader, SearchModal, ViewAllModal } from '../../components/ui';
     import { seriesService } from '../../services/seriesService';
     import Banner from '../../components/series/Banner';
 
@@ -31,6 +31,9 @@
       const headerOpacity = useRef(new Animated.Value(1)).current;
       const lastScrollY = useRef(0);
       const [searchVisible, setSearchVisible] = useState(false);
+      const [viewAllModalVisible, setViewAllModalVisible] = useState(false);
+      const [selectedCategory, setSelectedCategory] = useState('');
+      const [selectedTitle, setSelectedTitle] = useState('');
 
       // State cho data
       const [recommended, setRecommended] = useState<Movie[]>([]);
@@ -70,9 +73,9 @@
 
           // Fetch các phần còn lại, bỏ banner (đã có component Banner riêng)
           const [trendingRes, vietnameseRes, animeRes] = await Promise.all([
-            seriesService.getTrendingSeries(),
-            seriesService.getVietnameseSeries(),
-            seriesService.getAnimeSeries(),
+            seriesService.getTrendingSeries({ limit: 10 }),
+            seriesService.getVietnameseSeries({ limit: 10 }),
+            seriesService.getAnimeSeries({ limit: 10 }),
           ]);
 
           // Lấy đúng trường dữ liệu từ backend mới
@@ -98,18 +101,29 @@
         }
       };
 
+      const handleViewAll = (category: string, title: string) => {
+        setSelectedCategory(category);
+        setSelectedTitle(title);
+        setViewAllModalVisible(true);
+      };
+
       const renderMovieItem = ({ item }: { item: Movie }) => (
         <TouchableOpacity style={styles.movieItem}>
           <Image source={{ uri: item.poster }} style={styles.poster} />
         </TouchableOpacity>
       );
 
-      const renderSection = (title: string, data: Movie[]) => {
+      const renderSection = (title: string, data: Movie[], category: string) => {
         if (!data || data.length === 0) return null;
 
         return (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{title}</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>{title}</Text>
+              <TouchableOpacity onPress={() => handleViewAll(category, title)}>
+                <Text style={styles.seeAllText}>Xem tất cả</Text>
+              </TouchableOpacity>
+            </View>
             <FlatList
               data={data}
               renderItem={renderMovieItem}
@@ -179,10 +193,38 @@
           >
             <View style={styles.content}>
               <Banner />
-              {renderSection('Phim bộ dành cho bạn', recommended)}
-              {renderSection('Phim bộ đang thịnh hành', trending)}
-              {renderSection('Phim bộ Việt Nam', vietnamese)}
-              {renderSection('Anime / Hoạt hình', anime)}
+              <View style={styles.trendingSection}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Top Phim Bộ Xu Hướng</Text>
+                  <TouchableOpacity onPress={() => handleViewAll('trending', 'Top Phim Bộ Xu Hướng')}>
+                    <Text style={styles.seeAllText}>Xem tất cả</Text>
+                  </TouchableOpacity>
+                </View>
+                <FlatList
+                  data={trending.slice(0, 10)}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.trendingList}
+                  renderItem={({ item, index }) => (
+                    <TouchableOpacity style={styles.trendingItem}>
+                      <View style={styles.rankContainer}>
+                        <Text style={styles.rankNumber}>{index + 1}</Text>
+                      </View>
+                      <Image source={{ uri: item.poster }} style={styles.trendingPoster} />
+                      <LinearGradient
+                        colors={['transparent', 'rgba(0,0,0,0.9)']}
+                        style={styles.trendingGradient}
+                      >
+                        <Text style={styles.trendingTitle} numberOfLines={2}>{item.title}</Text>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  )}
+                  keyExtractor={(item) => item.movieId}
+                />
+              </View>
+              {renderSection('Phim bộ dành cho bạn', recommended, 'recommended')}
+              {renderSection('Phim bộ Việt Nam', vietnamese, 'vietnamese')}
+              {renderSection('Phim bộ Anime', anime, 'anime')}
             </View>
           </Animated.ScrollView>
 
@@ -190,6 +232,13 @@
             visible={searchVisible}
             onClose={() => setSearchVisible(false)}
             category="series"
+          />
+
+          <ViewAllModal
+            visible={viewAllModalVisible}
+            onClose={() => setViewAllModalVisible(false)}
+            category={selectedCategory}
+            title={selectedTitle}
           />
         </View>
       );
@@ -261,5 +310,85 @@
         color: '#fff',
         fontSize: 14,
         fontWeight: '600',
+      },
+      trendingSection: {
+        marginBottom: 24,
+        paddingTop: 16,
+      },
+      trendingList: {
+        paddingLeft: 15,
+        paddingTop: 8,
+      },
+      trendingItem: {
+        width: 160,
+        height: 240,
+        marginRight: 16,
+        position: 'relative',
+      },
+      rankContainer: {
+        position: 'absolute',
+        top: -10,
+        left: -10,
+        zIndex: 2,
+        width: 40,
+        height: 40,
+        backgroundColor: '#D32F2F',
+        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: {
+          width: 0,
+          height: 2,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5,
+       
+      },
+      rankNumber: {
+        color: '#fff',
+        fontSize: 20,
+        fontWeight: 'bold',
+      },
+      trendingPoster: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 12,
+        backgroundColor: '#1a1a1a',
+     
+      },
+      trendingGradient: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: '50%',
+        padding: 12,
+        borderBottomLeftRadius: 12,
+        borderBottomRightRadius: 12,
+        justifyContent: 'flex-end',
+      },
+      trendingTitle: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: '600',
+        textShadowColor: 'rgba(0,0,0,0.75)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 2,
+      },
+      sectionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 12,
+        paddingHorizontal: 16,
+      },
+      seeAllText: {
+        color: '#B0B0B0',
+        fontSize: 15,
+        fontWeight: '600',
+        textDecorationLine: 'underline',
+        textDecorationColor: 'transparent',
       },
     });

@@ -77,7 +77,7 @@ export default function TabHeader({
   opacity,
   translateY,
   backgroundColor = 'transparent',
-  gradientColors = ['rgb(0, 0, 0)', 'rgba(0, 0, 0, 0.8)', 'transparent'],
+  gradientColors = ['rgba(0, 0, 0, 0.93)', 'rgba(0, 0, 0, 0.74)', 'transparent'],
   showGradient = true,
   actionButtons,
   leftComponent,
