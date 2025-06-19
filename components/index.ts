@@ -20,4 +20,7 @@ export * from './series';
 export * from './navigation';
 
 // Layout components
-export * from './layout'; 
+export * from './layout';
+
+// Anime components
+export * from './anime'; 
