@@ -10,22 +10,20 @@ import {
   FlatList,
   Image,
   ActivityIndicator,
+  TouchableOpacity,
 } from 'react-native';
 
 import TabHeader from '../../components/ui/TabHeader';
 import SearchModal from '../../components/ui/SearchModal';
+import { seriesService } from '../../services/seriesService';
+import Banner from '../../components/series/Banner';
 
 type Movie = {
   movieId: string;
   title: string;
   poster: string;
   producer: string;
-};
-
-type SectionData = {
-  title: string;
-  type: string;
-  movies: Movie[];
+  movieType: string;
 };
 
 export default function SeriesScreen() {
@@ -34,13 +32,13 @@ export default function SeriesScreen() {
   const lastScrollY = useRef(0);
   const [searchVisible, setSearchVisible] = useState(false);
 
-  const [banner, setBanner] = useState<Movie[]>([]);
+  // State cho data
   const [recommended, setRecommended] = useState<Movie[]>([]);
   const [trending, setTrending] = useState<Movie[]>([]);
   const [vietnamese, setVietnamese] = useState<Movie[]>([]);
   const [anime, setAnime] = useState<Movie[]>([]);
-  const [korean, setKorean] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const handleScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -62,49 +60,49 @@ export default function SeriesScreen() {
   );
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [
-          bannerRes,
-          trendingRes,
-          vietnameseRes,
-          animeRes,
-          koreanRes,
-        ] = await Promise.all([
-          fetch('/api/series/banner-series'),
-          fetch('/api/series/trending'),
-          fetch('/api/series/vietnamese'),
-          fetch('/api/series/anime'),
-          fetch('/api/series/korean'),
-        ]);
-
-        const bannerJson = await bannerRes.json();
-        const trendingJson = await trendingRes.json();
-        const vietnameseJson = await vietnameseRes.json();
-        const animeJson = await animeRes.json();
-        const koreanJson = await koreanRes.json();
-
-        setBanner(bannerJson.data.banner.movies || []);
-        setRecommended(bannerJson.data.recommended.movies || []);
-        setTrending(trendingJson.data.movies || []);
-        setVietnamese(vietnameseJson.data.movies || []);
-        setAnime(animeJson.data.movies || []);
-        setKorean(koreanJson.data.movies || []);
-      } catch (error) {
-        console.error('Error fetching series data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
+    fetchSeriesData();
   }, []);
 
+  const fetchSeriesData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Fetch các phần còn lại, bỏ banner (đã có component Banner riêng)
+      const [trendingRes, vietnameseRes, animeRes] = await Promise.all([
+        seriesService.getTrendingSeries(),
+        seriesService.getVietnameseSeries(),
+        seriesService.getAnimeSeries(),
+      ]);
+
+      // Lấy đúng trường dữ liệu từ backend mới
+      const extractMovies = (res: any) => (res.data?.movies || res.data || []);
+      const convertToMovie = (series: any) => ({
+        movieId: series.movieId || series._id,
+        title: series.title || series.movie_title,
+        poster: series.poster || series.poster_path,
+        producer: series.producer || '',
+        movieType: series.movieType || series.movie_type || '',
+      });
+
+      setTrending(extractMovies(trendingRes).map(convertToMovie));
+      setVietnamese(extractMovies(vietnameseRes).map(convertToMovie));
+      setAnime(extractMovies(animeRes).map(convertToMovie));
+      setRecommended(extractMovies(trendingRes).map(convertToMovie));
+
+    } catch (err) {
+      console.error('Error fetching series data:', err);
+      setError('Có lỗi xảy ra khi tải dữ liệu');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const renderMovieItem = ({ item }: { item: Movie }) => (
-    <View style={styles.movieItem}>
-      <Image source={{ uri: item.poster }} style={styles.poster} />
-      <Text style={styles.title}>{item.title}</Text>
-    </View>
+    <TouchableOpacity style={{ marginRight: 12 }}>
+      <Image source={{ uri: item.poster }} style={{ width: 120, height: 180, borderRadius: 10, backgroundColor: '#222' }} />
+      <Text style={{ color: '#fff', width: 120, marginTop: 6 }} numberOfLines={2}>{item.title}</Text>
+    </TouchableOpacity>
   );
 
   const renderSection = (title: string, data: Movie[]) => {
@@ -117,57 +115,71 @@ export default function SeriesScreen() {
           data={data}
           renderItem={renderMovieItem}
           keyExtractor={(item) => item.movieId}
-          horizontal={false}
-          numColumns={3}
-          scrollEnabled={false}
-        />
-      </View>
-    );
-  };
-
-  const renderBanner = () => {
-    if (!banner || banner.length === 0) return null;
-
-    return (
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Phim bộ mới ra mắt</Text>
-        <FlatList
-          data={banner}
-          renderItem={({ item }) => (
-            <Image source={{ uri: item.poster }} style={styles.bannerImage} />
-          )}
           horizontal
           showsHorizontalScrollIndicator={false}
-          keyExtractor={(item) => item.movieId}
+          contentContainerStyle={{ paddingLeft: 8, paddingRight: 8 }}
         />
       </View>
     );
   };
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#000" />
+        <View style={styles.loading}>
+          <ActivityIndicator size="large" color="#fff" />
+          <Text style={styles.loadingText}>Đang tải dữ liệu...</Text>
+        </View>
+        <TabHeader
+          title="Phim bộ"
+          onSearchPress={() => setSearchVisible(true)}
+          onNotificationPress={() => {}}
+          opacity={headerOpacity}
+        />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#000" />
+        <View style={styles.error}>
+          <Ionicons name="alert-circle" size={48} color="#ff6b6b" />
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={fetchSeriesData}>
+            <Text style={styles.retryButtonText}>Thử lại</Text>
+          </TouchableOpacity>
+        </View>
+        <TabHeader
+          title="Phim bộ"
+          onSearchPress={() => setSearchVisible(true)}
+          onNotificationPress={() => {}}
+          opacity={headerOpacity}
+        />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#000" />
 
-      {loading ? (
-        <View style={styles.loading}>
-          <ActivityIndicator size="large" color="#fff" />
+      <Animated.ScrollView
+        style={styles.scrollView}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.content}>
+          <Banner />
+          {renderSection('Phim bộ dành cho bạn', recommended)}
+          {renderSection('Phim bộ đang thịnh hành', trending)}
+          {renderSection('Phim bộ Việt Nam', vietnamese)}
+          {renderSection('Anime / Hoạt hình', anime)}
         </View>
-      ) : (
-        <Animated.ScrollView
-          style={styles.scrollView}
-          onScroll={handleScroll}
-          scrollEventThrottle={16}
-        >
-          <View style={styles.content}>
-            {renderBanner()}
-            {renderSection('Phim bộ dành cho bạn', recommended)}
-            {renderSection('Phim bộ đang thịnh hành', trending)}
-            {renderSection('Phim bộ Việt Nam', vietnamese)}
-            {renderSection('Anime / Hoạt hình', anime)}
-            {renderSection('Phim bộ Hàn Quốc', korean)}
-          </View>
-        </Animated.ScrollView>
-      )}
+      </Animated.ScrollView>
 
       <TabHeader
         title="Phim bộ"
@@ -204,6 +216,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#000',
   },
+  loadingText: {
+    color: '#fff',
+    marginTop: 16,
+    fontSize: 16,
+  },
+  error: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000',
+    padding: 20,
+  },
+  errorText: {
+    color: '#ff6b6b',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  retryButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 16,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   section: {
     marginBottom: 24,
   },
@@ -229,12 +272,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#fff',
     textAlign: 'center',
-  },
-  bannerImage: {
-    width: 250,
-    height: 150,
-    borderRadius: 12,
-    marginRight: 12,
-    resizeMode: 'cover',
+    lineHeight: 16,
   },
 });

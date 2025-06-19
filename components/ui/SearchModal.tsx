@@ -114,10 +114,7 @@ export default function SearchModal({ visible, onClose, category }: SearchModalP
 
   const handleMoviePress = (movieId: string) => {
     onClose();
-    router.push({
-      pathname: "/(tabs)/movie/[id]",
-      params: { id: movieId }
-    });
+    (router.push as any)(`/(tabs)/movie/${movieId}`);
   };
 
   const handleBackPress = () => {

@@ -88,4 +88,99 @@ export interface ContinueWatchingResponse {
     type: 'continue_watching';    // Section type
     data: ContinueWatchingItem[]; // Continue watching items
   };
+}
+
+/**
+ * SERIES TYPES - Types cho series API
+ */
+
+// Genre type cho series
+export interface SeriesGenre {
+  _id: string;
+  genre_name: string;
+  description?: string;
+}
+
+// Episode type cho series
+export interface SeriesEpisode {
+  _id: string;
+  episode_title: string;
+  uri: string;
+  episode_number: number;
+  episode_description?: string;
+  duration?: number;
+}
+
+// Series movie type
+export interface SeriesMovie {
+  _id: string;
+  movie_title: string;
+  description: string;
+  poster_path: string;
+  genres: SeriesGenre[];
+  country?: string;
+  total_episodes: number;
+  view_count: number;
+  favorite_count: number;
+  release_status?: string;
+  price: number;
+  is_free: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Series detail type (bao gồm episodes)
+export interface SeriesDetail extends SeriesMovie {
+  episodes: SeriesEpisode[];
+}
+
+// Series API response types
+export interface SeriesResponse {
+  success: boolean;
+  data: SeriesMovie[];
+}
+
+export interface SeriesDetailResponse {
+  success: boolean;
+  data: SeriesDetail;
+}
+
+// Country tab type
+export interface CountryTab {
+  id: string;
+  name: string;
+}
+
+export interface CountryTabsResponse {
+  success: boolean;
+  data: CountryTab[];
+}
+
+// Banner series response type
+export interface BannerSeriesResponse {
+  success: boolean;
+  data: {
+    banner: {
+      title: string;
+      type: 'banner_list';
+      movies: BannerMovie[];
+    };
+    recommended: {
+      title: string;
+      type: 'grid';
+      movies: GridMovie[];
+    };
+  };
+}
+
+// API response thực tế từ server cho series grid
+export interface SeriesGridResponse {
+  success: boolean;
+  data: {
+    movies: SeriesMovie[];
+    title: string;
+    type: 'grid';
+    total: number;
+    showAll: boolean;
+  };
 } 
