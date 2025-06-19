@@ -13,6 +13,9 @@ export * from './ui';
 // Movie components
 export * from './movie';
 
+// Series components
+export * from './series';
+
 // Navigation components
 export * from './navigation';
 
