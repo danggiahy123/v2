@@ -19,6 +19,7 @@ interface SearchMoviesParams {
   page?: number;
   limit?: number;
   category?: 'series' | 'anime';
+  searchByTitle?: boolean;
 }
 
 /**
@@ -202,7 +203,7 @@ export const movieService = {
 
   /**
    * Tìm kiếm phim theo từ khóa
-   * @param params Tham số tìm kiếm (từ khóa, trang, giới hạn)
+   * @param params Tham số tìm kiếm (từ khóa, trang, giới hạn, chỉ tìm theo tên)
    * @returns Promise<SearchMoviesResponse>
    */
   async searchMovies(params?: SearchMoviesParams): Promise<SearchMoviesResponse> {
@@ -212,6 +213,7 @@ export const movieService = {
       if (params?.page) queryParams.append('page', params.page.toString());
       if (params?.limit) queryParams.append('limit', params.limit.toString());
       if (params?.category) queryParams.append('category', params.category);
+      if (params?.searchByTitle) queryParams.append('searchByTitle', 'true');
 
       const response = await fetch(`${API_BASE_URL}/api/movies/search?${queryParams.toString()}`);
       const data = await response.json();
