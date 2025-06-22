@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import {
-  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -12,11 +11,11 @@ import {
   Image,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { TabHeader, SearchModal, ViewAllModal } from '../../components/ui';
 import { animeService } from '../../services/animeService';
 import { AnimeBanner } from '../../components/anime';
+import { useRouter } from 'expo-router';
 
 type Anime = {
   _id: string;
@@ -39,6 +38,7 @@ export default function AnimeScreen() {
   const [movies, setMovies] = useState<Anime[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   const handleScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -88,8 +88,11 @@ export default function AnimeScreen() {
   };
 
   const renderMovieItem = ({ item }: { item: Anime }) => (
-    <TouchableOpacity style={styles.movieItem}>
-      <Image source={{ uri: item.poster }} style={styles.poster} />
+    <TouchableOpacity 
+      style={styles.movieItem}
+      onPress={() => router.push(`/movie/${item._id}`)}
+    >
+      <Image source={{ uri: item.poster }} style={styles.poster} resizeMode="cover" />
     </TouchableOpacity>
   );
 
@@ -133,7 +136,10 @@ export default function AnimeScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.trendingList}
           renderItem={({ item, index }) => (
-            <TouchableOpacity style={styles.trendingItem}>
+            <TouchableOpacity 
+              style={styles.trendingItem}
+              onPress={() => router.push(`/movie/${item._id}`)}
+            >
               <View style={styles.rankContainer}>
                 <Text style={styles.rankNumber}>{index + 1}</Text>
               </View>

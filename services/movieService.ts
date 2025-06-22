@@ -185,15 +185,32 @@ export const movieService = {
    */
   async searchMovies(params?: SearchMoviesParams): Promise<SearchMoviesResponse> {
     try {
+      console.log('🔍 SearchMovies called with params:', params);
+      
       const queryParams = new URLSearchParams();
-      if (params?.tuKhoa) queryParams.append('tuKhoa', params.tuKhoa);
+      // Gửi cả hai tham số để đảm bảo compatibility
+      if (params?.tuKhoa) {
+        queryParams.append('tuKhoa', params.tuKhoa);
+        queryParams.append('q', params.tuKhoa); // Fallback cho old API
+      }
       if (params?.page) queryParams.append('page', params.page.toString());
       if (params?.limit) queryParams.append('limit', params.limit.toString());
       if (params?.category) queryParams.append('category', params.category);
       if (params?.searchByTitle) queryParams.append('searchByTitle', 'true');
 
-      const response = await fetch(`${API_BASE_URL}/api/movies/search?${queryParams.toString()}`);
+      const url = `${API_BASE_URL}/api/movies/search?${queryParams.toString()}`;
+      console.log('🌐 Searching with URL:', url);
+      
+      const response = await fetch(url);
+      console.log('📊 Response status:', response.status);
+      
+      if (!response.ok) {
+        console.error('❌ API Error:', response.status, response.statusText);
+        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      }
+      
       const data = await response.json();
+      console.log('📦 Response data:', data);
       return data;
     } catch (error) {
       console.error('Lỗi khi tìm kiếm phim:', error);

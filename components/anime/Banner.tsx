@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Image, FlatList, TouchableOpacity, ActivityIndicator, Dimensions, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { animeService } from '../../services/animeService';
 
 const { width, height } = Dimensions.get('window');
@@ -13,7 +14,7 @@ const AnimeBanner = () => {
   const flatListRef = useRef<FlatList>(null);
 
   useEffect(() => {
-    animeService.getTrendingAnime({ type: 'series', limit: 5 }).then(res => {
+    animeService.getTrendingAnime({ type: 'series', limit: 5, showAll: false }).then(res => {
       setBanner(res.data || []);
       setLoading(false);
     });
@@ -44,7 +45,10 @@ const AnimeBanner = () => {
       <View style={styles.bannerContent}>
         <Text style={styles.bannerTitle} numberOfLines={2}>{item.title}</Text>
         <View style={styles.bannerButtons}>
-          <TouchableOpacity style={styles.playButton}>
+          <TouchableOpacity 
+            style={styles.playButton}
+            onPress={() => router.push(`/movie/${item.movieId || item._id}`)}
+          >
             <Ionicons name="play" size={16} color="#fff" />
             <Text style={styles.playButtonText}>Xem ngay</Text>
           </TouchableOpacity>
