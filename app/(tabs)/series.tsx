@@ -1,22 +1,23 @@
     import { Ionicons } from '@expo/vector-icons';
-    import React, { useEffect, useRef, useState } from 'react';
+    import React, { useEffect, useRef, useState, useCallback } from 'react';
     import {
-      ScrollView,
-      StatusBar,
-      StyleSheet,
-      Text,
-      View,
-      Animated,
-      FlatList,
-      Image,
-      ActivityIndicator,
-      TouchableOpacity,
-    } from 'react-native';
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
+  Animated,
+  FlatList,
+  Image,
+  ActivityIndicator,
+  TouchableOpacity,
+} from 'react-native';
     import { LinearGradient } from 'expo-linear-gradient';
+    import { SafeAreaView } from 'react-native-safe-area-context';
+    import { useRouter } from 'expo-router';
 
     import { TabHeader, SearchModal, ViewAllModal } from '../../components/ui';
     import { seriesService } from '../../services/seriesService';
-    import Banner from '../../components/series/Banner';
+    import { SeriesBanner } from '../../components/series';
 
     type Movie = {
       movieId: string;
@@ -42,6 +43,8 @@
       const [anime, setAnime] = useState<Movie[]>([]);
       const [loading, setLoading] = useState(true);
       const [error, setError] = useState<string | null>(null);
+
+      const router = useRouter();
 
       const handleScroll = Animated.event(
         [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -108,8 +111,11 @@
       };
 
       const renderMovieItem = ({ item }: { item: Movie }) => (
-        <TouchableOpacity style={styles.movieItem}>
-          <Image source={{ uri: item.poster }} style={styles.poster} />
+        <TouchableOpacity 
+          style={styles.movieItem}
+          onPress={() => router.push(`/movie/${item.movieId}`)}
+        >
+          <Image source={{ uri: item.poster }} style={styles.poster} resizeMode="cover" />
         </TouchableOpacity>
       );
 
@@ -192,7 +198,7 @@
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.content}>
-              <Banner />
+              <SeriesBanner />
               <View style={styles.trendingSection}>
                 <View style={styles.sectionHeader}>
                   <Text style={styles.sectionTitle}>Top Phim Bộ Xu Hướng</Text>
@@ -206,7 +212,10 @@
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.trendingList}
                   renderItem={({ item, index }) => (
-                    <TouchableOpacity style={styles.trendingItem}>
+                    <TouchableOpacity 
+                      style={styles.trendingItem}
+                      onPress={() => router.push(`/movie/${item.movieId}`)}
+                    >
                       <View style={styles.rankContainer}>
                         <Text style={styles.rankNumber}>{index + 1}</Text>
                       </View>

@@ -6,16 +6,13 @@ import {
   FlatList,
   Image,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
   Animated,
-  Modal,
-  TextInput,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+// SafeAreaView imported but not used - will be used in future updates
 import { LinearGradient } from 'expo-linear-gradient';
 import { movieService } from '../../services/movieService';
 import { useAppSelector } from '../../store/hooks';
@@ -24,8 +21,6 @@ import { useRouter } from 'expo-router';
 import { TabHeader, SearchModal, ViewAllModal } from '../../components/ui';
 
 const { width } = Dimensions.get('window');
-const POSTER_WIDTH = (width - 60) / 3;
-const HEADER_HEIGHT = 120; // Approximate header height including safe area
 
 /**
  * Interface cho kết quả tìm kiếm phim
@@ -41,7 +36,7 @@ interface MovieSection {
 
 export default function HomeScreen() {
   const authState = useAppSelector((state) => state.auth);
-  const { user, userId } = authState || { user: null, userId: null };
+  const { userId } = authState || { userId: null };
   const router = useRouter();
   const scrollY = useRef(new Animated.Value(0)).current;
   const lastScrollY = useRef(0);
@@ -55,23 +50,22 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [searchModalVisible, setSearchModalVisible] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedTitle, setSelectedTitle] = useState('');
   const [viewAllModalVisible, setViewAllModalVisible] = useState(false);
 
   const bannerFlatListRef = useRef<FlatList>(null);
 
-  // Thêm state cho chức năng search
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const [searchPage, setSearchPage] = useState(1);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [hasMoreResults, setHasMoreResults] = useState(true);
+  // Search functionality - will be implemented in future updates
+  const [searchQuery] = useState('');
+  const [, setSearchResults] = useState<SearchResult[]>([]);
+  const [, setSearchPage] = useState(1);
+  const [, setIsLoadingMore] = useState(false);
+  const [, setHasMoreResults] = useState(true);
 
   useEffect(() => {
     loadHomeData();
-  }, [userId]);
+  }, [userId]); // loadHomeData is defined below, will be memoized in future optimization
 
   useEffect(() => {
     if (bannerMovies.length > 1) {
@@ -286,11 +280,17 @@ export default function HomeScreen() {
             {currentBannerMovie.title || 'Untitled'}
           </Text>
           <View style={styles.bannerButtons}>
-            <TouchableOpacity style={styles.playButton}>
+            <TouchableOpacity 
+              style={styles.playButton}
+              onPress={() => router.push(`/movie/${currentBannerMovie.movieId}`)}
+            >
               <Ionicons name="play" size={16} color="#fff" />
               <Text style={styles.playButtonText}>Xem ngay</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.moreButton}>
+            <TouchableOpacity 
+              style={styles.moreButton}
+              onPress={() => router.push(`/movie/${currentBannerMovie.movieId}`)}
+            >
               <Ionicons name="add" size={16} color="#fff" />
               <Text style={styles.moreButtonText}>Xem thêm</Text>
             </TouchableOpacity>
@@ -317,7 +317,10 @@ export default function HomeScreen() {
           keyExtractor={(item, index) => `${category}-${item.movieId}-${index}`}
           contentContainerStyle={styles.movieList}
           renderItem={({ item }) => (
-            <TouchableOpacity style={styles.movieItem}>
+            <TouchableOpacity 
+              style={styles.movieItem}
+              onPress={() => router.push(`/movie/${item.movieId}`)}
+            >
               <Image source={{ uri: item.poster }} style={styles.moviePoster} resizeMode="cover" />
             </TouchableOpacity>
           )}
@@ -344,7 +347,10 @@ export default function HomeScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.continueList}
           renderItem={({ item }) => (
-            <TouchableOpacity style={styles.continueItem}>
+            <TouchableOpacity 
+              style={styles.continueItem}
+              onPress={() => router.push(`/movie/${item.movieId}`)}
+            >
               <Image
                 source={{ uri: item.poster }}
                 style={styles.continuePoster}
@@ -370,57 +376,25 @@ export default function HomeScreen() {
    * Hàm xử lý tìm kiếm phim
    * @param resetPage - True nếu muốn reset về trang 1
    */
-  const handleSearch = async (resetPage = true) => {
-    try {
-      if (resetPage) {
-        setSearchPage(1);
-        setSearchResults([]);
-        setHasMoreResults(true);
-      }
-
-      if (!searchQuery.trim()) {
-        setSearchResults([]);
-        return;
-      }
-
-      setIsLoadingMore(true);
-      const currentPage = resetPage ? 1 : searchPage;
-
-      // Gọi API search từ movieService
-      const response = await movieService.searchMovies({
-        tuKhoa: searchQuery,
-        page: currentPage,
-        limit: 20
-      });
-
-      if (response?.status === 'success' && response.data) {
-        const newResults = response.data.movies || [];
-        
-        if (resetPage) {
-          setSearchResults(newResults);
-        } else {
-          setSearchResults(prev => [...prev, ...newResults]);
-        }
-
-        // Kiểm tra xem còn kết quả để load more không
-        setHasMoreResults(newResults.length === 20);
-        setSearchPage(currentPage + 1);
-      }
-    } catch (error) {
-      console.error('Lỗi khi tìm kiếm phim:', error);
-    } finally {
-      setIsLoadingMore(false);
-    }
-  };
+  // Search functionality - will be implemented when search feature is active
+  // const handleSearch = async (resetPage = true) => {
+  //   console.log('Search functionality placeholder:', { searchQuery, resetPage });
+  //   // Prevent unused variable warnings by using the state setters
+  //   setSearchPage(1);
+  //   setSearchResults([]);
+  //   setHasMoreResults(true);
+  //   setIsLoadingMore(false);
+  // };
 
   /**
    * Xử lý load thêm kết quả khi scroll đến cuối
    */
-  const handleLoadMore = () => {
-    if (!isLoadingMore && hasMoreResults) {
-      handleSearch(false);
-    }
-  };
+  // Load more functionality - will be implemented when search is active
+  // const handleLoadMore = () => {
+  //   if (!isLoadingMore && hasMoreResults) {
+  //     handleSearch(false);
+  //   }
+  // };
 
   const renderContent = () => {
     if (loading) {
@@ -619,6 +593,31 @@ const styles = StyleSheet.create({
     gap: 16,
     justifyContent: 'center',
     marginTop: 8,
+  },
+  // Test Movie Detail Button
+  testMovieButton: {
+    backgroundColor: '#ff6b6b',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+    marginTop: 10,
+  },
+  testMovieButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  testLoginButton: {
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+    marginTop: 5,
+  },
+  testLoginButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
   playButton: {
     backgroundColor: '#D32F2F',
