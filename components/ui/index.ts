@@ -21,3 +21,5 @@ export { default as Notification } from './Notification';
 export { default as SearchModal } from './SearchModal';
 export { default as TabHeader } from './TabHeader';
 export { default as ViewAllModal } from './ViewAllModal'; 
+export { default as VideoPlayer } from './VideoPlayer';
+export { default as DebugHighlight } from './DebugHighlight'; 

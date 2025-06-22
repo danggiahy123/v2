@@ -39,6 +39,19 @@ export interface GridMovie {
 }
 
 /**
+ * NAVIGABLE MOVIE ITEM - Unified interface cho navigation
+ * FEATURES: Standardized props cho tất cả movie cards với navigation
+ */
+export interface NavigableMovieItem {
+  movieId: string;                // Unique movie identifier
+  title: string;                  // Tên phim
+  poster: string;                 // URL poster image
+  movieType?: string;             // Loại phim (optional)
+  year?: number;                  // Release year (optional)
+  rating?: number;                // Rating score (optional)
+}
+
+/**
  * CONTINUE WATCHING ITEM - Phim đang xem dở
  * FEATURES: Progress tracking và last watched time
  */

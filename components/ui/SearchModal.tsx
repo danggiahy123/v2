@@ -24,6 +24,18 @@ const COLUMN_COUNT = 2; // 2 columns for a cleaner look
 const ITEM_MARGIN = 10; // Increased margin for better spacing
 const ITEM_WIDTH = (width - (COLUMN_COUNT + 1) * ITEM_MARGIN) / COLUMN_COUNT;
 
+// Backend movie response type
+interface BackendMovie {
+  _id: string;
+  movie_title: string;
+  poster_path: string;
+  movie_type: string;
+  producer: string;
+  description?: string;
+  production_time?: string;
+  genres?: any[];
+}
+
 interface SearchResult extends GridMovie {
   description?: string;
   releaseDate?: string;
@@ -78,6 +90,12 @@ export default function SearchModal({ visible, onClose, category }: SearchModalP
 
       const currentPage = resetPage ? 1 : searchPage;
 
+      console.log('🔍 [SearchModal] Starting search with:', {
+        searchQuery,
+        currentPage,
+        category
+      });
+
       const response = await movieService.searchMovies({
         tuKhoa: searchQuery,
         page: currentPage,
@@ -86,8 +104,23 @@ export default function SearchModal({ visible, onClose, category }: SearchModalP
         searchByTitle: true // Chỉ tìm kiếm theo tên phim
       });
 
+      console.log('📦 [SearchModal] API Response:', response);
+
       if (response?.status === 'success' && response.data) {
-        const newResults = response.data.movies || [];
+        // Map backend response to frontend expected format
+        const backendMovies = response.data.movies || [];
+        const newResults = (backendMovies as unknown as BackendMovie[]).map(movie => ({
+          movieId: movie._id,
+          title: movie.movie_title,
+          poster: movie.poster_path,
+          movieType: movie.movie_type,
+          producer: movie.producer,
+          description: movie.description,
+          releaseDate: movie.production_time,
+          year: movie.production_time ? new Date(movie.production_time).getFullYear() : undefined,
+          rating: undefined, // Backend doesn't include rating in search
+          genres: movie.genres
+        }));
         
         if (resetPage) {
           setSearchResults(newResults);
@@ -100,6 +133,13 @@ export default function SearchModal({ visible, onClose, category }: SearchModalP
       }
     } catch (error) {
       console.error('Lỗi khi tìm kiếm phim:', error);
+      // Log more details for debugging
+      console.error('Search error details:', {
+        searchQuery,
+        category,
+        page: searchPage,
+        error: error instanceof Error ? error.message : String(error)
+      });
     } finally {
       setIsLoading(false);
       setIsLoadingMore(false);
@@ -114,7 +154,7 @@ export default function SearchModal({ visible, onClose, category }: SearchModalP
 
   const handleMoviePress = (movieId: string) => {
     onClose();
-    (router.push as any)(`/(tabs)/movie/${movieId}`);
+    router.push(`/movie/${movieId}`);
   };
 
   const handleBackPress = () => {
@@ -224,7 +264,7 @@ export default function SearchModal({ visible, onClose, category }: SearchModalP
                   <View style={styles.emptyContainer}>
                     <Ionicons name="search-outline" size={64} color="rgba(255,255,255,0.2)" />
                     <Text style={styles.emptyText}>
-                      Không tìm thấy kết quả cho "{searchQuery}"
+                      Không tìm thấy kết quả cho &quot;{searchQuery}&quot;
                     </Text>
                     <Text style={styles.emptySubText}>
                       Hãy thử tìm kiếm với từ khóa khác

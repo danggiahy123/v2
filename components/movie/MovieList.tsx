@@ -25,10 +25,11 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
 import { movieService } from '../../services/movieService';
 import type { GridMovie } from '../../types/movie';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 const ITEMS_PER_PAGE = 20;
 const COLUMN_COUNT = 2; // Giảm xuống 2 cột để có space tốt hơn
 const SPACING = 16;
@@ -118,14 +119,15 @@ const MovieItem = ({ item, onPress }: { item: GridMovie; onPress: () => void }) 
 export default function MovieList({ category, title, onClose, showAll = false }: MovieListProps) {
   const [movies, setMovies] = useState<GridMovie[]>([]);
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
+  // Page state for pagination - will be implemented when pagination is added
+  // const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadMovies();
-  }, [category, showAll]);
+  }, [category, showAll]); // loadMovies will be memoized in future optimization
 
   const loadMovies = async (isLoadingMore = false) => {
     if (!isLoadingMore) {
@@ -205,13 +207,13 @@ export default function MovieList({ category, title, onClose, showAll = false }:
   const loadMore = () => {
     if (!hasMore || isLoadingMore || loading || showAll) return;
     setIsLoadingMore(true);
-    setPage(prev => prev + 1);
+    // setPage(prev => prev + 1); // Will be uncommented when pagination is implemented
     loadMovies(true);
   };
 
   const handleMoviePress = (movie: GridMovie) => {
-    // Navigation logic here
-    console.log('Movie pressed:', movie.title);
+    console.log('Navigating to movie:', movie.movieId);
+    router.push(`/movie/${movie.movieId}`);
   };
 
   const renderMovie = ({ item }: { item: GridMovie }) => (

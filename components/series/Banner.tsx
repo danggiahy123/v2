@@ -1,8 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Image, FlatList, ActivityIndicator, Dimensions, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { router } from 'expo-router';
 import { seriesService } from '../../services/seriesService';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+// Ionicons will be used for future interactive elements
+// import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 const SCREEN_PADDING = 16;
@@ -92,7 +94,10 @@ const Banner = () => {
   if (!banner || !banner.movies?.length) return null;
 
   const renderItem = ({ item, index }: { item: BannerMovie; index: number }) => (
-    <View style={styles.itemContainer}>
+    <TouchableOpacity 
+      style={styles.itemContainer}
+      onPress={() => router.push(`/movie/${item.movieId}`)}
+    >
       <Image 
         source={{ uri: item.poster }} 
         style={styles.bannerImage} 
@@ -111,7 +116,7 @@ const Banner = () => {
           )}
         </View>
       </LinearGradient>
-    </View>
+    </TouchableOpacity>
   );
 
   return (
