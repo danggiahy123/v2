@@ -45,9 +45,10 @@ interface SearchMoviesResponse {
  * 3. getTrending - Lấy phim trending
  * 4. getTopRated - Lấy phim đánh giá cao
  * 5. getSports - Lấy phim thể thao
- * 6. getAnime - Lấy anime
- * 7. getVietnamese - Lấy phim Việt Nam
- * 8. getComingSoon - Lấy phim sắp chiếu
+ * 6. getComingSoon - Lấy phim sắp chiếu
+ * 7. searchMovies - Tìm kiếm phim
+ * 
+ * NOTE: Anime và Vietnamese series đã được chuyển sang animeService và seriesService
  */
 export const movieService = {
 
@@ -156,47 +157,7 @@ export const movieService = {
   },
 
   /**
-   * API 6: Lấy anime/hoạt hình
-   * ENDPOINT: GET /api/home/anime
-   * THAM SỐ: 
-   * - limit - Số lượng phim (optional)
-   * - showAll - Hiển thị tất cả phim (optional)
-   * TRẢ VỀ: { data: { title, movies: [] } }
-   */
-  async getAnime(limit?: number, showAll?: boolean): Promise<GenericMovieResponse> {
-    const queryParams = new URLSearchParams();
-    if (limit && !showAll) queryParams.append('limit', limit.toString());
-    if (showAll) queryParams.append('showAll', 'true');
-
-    const url = `${API_BASE_URL}/api/home/anime${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-    const response = await fetch(url, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
-
-    if (!response.ok) throw new Error(`Failed to fetch anime: ${response.status}`);
-    return response.json();
-  },
-
-  /**
-   * API 7: Lấy phim Việt Nam
-   * ENDPOINT: GET /api/home/vietnamese
-   * THAM SỐ: 
-   * - limit - Số lượng phim (optional)
-   * - showAll - Hiển thị tất cả phim (optional)
-   * TRẢ VỀ: { data: { title, movies: [] } }
-   */
-  async getVietnamese(limit?: number, showAll?: boolean): Promise<GenericMovieResponse> {
-    const queryParams = new URLSearchParams();
-    if (limit && !showAll) queryParams.append('limit', limit.toString());
-    if (showAll) queryParams.append('showAll', 'true');
-
-    const url = `${API_BASE_URL}/api/home/vietnamese${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-    const response = await fetch(url, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
-
-    if (!response.ok) throw new Error(`Failed to fetch vietnamese: ${response.status}`);
-    return response.json();
-  },
-
-  /**
-   * API 8: Lấy phim sắp chiếu
+   * API 6: Lấy phim sắp chiếu
    * ENDPOINT: GET /api/home/coming-soon
    * THAM SỐ:
    * - limit: Số lượng phim (optional)

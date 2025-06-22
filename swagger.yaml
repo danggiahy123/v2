@@ -4,10 +4,39 @@ info:
   description: |
     API documentation cho ứng dụng Movie Backend
 
+    **📊 FRONTEND IMPLEMENTATION STATUS:**
+    - ✅ = API đã được sử dụng trong frontend
+    - ❌ = API chưa được sử dụng trong frontend
+    - 📊 **Tổng kết:** 18/35 APIs đã được implement (51%)
+
+    **🎯 NÚT "XEM TẤT CẢ" - HƯỚNG DẪN FRONTEND:**
+    
+    **📱 Cách triển khai nút "Xem tất cả" cho các section:**
+    ```javascript
+    // 1. Hiển thị section ban đầu (8-10 phim)
+    fetch('/api/home/trending')
+    
+    // 2. Khi user click "Xem tất cả" → hiển thị tối đa 20 phim  
+    fetch('/api/home/trending?showAll=true')
+    
+    // 3. Áp dụng cho tất cả sections:
+    // - /api/home/trending?showAll=true
+    // - /api/home/top-rated?showAll=true  
+    // - /api/home/anime?showAll=true
+    // - /api/home/vietnamese?showAll=true
+    // - /api/home/sports?showAll=true
+    // - /api/home/coming-soon?showAll=true
+    // - /api/series/trending?showAll=true
+    // - /api/series/vietnamese?showAll=true
+    // - /api/series/anime?showAll=true
+    // - /api/series/korean?showAll=true
+    ```
+
     **🔄 PHIÊN BẢN ĐÃ CẬP NHẬT:**
     - ❌ Đã bỏ JWT tokens  
     - ❌ Đã bỏ authentication middleware
     - ✅ Sử dụng userId đơn giản
+    - ✅ Default limit 20 cho tất cả sections
 
     **📋 FLOW AUTH MỚI (1 màn hình duy nhất):**
     1. **Màn hình nhập SĐT:** User nhập số điện thoại
@@ -22,9 +51,10 @@ info:
     3. Nếu response có `needsRegistration: true` → Gọi `/api/auth/complete-registration`
     4. Nếu response có `needsRegistration: false` → Đăng nhập thành công, vào trang chủ
 
-    **📁 AWS S3 CONFIGURATION:**
-    - **Bucket:** locdev-bucket (ap-southeast-1)
-    - **Avatar path:** assets/avatar-users/{uuid}.{extension}
+    **📁 CLOUDFLARE IMAGES CONFIGURATION:**
+          - **Account ID:** 8396e0173865666f8dae8dd32565efca
+      - **Avatar variant:** 150x150px optimized
+      - **Image delivery:** Global CDN with auto WebP conversion
     - **Supported formats:** JPEG, PNG, GIF
     - **Max file size:** 2MB
     - **Auto cleanup:** Old avatars deleted when uploading new ones
@@ -65,14 +95,22 @@ tags:
     description: Các API trang chủ (/api/home) - Banner, phim mới, đề xuất
   - name: Series
     description: Các API cho phim bộ/series (/api/series) - Banner, trending, phân loại theo quốc gia
+  - name: Video Player
+    description: Các API cho màn hình phát video (/api/video-url, /api/watching, /api/episodes) - Stream URLs, progress tracking, interactions
+  - name: Episode
+    description: Các API cho tập phim (/api/episodes) - Chi tiết tập phim
 
 paths:
-  # === FLOW MỚI: 1 MÀN HÌNH DUY NHẤT ===
+  # ===============================
+  # 🔐 AUTHENTICATION APIs
+  # ===============================
+  
+  # ✅ USED - authSlice.ts sendOTP thunk
   /api/auth/send-otp:
     post:
       tags:
         - Authentication
-      summary: 🔄 Gửi mã OTP (Đăng ký/Đăng nhập thống nhất)
+      summary: ✅ 🔄 Gửi mã OTP (Đăng ký/Đăng nhập thống nhất)
       description: |
         **🔄 FLOW MỚI:** Gửi mã OTP cho cả đăng ký và đăng nhập trong 1 API duy nhất.
 
@@ -128,11 +166,12 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  # ✅ USED - authSlice.ts verifyOTP thunk
   /api/auth/verify-otp:
     post:
       tags:
         - Authentication
-      summary: 🔄 Xác thực OTP (Đăng ký/Đăng nhập thống nhất)
+      summary: ✅ 🔄 Xác thực OTP (Đăng ký/Đăng nhập thống nhất)
       description: |
         **🔄 FLOW MỚI:** Xác thực mã OTP cho cả đăng ký và đăng nhập.
 
@@ -205,11 +244,12 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  # ✅ USED - authSlice.ts completeRegistration thunk
   /api/auth/complete-registration:
     post:
       tags:
         - Authentication
-      summary: 🔄 Hoàn tất đăng ký (Sau khi verify OTP)
+      summary: ✅ 🔄 Hoàn tất đăng ký (Sau khi verify OTP)
       description: |
         **🔄 FLOW MỚI:** Hoàn tất quá trình đăng ký sau khi verify OTP thành công.
 
@@ -244,11 +284,12 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  # ❌ NOT USED - Frontend chỉ clear localStorage
   /api/auth/logout:
     post:
       tags:
         - Authentication
-      summary: 🔄 Đăng xuất
+      summary: ❌ 🔄 Đăng xuất
       description: |
         Đăng xuất người dùng (chỉ trả về success message).
 
@@ -270,11 +311,16 @@ paths:
                     type: string
                     example: "Đăng xuất thành công"
 
+  # ===============================
+  # 👤 USER APIs
+  # ===============================
+  
+  # ✅ USED - authSlice.ts getProfile thunk
   /api/users/profile:
     get:
       tags:
         - User
-      summary: Lấy thông tin profile
+      summary: ✅ Lấy thông tin profile
       description: |
         Lấy thông tin chi tiết của user.
 
@@ -325,16 +371,17 @@ paths:
                 status: "error"
                 message: "Không tìm thấy user"
 
+    # ✅ USED - authSlice.ts updateProfile thunk  
     put:
       tags:
         - User
-      summary: 🔄 Cập nhật profile (với upload avatar)
+      summary: ✅ 🔄 Cập nhật profile (với upload avatar)
       description: |
-        **🔄 API ĐÃ CẬP NHẬT:** Hỗ trợ upload avatar trực tiếp lên AWS S3 + cập nhật thông tin profile.
+        **🔄 API ĐÃ CẬP NHẬT:** Hỗ trợ upload avatar trực tiếp lên Cloudflare Images + cập nhật thông tin profile.
 
         **📋 TÍNH NĂNG:**
         - ✅ Cập nhật họ tên, giới tính
-        - ✅ Upload avatar lên AWS S3 (auto delete avatar cũ)
+                  - ✅ Upload avatar lên Cloudflare Images (auto delete avatar cũ)
         - ✅ Validation file ảnh (JPEG, PNG, GIF, max 2MB)
         - ✅ Unified API: có thể update chỉ text hoặc chỉ avatar hoặc cả hai
 
@@ -416,7 +463,7 @@ paths:
                         email: "datthien@gmail.com"
                         phone: "0288348192"
                         gender: "male"
-                        avatar: "https://locdev-bucket.s3.ap-southeast-1.amazonaws.com/assets/avatar-users/old-avatar.jpg"
+                        avatar: "https://imagedelivery.net/8396e0173865666f8dae8dd32565efca/old-avatar/avatar"
                         is_phone_verified: true
                 avatar_upload_success:
                   summary: "Upload avatar + cập nhật text thành công"
@@ -431,7 +478,7 @@ paths:
                         email: "datthien@gmail.com"
                         phone: "0288348192"
                         gender: "male"
-                        avatar: "https://locdev-bucket.s3.ap-southeast-1.amazonaws.com/assets/avatar-users/32c5a14e-3fa0-497a-b036-32de0cdc842a.jpg"
+                        avatar: "https://imagedelivery.net/8396e0173865666f8dae8dd32565efca/32c5a14e-3fa0-497a-b036-32de0cdc842a/avatar"
                         is_phone_verified: true
         "400":
           description: ❌ Lỗi validation hoặc file
@@ -479,11 +526,16 @@ paths:
                 status: "error"
                 message: "Lỗi server khi xử lý upload"
 
+  # ===============================
+  # 🎬 HOME APIs
+  # ===============================
+  
+  # ✅ USED - movieService.ts getNewReleases() - index.tsx, MovieList.tsx
   /api/home/new-releases:
     get:
       tags:
         - Home
-      summary: API Banner và Phim đề xuất
+      summary: ✅ API Banner và Phim đề xuất
       description: |
         Lấy danh sách phim mới ra mắt cho Banner đầu trang và danh sách ở dưới "Phim dành cho bạn".
 
@@ -570,11 +622,12 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  # ✅ USED - movieService.ts getContinueWatching() - index.tsx
   /api/home/continue-watching:
     get:
       tags:
         - Home
-      summary: API Đang xem (Cần userId sẽ phát triển trong tương lai)
+      summary: ✅ API Đang xem (Cần userId sẽ phát triển trong tương lai)
       description: |
         Lấy danh sách phim đang xem của user.
 
@@ -592,8 +645,8 @@ paths:
           required: false
           schema:
             type: integer
-            default: 8
-          example: 8
+            default: 20
+          example: 20
       responses:
         "200":
           description: Lấy dữ liệu thành công
@@ -645,11 +698,12 @@ paths:
                 status: "error"
                 message: "userId là bắt buộc"
 
+  # ✅ USED - movieService.ts getTrending() - index.tsx, MovieList.tsx
   /api/home/trending:
     get:
       tags:
         - Home
-      summary: API Phim đang thịnh hành
+      summary: ✅ API Phim đang thịnh hành
       description: |
         Lấy danh sách phim đang thịnh hành (được xem nhiều nhất).
 
@@ -657,17 +711,38 @@ paths:
         - Public API (không cần đăng nhập)
         - Sắp xếp theo view count
         - Format giống GridMovie
+        
+        **🔥 FRONTEND "XEM TẤT CẢ" BUTTON:**
+        ```javascript
+        // Hiển thị section ban đầu (10 phim)
+        GET /api/home/trending
+        
+        // Khi user nhấn "Xem tất cả" → hiển thị tối đa 20 phim
+        GET /api/home/trending?showAll=true
+        ```
       parameters:
+        - name: showAll
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            **🎯 NÚT "XEM TẤT CẢ"**
+            
+            - `false`: Hiển thị section mặc định (10 phim) ⭐ **Dành cho trang chủ**
+            - `true`: Hiển thị tối đa 20 phim ⭐ **Dành cho nút "Xem tất cả"**
+          example: true
         - name: limit
           in: query
           required: false
           schema:
             type: integer
-            default: 7
+            default: 20
             minimum: 1
             maximum: 20
-          description: Số lượng phim trending (mặc định 7)
-          example: 7
+          description: Số lượng phim trending (chỉ áp dụng khi showAll=true, mặc định 20)
+          example: 20
       responses:
         "200":
           description: Lấy dữ liệu thành công
@@ -699,11 +774,12 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  # ✅ USED - movieService.ts getTopRated() - index.tsx, MovieList.tsx
   /api/home/top-rated:
     get:
       tags:
         - Home
-      summary: API Phim được đánh giá cao
+      summary: ✅ API Phim được đánh giá cao
       description: |
         Lấy danh sách phim được đánh giá cao nhất.
 
@@ -711,17 +787,38 @@ paths:
         - Public API (không cần đăng nhập)
         - Sắp xếp theo rating
         - Chỉ lấy phim có rating > 0
+        
+        **⭐ FRONTEND "XEM TẤT CẢ" BUTTON:**
+        ```javascript
+        // Hiển thị section ban đầu (8 phim)
+        GET /api/home/top-rated
+        
+        // Khi user nhấn "Xem tất cả" → hiển thị tối đa 20 phim
+        GET /api/home/top-rated?showAll=true
+        ```
       parameters:
+        - name: showAll
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            **🎯 NÚT "XEM TẤT CẢ"**
+            
+            - `false`: Hiển thị section mặc định (8 phim) ⭐ **Dành cho trang chủ**
+            - `true`: Hiển thị tối đa 20 phim ⭐ **Dành cho nút "Xem tất cả"**
+          example: true
         - name: limit
           in: query
           required: false
           schema:
             type: integer
-            default: 8
+            default: 20
             minimum: 1
             maximum: 20
-          description: Số lượng phim top-rated (mặc định 8)
-          example: 8
+          description: Số lượng phim top-rated (chỉ áp dụng khi showAll=true, mặc định 20)
+          example: 20
       responses:
         "200":
           description: Lấy dữ liệu thành công
@@ -753,11 +850,12 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  # ✅ USED - movieService.ts getSports() - index.tsx, MovieList.tsx
   /api/home/sports:
     get:
       tags:
         - Home
-      summary: API Sự kiện thể thao
+      summary: ✅ API Sự kiện thể thao
       description: |
         Lấy danh sách sự kiện thể thao.
 
@@ -765,17 +863,38 @@ paths:
         - Public API (không cần đăng nhập)
         - Chỉ lấy movie_type = "Thể thao"
         - Filter theo status (upcoming, released, ended)
+        
+        **⚽ FRONTEND "XEM TẤT CẢ" BUTTON:**
+        ```javascript
+        // Hiển thị section ban đầu (8 sự kiện)
+        GET /api/home/sports
+        
+        // Khi user nhấn "Xem tất cả" → hiển thị tối đa 20 sự kiện
+        GET /api/home/sports?showAll=true
+        ```
       parameters:
+        - name: showAll
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            **🎯 NÚT "XEM TẤT CẢ"**
+            
+            - `false`: Hiển thị section mặc định (8 sự kiện) ⭐ **Dành cho trang chủ**
+            - `true`: Hiển thị tối đa 20 sự kiện ⭐ **Dành cho nút "Xem tất cả"**
+          example: true
         - name: limit
           in: query
           required: false
           schema:
             type: integer
-            default: 8
+            default: 20
             minimum: 1
             maximum: 20
-          description: Số lượng sự kiện thể thao (mặc định 8)
-          example: 8
+          description: Số lượng sự kiện thể thao (chỉ áp dụng khi showAll=true, mặc định 20)
+          example: 20
         - name: status
           in: query
           required: false
@@ -819,28 +938,51 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  # ✅ USED - movieService.ts getAnime() - index.tsx, MovieList.tsx
   /api/home/anime:
     get:
       tags:
         - Home
-      summary: API Anime/Hoạt hình hot
+      summary: ✅ API Anime/Hoạt hình hot
       description: |
         Lấy danh sách anime/hoạt hình nổi bật với logic đặc trưng.
+        
         **Fontend sử dụng cho:**
         - Section "Anime hot"
         - Grid layout hoạt hình
         - Hiển thị poster anime với tỉ lệ đặc biệt
+        
+        **🌸 FRONTEND "XEM TẤT CẢ" BUTTON:**
+        ```javascript
+        // Hiển thị section ban đầu (8 anime)
+        GET /api/home/anime
+        
+        // Khi user nhấn "Xem tất cả" → hiển thị tối đa 20 anime
+        GET /api/home/anime?showAll=true
+        ```
       parameters:
+        - name: showAll
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            **🎯 NÚT "XEM TẤT CẢ"**
+            
+            - `false`: Hiển thị section mặc định (8 anime) ⭐ **Dành cho trang chủ**
+            - `true`: Hiển thị tối đa 20 anime ⭐ **Dành cho nút "Xem tất cả"**
+          example: true
         - name: limit
           in: query
           required: false
           schema:
             type: integer
-            default: 8
+            default: 20
             minimum: 1
             maximum: 20
-          description: Số lượng anime hot (mặc định 8)
-          example: 8
+          description: Số lượng anime hot (chỉ áp dụng khi showAll=true, mặc định 20)
+          example: 20
       responses:
         "200":
           description: Lấy dữ liệu thành công
@@ -881,32 +1023,55 @@ paths:
                 status: "error"
                 message: "Lỗi khi lấy anime hot"
 
+  # ✅ USED - movieService.ts getVietnamese() - index.tsx, MovieList.tsx
   /api/home/vietnamese:
     get:
       tags:
         - Home
-      summary: API Phim Việt đặc sắc
+      summary: ✅ API Phim Việt đặc sắc
       description: |
         Lấy danh sách phim Việt Nam với logic tìm kiếm đặc trưng.
 
         **Logic đặc trưng:**
         - Sắp xếp theo rating (phim có rating cao nhất)
         - Tính toán rating/viewCount        
+        
         **Fontend sử dụng cho:**
         - Section "Phim Việt đặc sắc"
         - Grid layout phim Việt
         - Hiển thị poster phim Việt Nam
+        
+        **🇻🇳 FRONTEND "XEM TẤT CẢ" BUTTON:**
+        ```javascript
+        // Hiển thị section ban đầu (8 phim Việt)
+        GET /api/home/vietnamese
+        
+        // Khi user nhấn "Xem tất cả" → hiển thị tối đa 20 phim Việt
+        GET /api/home/vietnamese?showAll=true
+        ```
       parameters:
+        - name: showAll
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            **🎯 NÚT "XEM TẤT CẢ"**
+            
+            - `false`: Hiển thị section mặc định (8 phim Việt) ⭐ **Dành cho trang chủ**
+            - `true`: Hiển thị tối đa 20 phim Việt ⭐ **Dành cho nút "Xem tất cả"**
+          example: true
         - name: limit
           in: query
           required: false
           schema:
             type: integer
-            default: 8
+            default: 20
             minimum: 1
             maximum: 20
-          description: Số lượng phim Việt (mặc định 8)
-          example: 8
+          description: Số lượng phim Việt (chỉ áp dụng khi showAll=true, mặc định 20)
+          example: 20
       responses:
         "200":
           description: Lấy dữ liệu thành công
@@ -939,17 +1104,17 @@ paths:
                   movies:
                     - movieId: "683fb55d88e880e019875aa7"
                       title: "Mình Yêu Nhau, Bình Yên Thôi"
-                      poster: "https://locdev-bucket.s3.ap-southeast-1.amazonaws.com/assets/tinh-cam/minh-yeu-nhau-binh-yen-thoi.jpg"
+                      poster: "https://imagedelivery.net/8396e0173865666f8dae8dd32565efca/minh-yeu-nhau-binh-yen-thoi/medium"
                       movieType: "Phim bộ"
                       producer: "SK Pictures, VTV3"
                     - movieId: "683e6774602b36157f1c7b18"
                       title: "Gặp Lại Chị Bầu"
-                      poster: "https://locdev-bucket.s3.ap-southeast-1.amazonaws.com/assets/hai/gap-lai-chi-bau-500_1707203931098.jpg"
+                      poster: "https://imagedelivery.net/8396e0173865666f8dae8dd32565efca/gap-lai-chi-bau-500/medium"
                       movieType: "Phim lẻ"
                       producer: "CJ Entertainment Vietnam"
                     - movieId: "683fb6e188e880e019875ac3"
                       title: "Ngày Xưa Có Một Chuyện Tình"
-                      poster: "https://locdev-bucket.s3.ap-southeast-1.amazonaws.com/assets/tinh-cam/ngay-xua-co-cau-chuyen-tinh.jpg"
+                      poster: "https://imagedelivery.net/8396e0173865666f8dae8dd32565efca/ngay-xua-co-cau-chuyen-tinh/medium"
                       movieType: "Phim lẻ"
                       producer: "HK Film, Hãng phim Anh Tễu"
         "500":
@@ -962,29 +1127,52 @@ paths:
                 status: "error"
                 message: "Lỗi khi lấy phim Việt"
 
+  # ✅ USED - movieService.ts getComingSoon() - index.tsx, MovieList.tsx
   /api/home/coming-soon:
     get:
       tags:
         - Home
-      summary: API Phim sắp chiếu (đặt lịch sẽ phát triển trong tương lai)
+      summary: ✅ API Phim sắp chiếu (đặt lịch sẽ phát triển trong tương lai)
       description: |
         Lấy danh sách phim sắp chiếu với logic đặc trưng.
+        
         **Fontend sử dụng cho:**
         - Section "Sắp chiếu"
         - Grid layout phim sắp chiếu
         - Hiển thị poster + thông tin cơ bản
         - Có thể thêm countdown timer đến ngày chiếu
+        
+        **🔜 FRONTEND "XEM TẤT CẢ" BUTTON:**
+        ```javascript
+        // Hiển thị section ban đầu (8 phim sắp chiếu)
+        GET /api/home/coming-soon
+        
+        // Khi user nhấn "Xem tất cả" → hiển thị tối đa 20 phim sắp chiếu
+        GET /api/home/coming-soon?showAll=true
+        ```
       parameters:
+        - name: showAll
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            **🎯 NÚT "XEM TẤT CẢ"**
+            
+            - `false`: Hiển thị section mặc định (8 phim) ⭐ **Dành cho trang chủ**
+            - `true`: Hiển thị tối đa 20 phim ⭐ **Dành cho nút "Xem tất cả"**
+          example: true
         - name: limit
           in: query
           required: false
           schema:
             type: integer
-            default: 8
+            default: 20
             minimum: 1
             maximum: 20
-          description: Số lượng phim sắp chiếu (mặc định 8)
-          example: 8
+          description: Số lượng phim sắp chiếu (chỉ áp dụng khi showAll=true, mặc định 20)
+          example: 20
         - name: days
           in: query
           required: false
@@ -1027,12 +1215,12 @@ paths:
                   movies:
                     - movieId: "683fb76c88e880e019875acb"
                       title: "Avatar: The Way of Water 2"
-                      poster: "https://locdev-bucket.s3.ap-southeast-1.amazonaws.com/assets/hanh-dong/avatar-way-of-water-2.jpg"
+                      poster: "https://imagedelivery.net/8396e0173865666f8dae8dd32565efca/avatar-way-of-water-2/medium"
                       movieType: "Phim lẻ"
                       producer: "20th Century Studios"
                     - movieId: "683e922d88e880e019875a1f"
                       title: "World Cup 2026 Final"
-                      poster: "https://locdev-bucket.s3.ap-southeast-1.amazonaws.com/assets/sports/world-cup-2026.jpg"
+                      poster: "https://imagedelivery.net/8396e0173865666f8dae8dd32565efca/world-cup-2026/medium"
                       movieType: "Thể thao"
                       producer: "FIFA"
         "500":
@@ -1045,12 +1233,16 @@ paths:
                 status: "error"
                 message: "Lỗi khi lấy phim sắp chiếu"
 
-  # === SERIES/PHIM BỘ APIs ===
+  # ===============================
+  # 📺 SERIES APIs
+  # ===============================
+  
+  # ✅ USED - seriesService.ts getBannerSeries() - Banner.tsx (series)
   /api/series/banner-series:
     get:
       tags:
         - Series
-      summary: 🎬 API Banner và phim bộ đề xuất cho màn hình Series
+      summary: ✅ 🎬 API Banner và phim bộ đề xuất cho màn hình Series
       description: |
         **🎯 API CHUYÊN DÀNH CHO MÀN HÌNH PHIM BỘ**
 
@@ -1090,6 +1282,18 @@ paths:
             - Mặc định: `5` phim ⭐ **Khuyên dùng**
             - Tối đa: `10` phim
           example: 5
+        - name: showAll
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            **🎯 NÚT "XEM TẤT CẢ"**
+            
+            - `false`: Hiển thị section mặc định (6 phim bộ) ⭐ **Dành cho trang chủ**
+            - `true`: Hiển thị tối đa 20 phim bộ ⭐ **Dành cho nút "Xem tất cả"**
+          example: true
         - name: limit
           in: query
           required: false
@@ -1103,7 +1307,7 @@ paths:
             
             Số lượng phim bộ trong section "Phim bộ dành cho bạn"
             - Mặc định: `6` phim ⭐ **Khuyên dùng**
-            - Tối đa: `20` phim
+            - Tối đa: `20` phim (khi showAll=true)
           example: 6
         - name: days
           in: query
@@ -1169,7 +1373,7 @@ paths:
                     movies:
                       - movieId: "683fb76c88e880e019875aca"
                         title: "1000 Years Old"
-                        poster: "https://locdev-bucket.s3.ap-southeast-1.amazonaws.com/assets/tinh-cam/phimbo-1000-years-old.jpg"
+                        poster: "https://imagedelivery.net/8396e0173865666f8dae8dd32565efca/phimbo-1000-years-old/medium"
                         description: "Bộ phim tình cảm đặc sắc từ Thái Lan với câu chuyện tình yêu vượt thời gian..."
                         releaseYear: 2024
                         movieType: "Phim bộ"
@@ -1181,7 +1385,7 @@ paths:
                     movies:
                       - movieId: "683fb76c88e880e019875aca"
                         title: "1000 Years Old"
-                        poster: "https://locdev-bucket.s3.ap-southeast-1.amazonaws.com/assets/tinh-cam/phimbo-1000-years-old.jpg"
+                        poster: "https://imagedelivery.net/8396e0173865666f8dae8dd32565efca/phimbo-1000-years-old/medium"
                         movieType: "Phim bộ"
                         producer: "WeTV Thailand"
         "500":
@@ -1194,11 +1398,12 @@ paths:
                 status: "error"
                 message: "Lỗi khi lấy banner phim bộ"
 
+  # ✅ USED - seriesService.ts getTrendingSeries() - series.tsx
   /api/series/trending:
     get:
       tags:
         - Series
-      summary: 🔥 API Phim bộ đang thịnh hành
+      summary: ✅ 🔥 API Phim bộ đang thịnh hành
       description: |
         **🎯 API PHIM BỘ HOT NHẤT**
 
@@ -1276,7 +1481,7 @@ paths:
                       movies:
                         - movieId: "683fb76c88e880e019875aca"
                           title: "1000 Years Old"
-                          poster: "https://locdev-bucket.s3.ap-southeast-1.amazonaws.com/assets/tinh-cam/phimbo-1000-years-old.jpg"
+                          poster: "https://imagedelivery.net/8396e0173865666f8dae8dd32565efca/phimbo-1000-years-old/medium"
                           movieType: "Phim bộ"
                           producer: "WeTV Thailand"
                 show_all_view:
@@ -1291,7 +1496,7 @@ paths:
                       movies:
                         - movieId: "683fb76c88e880e019875aca"
                           title: "1000 Years Old"
-                          poster: "https://locdev-bucket.s3.ap-southeast-1.amazonaws.com/assets/tinh-cam/phimbo-1000-years-old.jpg"
+                          poster: "https://imagedelivery.net/8396e0173865666f8dae8dd32565efca/phimbo-1000-years-old/medium"
                           movieType: "Phim bộ"
                           producer: "WeTV Thailand"
 
@@ -1508,7 +1713,7 @@ paths:
                   movies:
                     - movieId: "683fb123456789abcdef1234"
                       title: "Hometown's Embrace"
-                      poster: "https://locdev-bucket.s3.ap-southeast-1.amazonaws.com/assets/korean/hometown-embrace.jpg"
+                      poster: "https://imagedelivery.net/8396e0173865666f8dae8dd32565efca/hometown-embrace/medium"
                       movieType: "Phim bộ"
                       producer: "KBS Drama"
 
@@ -2326,7 +2531,7 @@ paths:
                       movies:
                         - movieId: "683fb76c88e880e019875aca"
                           title: "1000 Years Old"
-                          poster: "https://locdev-bucket.s3.ap-southeast-1.amazonaws.com/assets/tinh-cam/phimbo-1000-years-old.jpg"
+                          poster: "https://imagedelivery.net/8396e0173865666f8dae8dd32565efca/phimbo-1000-years-old/medium"
                           movieType: "Phim bộ"
                           producer: "WeTV Thailand"
                           description: "Bộ phim tình cảm đặc sắc từ Thái Lan với câu chuyện tình yêu vượt thời gian..."
@@ -2342,7 +2547,7 @@ paths:
                           genres: ["Tình cảm", "Drama"]
                         - movieId: "683fb76c88e880e019875acb"
                           title: "Avatar: The Way of Water 2"
-                          poster: "https://locdev-bucket.s3.ap-southeast-1.amazonaws.com/assets/hanh-dong/avatar-way-of-water-2.jpg"
+                          poster: "https://imagedelivery.net/8396e0173865666f8dae8dd32565efca/avatar-way-of-water-2/medium"
                           movieType: "Phim lẻ"
                           producer: "20th Century Studios"
                           description: "Phần tiếp theo đầy màu sắc của bom tấn Avatar với những cảnh quay dưới nước..."
@@ -2409,6 +2614,465 @@ paths:
               example:
                 status: "error"
                 message: "Lỗi server khi tìm kiếm phim"
+
+  # === VIDEO STREAMING APIs ===
+  /api/video-url/{videoId}:
+    get:
+      tags:
+        - Video Player
+      summary: 🎬 API chính lấy Stream URL cho Expo Video Player
+      operationId: getVideoStreamUrl
+      description: |
+        **🎯 API QUAN TRỌNG NHẤT CHO VIDEO PLAYER**
+        
+        Lấy Cloudflare Stream URLs để phát video trong Expo app.
+      parameters:
+        - name: videoId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Episode ID hoặc Movie ID
+          example: "675a1234567890abcdef1234"
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [auto, episode, movie]
+            default: auto
+          description: Loại tìm kiếm (tự động detect)
+        - name: quality
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [auto, 360p, 480p, 720p]
+            default: auto
+          description: Chất lượng video
+      responses:
+        "200":
+          description: Lấy stream URLs thành công
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoStreamResponse"
+        "202":
+          description: Video đang được xử lý
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Video yêu cầu thanh toán
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Video không tồn tại
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/video-url/{videoId}/refresh:
+    post:
+      tags:
+        - Video Streaming
+      summary: 🔄 Refresh Stream URL
+      operationId: refreshVideoStreamUrl
+      description: Làm mới Stream URL với thời gian hết hạn mới
+      parameters:
+        - name: videoId
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "675a1234567890abcdef1234"
+      responses:
+        "200":
+          description: URL đã được làm mới
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoStreamResponse"
+        "404":
+          description: Video không tồn tại
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/video-url/{videoId}/status:
+    get:
+      tags:
+        - Video Streaming
+      summary: 📊 Check Video Status
+      operationId: getVideoStatus
+      description: Kiểm tra trạng thái video và khả năng truy cập
+      parameters:
+        - name: videoId
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "675a1234567890abcdef1234"
+      responses:
+        "200":
+          description: Thông tin trạng thái video
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    type: object
+                    properties:
+                      videoId:
+                        type: string
+                      streamUid:
+                        type: string
+                      available:
+                        type: boolean
+                      accessible:
+                        type: boolean
+                      message:
+                        type: string
+        "404":
+          description: Video không tồn tại
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # === UPLOAD APIs ===
+  /api/upload/image:
+    post:
+      tags:
+        - Upload
+      summary: 🖼️ Upload Image to Cloudflare Images
+      operationId: uploadImage
+      description: Upload ảnh lên Cloudflare Images với auto-optimization
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: "Image file (JPEG/PNG/GIF/WebP, max 5MB)"
+                folder:
+                  type: string
+                  default: "general"
+                  description: "Folder name for organization"
+                variant:
+                  type: string
+                  enum: [avatar, thumbnail, medium, public]
+                  default: "public"
+                  description: "Image variant for optimization"
+      responses:
+        "200":
+          description: Image uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CloudflareImageResponse"
+        "400":
+          description: File không hợp lệ
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/upload/video:
+    post:
+      tags:
+        - Upload
+      summary: 🎬 Upload Video to Cloudflare Stream
+      operationId: uploadVideo
+      description: Upload video lên Cloudflare Stream với auto-processing
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+                - episodeId
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: "Video file (MP4/AVI/MOV/WebM/MKV/FLV, max 500MB)"
+                episodeId:
+                  type: string
+                  description: "Episode ID để liên kết video"
+                movieTitle:
+                  type: string
+                  description: "Tên phim (optional)"
+                episodeTitle:
+                  type: string
+                  description: "Tên tập phim (optional)"
+      responses:
+        "200":
+          description: Video uploaded và đang xử lý
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CloudflareVideoUploadResponse"
+        "400":
+          description: File không hợp lệ
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # === WATCHING PROGRESS APIs ===
+  /api/watching/progress/{episodeId}:
+    get:
+      tags:
+        - Video Player
+      summary: 📊 API lấy tiến độ xem đã lưu
+      operationId: getWatchingProgress
+      description: Lấy tiến độ xem đã lưu để resume video từ vị trí đã xem
+      parameters:
+        - name: episodeId
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "675a1234567890abcdef1234"
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "User ID để lấy progress cá nhân"
+          example: "675a1234567890abcdef1234"
+      responses:
+        "200":
+          description: Tiến độ xem đã lưu
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  episode_id:
+                    type: string
+                  current_time:
+                    type: number
+                    example: 1250
+                    description: "Vị trí đã xem (giây)"
+                  duration:
+                    type: number
+                    example: 1800
+                  completed:
+                    type: boolean
+                    example: false
+                  watch_percentage:
+                    type: number
+                    example: 69.4
+                  last_watched:
+                    type: string
+                    format: date-time
+        "404":
+          description: Không tìm thấy progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    post:
+      tags:
+        - Video Player
+      summary: 💾 API lưu tiến độ xem
+      operationId: saveWatchingProgress
+      description: Lưu tiến độ xem hiện tại của user để có thể resume sau
+      parameters:
+        - name: episodeId
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "675a1234567890abcdef1234"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+                - currentTime
+                - duration
+              properties:
+                userId:
+                  type: string
+                  description: "User ID"
+                currentTime:
+                  type: number
+                  description: "Vị trí hiện tại (giây)"
+                duration:
+                  type: number
+                  description: "Tổng thời lượng video (giây)"
+                completed:
+                  type: boolean
+                  description: "Đã xem xong hay chưa"
+      responses:
+        "200":
+          description: Lưu progress thành công
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Dữ liệu không hợp lệ
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/watching/history:
+    get:
+      tags:
+        - Video Player
+      summary: 📺 Lấy lịch sử xem phim
+      operationId: getWatchingHistory
+      description: Lấy danh sách phim/episode user đã xem gần đây
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "User ID"
+          example: "675a1234567890abcdef1234"
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+          description: "Số lượng items tối đa"
+      responses:
+        "200":
+          description: Lịch sử xem phim
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        episode_id:
+                          type: string
+                        movie:
+                          type: object
+                        episode:
+                          type: object
+                        current_time:
+                          type: number
+                        duration:
+                          type: number
+                        watch_percentage:
+                          type: number
+                        last_watched:
+                          type: string
+                          format: date-time
+        "400":
+          description: UserId không hợp lệ
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # === EPISODE APIs ===
+  /api/episodes/{id}:
+    get:
+      tags:
+        - Episode
+      summary: 📺 Chi tiết Episode
+      operationId: getEpisodeDetail
+      description: Lấy thông tin chi tiết của một episode
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: "Episode ID"
+          example: "675a1234567890abcdef1234"
+        - name: userId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: "User ID để lấy progress và interactions"
+      responses:
+        "200":
+          description: Chi tiết episode
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    type: object
+                    properties:
+                      episode:
+                        type: object
+                        properties:
+                          _id:
+                            type: string
+                          episode_title:
+                            type: string
+                            example: "Tập 1: Khởi đầu"
+                          episode_number:
+                            type: integer
+                            example: 1
+                          description:
+                            type: string
+                          duration:
+                            type: number
+                            example: 1800
+                          uri:
+                            type: string
+                            nullable: true
+                          streamUid:
+                            type: string
+                            nullable: true
+                      movie:
+                        type: object
+                        description: "Thông tin phim chứa episode này"
+                      userProgress:
+                        type: object
+                        nullable: true
+                        description: "Tiến độ xem của user (nếu có userId)"
+        "404":
+          description: Episode không tồn tại
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
 components:
   schemas:
@@ -2599,7 +3263,7 @@ components:
           description: Tên phim
         poster:
           type: string
-          example: "https://locdev-bucket.s3.ap-southeast-1.amazonaws.com/assets/tinh-cam/phimbo-1000-years-old.jpg"
+          example: "https://imagedelivery.net/8396e0173865666f8dae8dd32565efca/phimbo-1000-years-old/medium"
           description: URL poster phim
         description:
           type: string
@@ -2720,7 +3384,7 @@ components:
           description: Tên phim
         poster:
           type: string
-          example: "https://locdev-bucket.s3.ap-southeast-1.amazonaws.com/assets/tinh-cam/phimbo-1000-years-old.jpg"
+          example: "https://imagedelivery.net/8396e0173865666f8dae8dd32565efca/phimbo-1000-years-old/medium"
           description: URL poster phim
         movieType:
           type: string
@@ -2988,7 +3652,7 @@ components:
         poster:
           type: string
           nullable: true
-          example: "https://locdev-bucket.s3.ap-southeast-1.amazonaws.com/assets/tinh-cam/phimbo-1000-years-old.jpg"
+          example: "https://imagedelivery.net/8396e0173865666f8dae8dd32565efca/phimbo-1000-years-old/medium"
           description: "URL poster phim"
         movieType:
           type: string
@@ -3109,3 +3773,217 @@ components:
               type: string
               example: "phobien"
               description: "Cách sắp xếp đã áp dụng"
+
+    # === CLOUDFLARE SCHEMAS ===
+    VideoStreamResponse:
+      type: object
+      description: "🎬 Schema for Cloudflare Stream video response"
+      properties:
+        status:
+          type: string
+          example: "success"
+        data:
+          type: object
+          properties:
+            videoId:
+              type: string
+              example: "675a1234567890abcdef1234"
+              description: "Episode ID hoặc Movie ID"
+            streamUid:
+              type: string
+              example: "a1b2c3d4e5f6789012345678"
+              description: "Cloudflare Stream UID"
+            type:
+              type: string
+              example: "cloudflare-stream"
+              description: "Loại streaming service"
+            movie:
+              type: object
+              properties:
+                _id:
+                  type: string
+                title:
+                  type: string
+                  example: "The Batman 2024"
+                type:
+                  type: string
+                  example: "Phim bộ"
+            episode:
+              type: object
+              nullable: true
+              properties:
+                _id:
+                  type: string
+                title:
+                  type: string
+                  example: "Tập 1: Khởi đầu"
+                number:
+                  type: integer
+                  example: 1
+            stream:
+              type: object
+              properties:
+                urls:
+                  type: object
+                  properties:
+                    hls:
+                      type: string
+                      example: "https://customer-account.cloudflarestream.com/uid/manifest/video.m3u8"
+                      description: "HLS streaming URL cho mobile/iOS"
+                    dash:
+                      type: string
+                      example: "https://customer-account.cloudflarestream.com/uid/manifest/video.mpd"
+                      description: "DASH streaming URL cho web"
+                    mp4:
+                      type: object
+                      properties:
+                        auto:
+                          type: string
+                          example: "https://customer-account.cloudflarestream.com/uid/manifest/video.mp4"
+                        360p:
+                          type: string
+                        480p:
+                          type: string
+                        720p:
+                          type: string
+                        1080p:
+                          type: string
+                    thumbnail:
+                      type: string
+                      nullable: true
+                      example: "https://customer-account.cloudflarestream.com/uid/thumbnails/thumbnail.jpg"
+                      description: "Auto-generated thumbnail"
+                    preview:
+                      type: string
+                      example: "https://customer-account.cloudflarestream.com/uid/thumbnails/thumbnail.jpg?time=1s"
+                recommended:
+                  type: object
+                  description: "URLs được đề xuất dựa trên device/platform"
+                  properties:
+                    mobile:
+                      type: string
+                      description: "HLS URL cho mobile"
+                    web:
+                      type: string
+                      description: "DASH URL cho web browsers"
+                    fallback:
+                      type: string
+                      description: "MP4 URL cho compatibility"
+                duration:
+                  type: number
+                  example: 3600
+                  description: "Video duration in seconds"
+                size:
+                  type: number
+                  example: 524288000
+                  description: "File size in bytes"
+                created:
+                  type: string
+                  format: date-time
+                  description: "Upload timestamp"
+                processingStatus:
+                  type: string
+                  example: "ready"
+                  description: "Video processing status"
+
+    CloudflareImageResponse:
+      type: object
+      description: "🖼️ Schema for Cloudflare Images upload response"
+      properties:
+        status:
+          type: string
+          example: "success"
+        message:
+          type: string
+          example: "Ảnh đã được upload thành công lên Cloudflare Images"
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+              example: "2cdc28f0-017a-49c4-9ed7-87056c83901f"
+              description: "Cloudflare Images ID"
+            filename:
+              type: string
+              example: "avatar.jpg"
+              description: "Original filename"
+            uploaded:
+              type: string
+              format: date-time
+              description: "Upload timestamp"
+            urls:
+              type: object
+              properties:
+                original:
+                  type: string
+                  example: "https://imagedelivery.net/account/id/public"
+                  description: "Original size image"
+                avatar:
+                  type: string
+                  example: "https://imagedelivery.net/account/id/avatar"
+                  description: "150x150px optimized for avatars"
+                thumbnail:
+                  type: string
+                  example: "https://imagedelivery.net/account/id/thumb"
+                  description: "300x300px thumbnail"
+                medium:
+                  type: string
+                  example: "https://imagedelivery.net/account/id/medium"
+                  description: "800x600px medium size"
+            recommendedUrl:
+              type: string
+              description: "URL được đề xuất dựa trên variant requested"
+
+    CloudflareVideoUploadResponse:
+      type: object
+      description: "🎬 Schema for Cloudflare Stream video upload response"
+      properties:
+        status:
+          type: string
+          example: "success"
+        message:
+          type: string
+          example: "Video đã được upload thành công lên Cloudflare Stream"
+        data:
+          type: object
+          properties:
+            episodeId:
+              type: string
+              example: "675a1234567890abcdef1234"
+              description: "Episode ID liên kết với video"
+            streamUid:
+              type: string
+              example: "a1b2c3d4e5f6789012345678"
+              description: "Cloudflare Stream UID"
+            uploadStatus:
+              type: string
+              enum: [ready, inprogress, error]
+              example: "inprogress"
+              description: "Trạng thái upload/processing"
+            playback:
+              type: object
+              nullable: true
+              description: "Playback URLs (available when status=ready)"
+              properties:
+                hls:
+                  type: string
+                dash:
+                  type: string
+                mp4:
+                  type: object
+            thumbnail:
+              type: string
+              nullable: true
+              example: "https://customer-account.cloudflarestream.com/uid/thumbnails/thumbnail.jpg"
+              description: "Auto-generated thumbnail"
+            processingStatus:
+              type: string
+              example: "ready"
+              description: "Video processing status"
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: query
+      name: userId
+      description: User ID for authentication

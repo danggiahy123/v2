@@ -18,6 +18,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { movieService } from '../../services/movieService';
+import { animeService } from '../../services/animeService';
+import { seriesService } from '../../services/seriesService';
 import { useAppSelector } from '../../store/hooks';
 import { BannerMovie, ContinueWatchingItem, GridMovie } from '../../types/movie';
 import { useRouter } from 'expo-router';
@@ -128,8 +130,8 @@ export default function HomeScreen() {
           movieService.getTrending(8),
           movieService.getTopRated(8),
           movieService.getSports({ limit: 8, status: 'released' }),
-          movieService.getAnime(8),
-          movieService.getVietnamese(8),
+          animeService.getAllAnime({ showAll: false }),
+          seriesService.getVietnameseSeries({ limit: 8 }),
           movieService.getComingSoon({ limit: 8, days: 30 }),
         ]);
 

@@ -26,6 +26,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { movieService } from '../../services/movieService';
+import { animeService } from '../../services/animeService';
+import { seriesService } from '../../services/seriesService';
 import type { GridMovie } from '../../types/movie';
 
 const { width, height } = Dimensions.get('window');
@@ -152,10 +154,10 @@ export default function MovieList({ category, title, onClose, showAll = false }:
           });
           break;
         case 'anime':
-          response = await movieService.getAnime(showAll ? undefined : ITEMS_PER_PAGE, showAll);
+          response = await animeService.getAllAnime({ showAll });
           break;
         case 'vietnamese':
-          response = await movieService.getVietnamese(showAll ? undefined : ITEMS_PER_PAGE, showAll);
+          response = await seriesService.getVietnameseSeries({ limit: showAll ? undefined : ITEMS_PER_PAGE, showAll });
           break;
         case 'comingsoon':
           response = await movieService.getComingSoon({ 
