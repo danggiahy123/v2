@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Modal,
@@ -44,6 +44,19 @@ export default function SearchModal({ visible, onClose, category }: SearchModalP
   const [hasMoreResults, setHasMoreResults] = useState(true);
   const router = useRouter();
 
+  // Thêm debounce search để tránh gọi API quá nhiều khi gõ
+  useEffect(() => {
+    const debounceTimeout = setTimeout(() => {
+      if (searchQuery.trim()) {
+        handleSearch();
+      } else {
+        setSearchResults([]);
+      }
+    }, 300); // Đợi 300ms sau khi người dùng ngừng gõ
+
+    return () => clearTimeout(debounceTimeout);
+  }, [searchQuery]);
+
   const handleSearch = useCallback(async (resetPage = true) => {
     try {
       if (resetPage) {
@@ -69,7 +82,8 @@ export default function SearchModal({ visible, onClose, category }: SearchModalP
         tuKhoa: searchQuery,
         page: currentPage,
         limit: 20,
-        category: category
+        category: category,
+        searchByTitle: true // Chỉ tìm kiếm theo tên phim
       });
 
       if (response?.status === 'success' && response.data) {
@@ -140,14 +154,16 @@ export default function SearchModal({ visible, onClose, category }: SearchModalP
                   placeholderTextColor="rgba(255,255,255,0.5)"
                   value={searchQuery}
                   onChangeText={setSearchQuery}
-                  onSubmitEditing={() => handleSearch()}
                   autoFocus
                   returnKeyType="search"
                   selectionColor="#E50914"
                 />
                 {searchQuery.length > 0 ? (
                   <TouchableOpacity
-                    onPress={() => setSearchQuery('')}
+                    onPress={() => {
+                      setSearchQuery('');
+                      setSearchResults([]);
+                    }}
                     style={styles.clearButton}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
