@@ -131,22 +131,6 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      {/* Rental Section */}
-      <View style={styles.menuSection}>
-        <Text style={styles.sectionTitle}>Thuê phim</Text>
-        
-        <TouchableOpacity 
-          style={styles.menuItem}
-          onPress={() => router.push('../../profile/rental-history' as any)}
-        >
-          <View style={styles.menuItemContent}>
-            <Ionicons name="time-outline" size={20} color="#007AFF" style={styles.menuIcon} />
-            <Text style={styles.menuLabel}>Lịch sử thuê phim</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#666" />
-        </TouchableOpacity>
-      </View>
-
       <Notification
         visible={notificationVisible}
         message={notificationMessage}
@@ -276,32 +260,6 @@ const styles = StyleSheet.create({
   verifiedBadge: {
     fontSize: 12,
     color: '#4CAF50',
-    fontWeight: '500',
-  },
-  menuSection: {
-    backgroundColor: '#1c1c1e',
-    marginHorizontal: 16,
-    marginTop: 16,
-    padding: 20,
-    borderRadius: 12,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-  },
-  menuItemContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  menuIcon: {
-    marginRight: 12,
-  },
-  menuLabel: {
-    fontSize: 16,
-    color: '#ffffff',
     fontWeight: '500',
   },
 });

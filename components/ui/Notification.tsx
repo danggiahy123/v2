@@ -110,15 +110,17 @@ const Notification: React.FC<NotificationProps> = ({
             { transform: [{ translateY: translateAnim }] },
           ]}
         >
-          <View
-            style={[
-              styles.iconContainer,
-              type === 'success' ? styles.successIcon : styles.errorIcon,
-            ]}
-          >
-            <Text style={styles.icon}>{getIcon()}</Text>
+          <View style={styles.content}>
+            <View
+              style={[
+                styles.iconContainer,
+                type === 'success' ? styles.successIcon : styles.errorIcon,
+              ]}
+            >
+              <Text style={styles.icon}>{getIcon()}</Text>
+            </View>
+            <Text style={styles.message} numberOfLines={2}>{message}</Text>
           </View>
-          <Text style={styles.message}>{message}</Text>
           <TouchableOpacity style={styles.button} onPress={handleClose} activeOpacity={0.8}>
             <Text style={styles.buttonText}>Đóng</Text>
           </TouchableOpacity>
@@ -136,66 +138,69 @@ const styles = StyleSheet.create({
     right: 0,
     justifyContent: 'flex-start',
     alignItems: 'center',
-    paddingTop: 50, 
+    paddingTop: 50,
     zIndex: 9999,
   },
   container: {
-    width: Math.min(width - 40, 350), 
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    backgroundColor: '#1c1c1e', 
-    flexDirection: 'row',
+    width: Math.min(width - 40, 350),
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    backgroundColor: '#1c1c1e',
+    marginHorizontal: 20,
     marginBottom: 10,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 12,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 16,
+  },
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   success: {
-    borderWidth: 1,
+    borderLeftWidth: 4,
+    borderLeftColor: '#4CAF50',
   },
   error: {
-    borderWidth: 1,
+    borderLeftWidth: 4,
+    borderLeftColor: '#F44336',
   },
   iconContainer: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
-    backgroundColor: '#444',
   },
   successIcon: {
-    backgroundColor: '#4CAF50', 
+    backgroundColor: 'rgba(76, 175, 80, 0.15)',
   },
   errorIcon: {
-    backgroundColor: '#F44336',
+    backgroundColor: 'rgba(244, 67, 54, 0.15)',
   },
   icon: {
-    fontSize: 20,
+    fontSize: 18,
     color: '#ffffff',
   },
   message: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#ffffff',
-    textAlign: 'left',
-    marginRight: 10,
     flex: 1,
-    lineHeight: 22,
+    lineHeight: 20,
   },
   button: {
+    alignSelf: 'flex-end',
     paddingVertical: 6,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     backgroundColor: '#D11030',
-    borderRadius: 25,
-    marginLeft: 12,
+    borderRadius: 20,
   },
   buttonText: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#ffffff',
     fontWeight: '600',
   },
