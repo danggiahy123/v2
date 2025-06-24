@@ -399,7 +399,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   modalContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: '#000',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: '90%',

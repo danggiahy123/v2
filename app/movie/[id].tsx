@@ -9,7 +9,7 @@
  * - Video player integration
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -22,6 +22,9 @@ import {
   SafeAreaView,
   StatusBar,
   TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -29,8 +32,11 @@ import { useMovieDetail } from '../../hooks/useMovieDetail';
 import { Episode } from '../../types/movieDetail';
 import { useAppSelector } from '../../store/hooks'; //check auth
 import { VideoPlayer } from '../../components/movie/player/VideoPlayer';
-import { CommentsModal } from '../../components/movie/interactions/CommentsModal';
-import { PulseAnimation, SlideNotification, SkeletonLoader } from '../../components/ui/AnimatedElements';
+import { RentalOptionsModal } from '../../components/rental/RentalOptionsModal';
+import { useRentalStatus } from '../../hooks/useRentalStatus';
+import { rentalService } from '../../services/rentalService';
+
+import { SlideNotification, SkeletonLoader } from '../../components/ui/AnimatedElements';
 
 // Screen width for responsive design - will be used in future updates
 // const { width: screenWidth } = Dimensions.get('window');
@@ -39,7 +45,7 @@ import { PulseAnimation, SlideNotification, SkeletonLoader } from '../../compone
  * 🎬 MOVIE DETAIL SCREEN COMPONENT
  */
 export default function MovieDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, autoPlay } = useLocalSearchParams<{ id: string; autoPlay?: string }>();
   
   // 🕐 DURATION HELPER
   const formatDuration = (duration: number): string => {
@@ -91,18 +97,31 @@ export default function MovieDetailScreen() {
   // Comment input state - will be used when comment input is implemented
   // const [showCommentInput, setShowCommentInput] = useState(false);
   const [commentText, setCommentText] = useState('');
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const commentInputRef = useRef<TextInput>(null);
   
   // 🎬 NEW ENHANCED FEATURES STATE - Video always visible
-  const [showVideoPlayer, setShowVideoPlayer] = useState(false); // Will be removed
+  const [showVideoPlayer, setShowVideoPlayer] = useState(false);
+  const [episodeVideoUrl, setEpisodeVideoUrl] = useState<string | null>(null);
   const [currentEpisode, setCurrentEpisode] = useState<Episode | null>(null);
-  const [showCommentsModal, setShowCommentsModal] = useState(false);
+
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
   const [notificationType, setNotificationType] = useState<'success' | 'error' | 'info'>('info');
-  const [likeAnimation, setLikeAnimation] = useState(false);
-  const [favoriteAnimation, setFavoriteAnimation] = useState(false);
+
   
   
+  // 🎫 RENTAL STATE
+  const [showRentalModal, setShowRentalModal] = useState(false);
+  const {
+    hasAccess: hasRentalAccess,
+    rental: currentRental,
+    remainingTime,
+    // isLoading: isCheckingRental,
+    checkAccess: checkRentalAccess,
+    // message: rentalMessage
+  } = useRentalStatus(userId || null, id || null);
   
   const [activeTab, setActiveTab] = useState<'related' | 'comments'>('related');
 
@@ -112,22 +131,67 @@ export default function MovieDetailScreen() {
   
   // 🎬 GET DEFAULT EPISODE FOR VIDEO PLAYER
   const getDefaultEpisode = (): Episode | null => {
-    if (!movieDetail) return null;
+    if (!movieDetail) {
+      console.log('🎬 [DEBUG] getDefaultEpisode: No movieDetail');
+      return null;
+    }
+
+    console.log('🎬 [DEBUG] getDefaultEpisode:', {
+      movieType: movieDetail.movie_type,
+      hasEpisodes: !!movieDetail.episodes?.length,
+      episodeCount: movieDetail.episodes?.length,
+      hasUri: !!movieDetail.uri,
+      hasVideoUrl: !!movieDetail.video_url,
+      movieTitle: movieDetail.movie_title
+    });
 
     // FOR PHIM BỘ (Series): Get first episode
     if (movieDetail.movie_type === 'Phim bộ') {
       if (movieDetail.episodes && movieDetail.episodes.length > 0) {
+        console.log('🎬 [DEBUG] Returning first episode for Phim bộ');
         return movieDetail.episodes[0];
       }
+      console.log('🎬 [DEBUG] No episodes found for Phim bộ');
       return null;
     }
 
     // FOR PHIM LẺ (Single Movie): Create virtual episode
     if (movieDetail.movie_type === 'Phim lẻ') {
-      const videoUrl = movieDetail.uri || movieDetail.video_url;
-      if (!videoUrl) return null;
+      // Try to get video URL from multiple sources
+      let videoUrl = movieDetail.uri || movieDetail.video_url;
+      
+      // If no video URL in movie, check if there's an episode with video
+      if (!videoUrl && movieDetail.episodes && movieDetail.episodes.length > 0) {
+        const firstEpisode = movieDetail.episodes[0] as any; // Cast to any to access all fields
+        videoUrl = firstEpisode.video_url || firstEpisode.uri;
+        console.log('🎬 [DEBUG] Found video URL in episode:', {
+          episodeId: firstEpisode._id,
+          video_url: firstEpisode.video_url,
+          uri: firstEpisode.uri,
+          finalVideoUrl: videoUrl
+        });
+      }
+      
+      // Fallback: Use episodeVideoUrl state if available
+      if (!videoUrl && episodeVideoUrl) {
+        videoUrl = episodeVideoUrl;
+        console.log('🎬 [DEBUG] Using episode video URL from state:', videoUrl);
+      }
+      
+      console.log('🎬 [DEBUG] Phim lẻ video URLs:', {
+        movieUri: movieDetail.uri,
+        movieVideoUrl: movieDetail.video_url,
+        hasEpisodes: !!movieDetail.episodes?.length,
+        episodeVideoUrl: movieDetail.episodes?.[0]?.video_url,
+        finalUrl: videoUrl
+      });
+      
+      if (!videoUrl) {
+        console.log('🎬 [DEBUG] No video URL found for Phim lẻ');
+        return null;
+      }
 
-      return {
+      const episode = {
         _id: movieDetail._id || movieDetail.movieId || id,
         episode_title: movieDetail.movie_title,
         episode_number: 1,
@@ -138,8 +202,12 @@ export default function MovieDetailScreen() {
         createdAt: movieDetail.createdAt || new Date().toISOString(),
         updatedAt: movieDetail.updatedAt || new Date().toISOString()
       };
+      
+      console.log('🎬 [DEBUG] Created virtual episode for Phim lẻ:', episode);
+      return episode;
     }
 
+    console.log('🎬 [DEBUG] Unknown movie type:', movieDetail.movie_type);
     return null;
   };
 
@@ -166,13 +234,66 @@ export default function MovieDetailScreen() {
     });
   }
 
-  // 💾 OFFLINE SUPPORT
+  // 💾 OFFLINE SUPPORT & AUTO PLAY LOGIC
   useEffect(() => {
     if (movieDetail && !loading) {
       // Movie detail loaded successfully - no offline caching needed for student project
       console.log('✅ [MovieDetail] Movie data loaded:', movieDetail.movie_title);
+      
+      // Auto play video if autoPlay parameter is set
+      if (autoPlay === 'true') {
+        // For free movies or if user has rental access
+        if (movieDetail.is_free || hasRentalAccess) {
+          setShowVideoPlayer(true);
+        } else {
+          // Show notification that rental is required
+          showNotificationMessage('Cần thuê phim để xem video', 'info');
+        }
+      }
     }
-  }, [movieDetail, loading, id]);
+  }, [movieDetail, loading, id, autoPlay, hasRentalAccess]);
+
+  // Fetch episode video URL when needed
+  useEffect(() => {
+    const fetchEpisodeVideoUrl = async () => {
+      if (!movieDetail?.userInteractions?.watchingProgress) return;
+      if (episodeVideoUrl) return; // Already loaded
+      
+      const progress = movieDetail.userInteractions.watchingProgress;
+      console.log('🎬 [DEBUG] Fetching episode video URL:', progress.episodeId);
+      
+      try {
+        const response = await fetch(`https://backend-app-lou3.onrender.com/api/episodes/${progress.episodeId}`);
+        const data = await response.json();
+        
+        if (data.status === 'success' && data.data.episode.uri) {
+          setEpisodeVideoUrl(data.data.episode.uri);
+          console.log('🎬 [DEBUG] Episode video URL loaded:', data.data.episode.uri);
+        }
+      } catch (error) {
+        console.error('❌ [DEBUG] Failed to fetch episode video URL:', error);
+      }
+    };
+
+    fetchEpisodeVideoUrl();
+  }, [movieDetail, episodeVideoUrl]);
+
+  // 🎹 KEYBOARD HANDLING
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
+      setKeyboardVisible(true);
+      // Không auto scroll khi keyboard hiện - để user tự quyết định
+    });
+
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardVisible(false);
+    });
+
+    return () => {
+      keyboardDidShowListener?.remove();
+      keyboardDidHideListener?.remove();
+    };
+  }, []);
 
   // 📱 NOTIFICATION HELPER
   const showNotificationMessage = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
@@ -180,6 +301,8 @@ export default function MovieDetailScreen() {
     setNotificationType(type);
     setShowNotification(true);
   };
+
+
 
   // =====================================
   // ENHANCED EVENT HANDLERS
@@ -214,7 +337,7 @@ export default function MovieDetailScreen() {
 
     try {
       await toggleLike(newLikeState);
-      setLikeAnimation(true);
+
       showNotificationMessage(
         newLikeState ? 'Added to liked movies!' : 'Removed from liked movies',
         'success'
@@ -241,7 +364,7 @@ export default function MovieDetailScreen() {
 
     try {
       await toggleFavorite(newFavoriteState);
-      setFavoriteAnimation(true);
+
       showNotificationMessage(
         newFavoriteState ? 'Added to favorites!' : 'Removed from favorites',
         'success'
@@ -254,15 +377,16 @@ export default function MovieDetailScreen() {
     }
   };
 
-    const handleCommentPress = () => {
-    setShowCommentsModal(true);
-  };
+
 
   const handleCommentSubmit = async () => {
     if (!commentText.trim()) return;
     
     try {
       console.log('💬 [Comment] Submitting comment:', commentText.trim());
+      
+      // Dismiss keyboard first for better UX
+      Keyboard.dismiss();
       
       // 🚀 THỰC SỰ GỌI API ĐỂ THÊM COMMENT
       await addComment(commentText.trim());
@@ -281,29 +405,55 @@ export default function MovieDetailScreen() {
     }
   };
 
-  // Comment submit handler - will be implemented when comment input is ready
-  // const handleCommentSubmit = async () => {
-  //   if (!commentText.trim()) return;
-  //   
-  //   try {
-  //     await addComment(commentText.trim());
-  //     setCommentText('');
-  //     // setShowCommentInput(false); // Will be uncommented when comment input is implemented
-  //     Alert.alert('Success', 'Comment added successfully!');
-  //   } catch (err) {
-  //     console.error('Comment submit error:', err);
-  //     Alert.alert('Error', 'Failed to add comment. Please try again.');
-  //   }
-  // };
 
   const handleEpisodePress = (episode: Episode) => {
-    setCurrentEpisode(episode);
-    setShowVideoPlayer(true);
-    console.log('🎬 Opening video player for episode:', episode.episode_title);
+    console.log('🎬 Switching to episode:', episode.episode_title);
+    
+    // Get video URL from episode
+    const videoUrl = (episode as any).uri || (episode as any).video_url;
+    
+    if (videoUrl) {
+      // Create a new episode object with video URL
+      const episodeWithVideo = {
+        ...episode,
+        video_url: videoUrl,
+        uri: videoUrl
+      };
+      
+      setCurrentEpisode(episodeWithVideo);
+      setEpisodeVideoUrl(videoUrl);
+      setShowVideoPlayer(true);
+      console.log('🎬 Playing episode video:', videoUrl);
+    } else {
+      console.log('🎬 No video URL found for episode');
+      showNotificationMessage('Không tìm thấy video cho tập này', 'error');
+    }
   };
 
   const handleRelatedMoviePress = (movieId: string) => {
     router.push(`/movie/${movieId}`);
+  };
+
+  // 🎫 RENTAL HANDLERS
+  const handleRentPress = () => {
+    if (!movieDetail) return;
+    
+    if (movieDetail.is_free) {
+      showNotificationMessage('Phim này miễn phí!', 'info');
+      return;
+    }
+
+    if (!userId) {
+      showNotificationMessage('Vui lòng đăng nhập để thuê phim', 'error');
+      return;
+    }
+
+    setShowRentalModal(true);
+  };
+
+  const handleRentalSuccess = () => {
+    checkRentalAccess();
+    showNotificationMessage('Thuê phim thành công!', 'success');
   };
 
   // =====================================
@@ -389,124 +539,129 @@ export default function MovieDetailScreen() {
             </View>
           </View>
 
-          {/* Action Buttons với icon giống hệt trong ảnh */}
+          {/* Action Buttons với icon vector chất lượng cao */}
           
             <View style={styles.actionRowContainer}>
               {/* View Count */}
               <View style={styles.actionItemWithCount}>
-                <Text style={styles.actionIcon}>👁️</Text>
+                <Ionicons name="eye-outline" size={24} color="#ffffff" />
                 <Text style={styles.actionCount}>{movieDetail.viewCount || 70}</Text>
               </View>
 
               {/* Like Button with Count - Icon ❤️ */}
-              
-                <PulseAnimation trigger={likeAnimation} color="#ff6b6b">
                   <TouchableOpacity
                     style={[
                       styles.actionItemWithCount,
                       !auth.isLoggedIn && styles.disabledAction
                     ]}
                     onPress={handleLikePress}
-                    onPressOut={() => setLikeAnimation(false)}
-                  >
-                    <Text style={[styles.actionIcon, hasLiked && styles.likedIcon]}>
-                      ❤️
-                    </Text>
+              >
+                <Ionicons 
+                  name={hasLiked ? "heart" : "heart-outline"} 
+                  size={24} 
+                  color={hasLiked ? "#ff6b6b" : "#ffffff"} 
+                />
                     <Text style={styles.actionCount}>{movieDetail.likeCount || 67}</Text>
                   </TouchableOpacity>
-                </PulseAnimation>
               
 
               {/* Favorite Button - Icon 🔖 */}
-              
-                <PulseAnimation trigger={favoriteAnimation} color="#ffc107">
                   <TouchableOpacity
                     style={[
                       styles.actionItemWithCount,
                       !auth.isLoggedIn && styles.disabledAction
                     ]}
                     onPress={handleFavoritePress}
-                    onPressOut={() => setFavoriteAnimation(false)}
-                  >
-                    <Text style={[styles.actionIcon, isFavorite && styles.favoriteIcon]}>
-                      🔖
-                    </Text>
+              >
+                <Ionicons 
+                  name={isFavorite ? "bookmark" : "bookmark-outline"} 
+                  size={24} 
+                  color={isFavorite ? "#ffc107" : "#ffffff"} 
+                />
                     <Text style={styles.actionText}>Yêu thích</Text>
                   </TouchableOpacity>
-                </PulseAnimation>
+
 
 
               {/* Share Button - Icon 📤 */}
-              <View style={styles.actionItemWithCount}>
-                <Text style={styles.actionIcon}>📤</Text>
+              <TouchableOpacity style={styles.actionItemWithCount}>
+                <Ionicons name="share-social-outline" size={24} color="#ffffff" />
                 <Text style={styles.actionText}>Chia sẻ</Text>
+              </TouchableOpacity>
               </View>
+
+          {/* Free Movie Watch Button */}
+          {movieDetail && movieDetail.is_free && (
+            <View style={styles.freeMovieContainer}>
+              <TouchableOpacity 
+                style={styles.freeWatchButton}
+                onPress={() => setShowVideoPlayer(true)}
+              >
+                <Ionicons name="play-circle" size={24} color="#ffffff" />
+                <Text style={styles.freeWatchText}>Xem miễn phí</Text>
+              </TouchableOpacity>
             </View>
-          
-        </View>
-      
-    );
-  };
+          )}
 
-  const renderActionButtons = () => {
-    if (!movieDetail) return null;
-
-    // Handle user interactions based on auth state
-    const userInteractions = movieDetail.userInteractions;
-    const hasLiked = Boolean(userInteractions?.hasLiked);
-    const isFavorite = Boolean(userInteractions?.isFavorite);
-
-    return (
-      
-        <View style={styles.actionContainer}>
-          
-            <PulseAnimation trigger={likeAnimation} color="#ff6b6b">
-              <TouchableOpacity
-                style={[
-                  styles.actionButton, 
-                  hasLiked && styles.likedButton
-                ]}
-                onPress={handleLikePress}
-                onPressOut={() => setLikeAnimation(false)}
-              >
-                <Text style={styles.actionButtonText}>
-                  {hasLiked ? '❤️' : '🤍'} Like
+          {/* Rental Status Banner */}
+          {movieDetail && !movieDetail.is_free && (
+            <View style={styles.rentalContainer}>
+              {hasRentalAccess && currentRental ? (
+                <View style={styles.rentalAccessBanner}>
+                  <View style={styles.rentalAccessInfo}>
+                    <Text style={styles.rentalAccessTitle}>✅ Đã thuê phim</Text>
+                    {/* Debug info */}
+                  
+                    <Text style={styles.rentalAccessSubtitle}>
+                      Gói: {currentRental.rentalType === '48h' ? 'Thuê 48 giờ' : 'Thuê 30 ngày'}
                 </Text>
-              </TouchableOpacity>
-            </PulseAnimation>
-
-
-          
-            <PulseAnimation trigger={favoriteAnimation} color="#ffc107">
-              <TouchableOpacity
-                style={[
-                  styles.actionButton, 
-                  isFavorite && styles.favoriteButton
-                ]}
-                onPress={handleFavoritePress}
-                onPressOut={() => setFavoriteAnimation(false)}
-              >
-                <Text style={styles.actionButtonText}>
-                  {isFavorite ? '⭐' : '☆'} Favorite
+                    {remainingTime && (
+                      <Text style={styles.rentalTimeRemaining}>
+                        Còn lại: {rentalService.formatRemainingTime(remainingTime).formatted}
                 </Text>
+                    )}
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.watchNowButton}
+                    onPress={() => {
+                      console.log('🎬 [DEBUG] Xem ngay pressed', {
+                        showVideoPlayer,
+                        hasRentalAccess,
+                        defaultEpisode: !!defaultEpisode,
+                        movieIsFree: movieDetail?.is_free,
+                        userId
+                      });
+                      setShowVideoPlayer(true);
+                    }}
+                  >
+                    <Text style={styles.watchNowText}>Xem ngay</Text>
               </TouchableOpacity>
-            </PulseAnimation>
-
-
-          
+                </View>
+              ) : (
+                <View style={styles.rentalPrompt}>
+                  <View style={styles.rentalPromptInfo}>
+                    <Text style={styles.rentalPromptTitle}>Thuê phim để xem</Text>
+                    <Text style={styles.rentalPromptSubtitle}>
+                      Từ {rentalService.formatPrice(Math.round((movieDetail.price || 0) * 0.3))}
+                    </Text>
+                  </View>
             <TouchableOpacity
-                style={styles.actionButton}
-              onPress={handleCommentPress}
+                    style={styles.rentButton}
+                    onPress={handleRentPress}
             >
-                          <Text style={styles.actionButtonText}>
-              💬 Comment
-            </Text>
+                    <Text style={styles.rentButtonText}>Thuê ngay</Text>
             </TouchableOpacity>
+        </View>
+              )}
+            </View>
+          )}
           
         </View>
       
     );
   };
+
+
 
   const renderDescription = () => {
     if (!movieDetail) return null;
@@ -539,18 +694,17 @@ export default function MovieDetailScreen() {
         <View style={styles.episodesContainer}>
           <Text style={styles.sectionTitle}>Episodes ({movieDetail.episodes.length})</Text>
           {movieDetail.episodes.map((episode, index) => (
-            
               <TouchableOpacity
+              key={episode._id || index}
                 style={styles.episodeItem}
                 onPress={() => handleEpisodePress(episode)}
               >
                 <Text style={styles.episodeNumber}>Ep {episode.episode_number}</Text>
                 <Text style={styles.episodeTitle}>{episode.episode_title}</Text>
                 <Text style={styles.episodeDuration}>
-                  {formatDuration(episode.episode_duration || episode.duration || 0)}
+                {formatDuration(episode.episode_duration || episode.duration || 0)}
                 </Text>
               </TouchableOpacity>
-            
           ))}
         </View>
       
@@ -576,25 +730,17 @@ export default function MovieDetailScreen() {
         <View style={styles.commentsContainer}>
           <Text style={styles.sectionTitle}>Bình luận ({allComments.length})</Text>
           {allComments.map((comment: any, index: number) => (
-            
-              <View style={styles.commentItem}>
-                
+            <View key={comment._id || index} style={styles.commentItem}>
                   <Text style={styles.commentUser}>
                     {comment.user.name && comment.user.name !== 'Unknown User' 
                       ? comment.user.name 
                       : comment.user.email?.split('@')[0] || 'User'}
                   </Text>
-                
-                
                   <Text style={styles.commentText}>{comment.comment}</Text>
-                
-                
                   <Text style={styles.commentDate}>
                     {new Date(comment.createdAt).toLocaleDateString()}
                   </Text>
-                
               </View>
-            
           ))}
         </View>
       
@@ -611,25 +757,20 @@ export default function MovieDetailScreen() {
           
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {movieDetail.relatedMovies.map((movie, index) => (
-                
                   <TouchableOpacity
+                  key={movie.movieId || index}
                     style={styles.relatedMovieItem}
                     onPress={() => handleRelatedMoviePress(movie.movieId)}
                   >
-                    
                       <Image
                         source={{ uri: movie.poster }}
                         style={styles.relatedMoviePoster}
                         resizeMode="cover"
                       />
-                    
-                    
                       <Text style={styles.relatedMovieTitle} numberOfLines={2}>
                         {movie.title}
                       </Text>
-                    
                   </TouchableOpacity>
-                
               ))}
             </ScrollView>
           
@@ -767,7 +908,13 @@ export default function MovieDetailScreen() {
         <View style={styles.headerSpacer} />
       </View>
       
+      <KeyboardAvoidingView 
+        style={styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
       <ScrollView
+          ref={scrollViewRef}
         style={styles.scrollView}
         refreshControl={
           <RefreshControl
@@ -776,20 +923,37 @@ export default function MovieDetailScreen() {
             tintColor="#ff6b6b"
           />
         }
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
       >
         {/* Auth Status - Hidden in production like FPT Play */}
         {/* {renderAuthStatus()} */}
         
-        {/* 🎬 VIDEO PLAYER SECTION - Always visible */}
-        
-            <View style={styles.videoPlayerContainer}>
-            {defaultEpisode && userId ? (
+        {/* 🎬 VIDEO PLAYER SECTION - Conditional based on movie type and rental status */}
+        {showVideoPlayer && (currentEpisode || defaultEpisode) && (
+          <View style={styles.videoPlayerContainer}>
+            {/* Show video if: free movie OR user has rental access OR user is logged in */}
+            {(() => {
+              const episodeToPlay = currentEpisode || defaultEpisode;
+              const canShowVideo = movieDetail?.is_free || hasRentalAccess || userId;
+              console.log('🎬 [DEBUG] Video Player Conditions:', {
+                showVideoPlayer,
+                hasCurrentEpisode: !!currentEpisode,
+                hasDefaultEpisode: !!defaultEpisode,
+                episodeToPlay: episodeToPlay?.episode_title,
+                movieIsFree: movieDetail?.is_free,
+                hasRentalAccess,
+                userId: !!userId,
+                canShowVideo
+              });
+              return canShowVideo;
+            })() ? (
               <VideoPlayer
-                episode={defaultEpisode}
-                userId={userId}
+                episode={currentEpisode || defaultEpisode!}
+                userId={userId || 'anonymous'}
                 movieId={id}
-                movieType={movieDetail?.movie_type} // Truyền loại phim để xử lý UI
-                showTitle={false} // Không hiện title trong video nữa
+                movieType={movieDetail?.movie_type}
+                showTitle={false}
                 onProgressUpdate={(progress) => {
                   console.log(`⏯️ [VIDEO] Progress: ${progress}%`);
                 }}
@@ -801,15 +965,22 @@ export default function MovieDetailScreen() {
             ) : (
               <View style={styles.videoPlaceholder}>
                 <View style={styles.videoPlaceholderContent}>
-                  <Ionicons name="videocam-off" size={48} color="#666" />
-                  <Text style={styles.videoPlaceholderTitle}>Video đang được cập nhật</Text>
+                  <Ionicons name="lock-closed" size={48} color="#666" />
+                  <Text style={styles.videoPlaceholderTitle}>Cần thuê phim để xem</Text>
                   <Text style={styles.videoPlaceholderSubtitle}>
-                    Video sẽ có sẵn trong thời gian tới
+                    Vui lòng thuê phim để có thể xem video
                   </Text>
-            </View>
+                  <TouchableOpacity 
+                    style={styles.videoPlaceholderButton}
+                    onPress={() => setShowVideoPlayer(false)}
+                  >
+                    <Text style={styles.videoPlaceholderButtonText}>Đóng</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-        )}
+            )}
           </View>
+        )}
         
         
                           {/* 📽️ MOVIE INFO - Di chuyển xuống dưới video */}
@@ -852,42 +1023,7 @@ export default function MovieDetailScreen() {
                {activeTab === 'comments' && (
                  
                    <View style={styles.commentsTabContent}>
-                     {/* Comment Input Section */}
-                     
-                       <View style={styles.commentInputContainer}>
-                         <TextInput
-                           style={styles.commentInput}
-                           placeholder="Thêm bình luận..."
-                           placeholderTextColor="#666"
-                           multiline
-                           numberOfLines={3}
-                           value={commentText}
-                           onChangeText={setCommentText}
-                           maxLength={500}
-                         />
-                         <TouchableOpacity
-                           style={[
-                             styles.commentSubmitButton,
-                             !commentText.trim() && styles.commentSubmitDisabled
-                           ]}
-                           onPress={handleCommentSubmit}
-                           disabled={!commentText.trim()}
-                         >
-                           <Text style={[
-                             styles.commentSubmitText,
-                             !commentText.trim() && styles.commentSubmitTextDisabled
-                           ]}>
-                             Gửi
-                           </Text>
-                         </TouchableOpacity>
-                       </View>
-                       
-                       <Text style={styles.characterCount}>
-                         {commentText.length}/500
-                       </Text>
-                     
-                     
-                     {/* Comments List */}
+                     {/* Comments List Only - Input moved to bottom */}
                      {renderComments()}
                    </View>
                  
@@ -896,27 +1032,56 @@ export default function MovieDetailScreen() {
            </View>
          
         
-        <View style={styles.bottomSpacing} />
+        <View style={[styles.bottomSpacing, { 
+          height: (isKeyboardVisible && activeTab === 'comments') ? 20 : 50 
+        }]} />
       </ScrollView>
+
+
+
+      {/* 💬 FIXED COMMENT INPUT - Only show when on comments tab */}
+      {activeTab === 'comments' && (
+        <View style={styles.fixedCommentInputContainer}>
+          <View style={styles.commentInputWrapper}>
+                         <TextInput
+              ref={commentInputRef}
+              style={styles.fixedCommentInput}
+                           placeholder="Thêm bình luận..."
+                           placeholderTextColor="#666"
+                           multiline
+              numberOfLines={2}
+                           value={commentText}
+                           onChangeText={setCommentText}
+                           maxLength={500}
+              returnKeyType="send"
+              onSubmitEditing={handleCommentSubmit}
+              blurOnSubmit={false}
+                         />
+                         <TouchableOpacity
+                           style={[
+                styles.fixedCommentSubmitButton,
+                !commentText.trim() && styles.commentSubmitDisabled
+                           ]}
+                           onPress={handleCommentSubmit}
+              disabled={!commentText.trim()}
+                         >
+                           <Text style={[
+                styles.fixedCommentSubmitText,
+                !commentText.trim() && styles.commentSubmitTextDisabled
+                           ]}>
+                             Gửi
+                           </Text>
+                         </TouchableOpacity>
+                       </View>
+                       
+                         </View>
+                       )}
+                       
+      </KeyboardAvoidingView>
 
       {/* 🎬 VIDEO PLAYER MODAL - Removed, now inline */}
 
-      {/* 💬 COMMENTS MODAL */}
-      <CommentsModal
-        visible={showCommentsModal}
-        onClose={() => {
-          setShowCommentsModal(false);
-          // Refresh movie detail to get updated comment count
-          console.log('🔄 [MovieDetail] Comments modal closed, refreshing movie detail...');
-          setTimeout(() => {
-            refresh();
-          }, 300);
-        }}
-        movieId={id}
-        movieTitle={movieDetail?.movie_title || 'Movie'}
-        userId={userId}
-        isLoggedIn={auth.isLoggedIn}
-      />
+
 
       {/* 📱 NOTIFICATION */}
       <SlideNotification
@@ -925,6 +1090,23 @@ export default function MovieDetailScreen() {
         type={notificationType}
         onHide={() => setShowNotification(false)}
       />
+
+      {/* 🎫 RENTAL OPTIONS MODAL */}
+      {movieDetail && (
+        <RentalOptionsModal
+          visible={showRentalModal}
+          onClose={() => setShowRentalModal(false)}
+          movie={{
+            _id: movieDetail._id || id || '',
+            title: movieDetail.movie_title,
+            price: movieDetail.price || 0,
+            poster: movieDetail.poster_path,
+            is_free: movieDetail.is_free || false,
+          }}
+          userId={userId || ''}
+          onRentalSuccess={handleRentalSuccess}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -937,6 +1119,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000',
+  },
+  keyboardAvoidingView: {
+    flex: 1,
   },
   scrollView: {
     flex: 1,
@@ -1462,8 +1647,57 @@ const styles = StyleSheet.create({
   
   // Spacing
   bottomSpacing: {
-    height: 50,
+    height: 100,
   },
+
+  // Fixed Comment Input (Bottom)
+  fixedCommentInputContainer: {
+    backgroundColor: '#000',
+    borderTopWidth: 1,
+    borderTopColor: '#333',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    paddingBottom: Platform.OS === 'ios' ? 20 : 10,
+  },
+  commentInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    // marginBottom: 1,
+  },
+  fixedCommentInput: {
+    flex: 1,
+    backgroundColor: '#333',
+    color: '#fff',
+    borderRadius: 20,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    marginRight: 10,
+    fontSize: 16,
+    maxHeight: 100,
+    textAlignVertical: 'top',
+  },
+  fixedCommentSubmitButton: {
+    backgroundColor: '#ff6b6b',
+    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 60,
+  },
+  fixedCommentSubmitText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  fixedCharacterCount: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'right',
+    marginTop: 2,
+  },
+
+
   
   // Video Player Container
   videoPlayerContainer: {
@@ -1539,6 +1773,111 @@ const styles = StyleSheet.create({
     color: '#aaa',
     fontSize: 12,
     textAlign: 'center',
+    fontStyle: 'italic',
+  },
+
+  // === RENTAL STYLES ===
+  rentalContainer: {
+    backgroundColor: '#1a1a1a',
+    margin: 20,
+    marginTop: 15,
+    borderRadius: 12,
+    padding: 16,
+  },
+  rentalAccessBanner: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  rentalAccessInfo: {
+    flex: 1,
+  },
+  rentalAccessTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#4CAF50',
+    marginBottom: 4,
+  },
+  rentalAccessSubtitle: {
+    fontSize: 14,
+    color: '#aaa',
+    marginBottom: 2,
+  },
+  rentalTimeRemaining: {
+    fontSize: 12,
+    color: '#FFA500',
+    fontWeight: '500',
+  },
+  watchNowButton: {
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  watchNowText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  rentalPrompt: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  rentalPromptInfo: {
+    flex: 1,
+  },
+  rentalPromptTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 4,
+  },
+  rentalPromptSubtitle: {
+    fontSize: 14,
+    color: '#4CAF50',
+    fontWeight: '600',
+  },
+  rentButton: {
+    backgroundColor: '#FF6B6B',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  rentButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  
+  // === FREE MOVIE STYLES ===
+  freeMovieContainer: {
+    backgroundColor: '#1a1a1a',
+    margin: 20,
+    marginTop: 15,
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  freeWatchButton: {
+    backgroundColor: '#4CAF50',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  freeWatchText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  
+  // Debug styles
+  debugText: {
+    color: '#888',
+    fontSize: 10,
     fontStyle: 'italic',
   },
 }); 
