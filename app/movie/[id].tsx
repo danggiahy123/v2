@@ -907,7 +907,6 @@ export default function MovieDetailScreen() {
   // =====================================
 
   return (
-    <ErrorBoundary showGoBack={true}>
       <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#000" />
       
@@ -1127,7 +1126,6 @@ export default function MovieDetailScreen() {
         />
       )}
     </SafeAreaView>
-    </ErrorBoundary>
   );
 }
 
