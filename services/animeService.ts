@@ -18,7 +18,7 @@ export const animeService = {
     return res.json();
   },
   // Lấy danh sách anime chiếu rạp
-  async getAnimeMovies(params = { page: 1, limit: 10, price_type: undefined, showAll: false }) {
+  async getAnimeMovies(params = { page: 1, limit: 13, price_type: undefined, showAll: false }) {
     const query = new URLSearchParams();
     if (params.page) query.append('page', params.page.toString());
     if (params.limit && !params.showAll) query.append('limit', params.limit.toString());
@@ -28,7 +28,7 @@ export const animeService = {
     return res.json();
   },
   // Lấy anime trending
-  async getTrendingAnime(params = { type: 'series', limit: 8, showAll: false }) {
+  async getTrendingAnime(params = { type: 'series', limit: 10, showAll: false }) {
     const query = new URLSearchParams();
     if (params.type) query.append('type', params.type);
     if (params.limit && !params.showAll) query.append('limit', params.limit.toString());

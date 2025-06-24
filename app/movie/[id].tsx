@@ -35,8 +35,11 @@ import { VideoPlayer } from '../../components/movie/player/VideoPlayer';
 import { RentalOptionsModal } from '../../components/rental/RentalOptionsModal';
 import { useRentalStatus } from '../../hooks/useRentalStatus';
 import { rentalService } from '../../services/rentalService';
+
+
 import { Notification } from '../../components/ui';
 import { SkeletonLoader } from '../../components/ui/AnimatedElements';
+
 
 // Screen width for responsive design - will be used in future updates
 // const { width: screenWidth } = Dimensions.get('window');
@@ -46,6 +49,19 @@ import { SkeletonLoader } from '../../components/ui/AnimatedElements';
  */
 export default function MovieDetailScreen() {
   const { id, autoPlay } = useLocalSearchParams<{ id: string; autoPlay?: string }>();
+  
+  // Debug log for params
+  console.log('🔍 [MovieDetail] Route params:', { id, autoPlay, idType: typeof id });
+  
+  // Early return if no movie ID
+  if (!id || typeof id !== 'string') {
+    console.log('❌ [MovieDetail] No valid movie ID provided');
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#1a1a1a' }}>
+        <Text style={{ color: 'white', fontSize: 18 }}>Invalid movie ID</Text>
+      </View>
+    );
+  }
   
   // 🕐 DURATION HELPER
   const formatDuration = (duration: number): string => {
@@ -121,7 +137,7 @@ export default function MovieDetailScreen() {
     // isLoading: isCheckingRental,
     checkAccess: checkRentalAccess,
     // message: rentalMessage
-  } = useRentalStatus(userId || null, id || null);
+  } = useRentalStatus(userId || null, movieDetail ? id : null);
   
   const [activeTab, setActiveTab] = useState<'related' | 'comments'>('related');
 
@@ -891,7 +907,8 @@ export default function MovieDetailScreen() {
   // =====================================
 
   return (
-    <SafeAreaView style={styles.container}>
+    <ErrorBoundary showGoBack={true}>
+      <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#000" />
       
       {/* 📱 CUSTOM HEADER - Tránh tai thỏ iPhone */}
@@ -1110,6 +1127,7 @@ export default function MovieDetailScreen() {
         />
       )}
     </SafeAreaView>
+    </ErrorBoundary>
   );
 }
 

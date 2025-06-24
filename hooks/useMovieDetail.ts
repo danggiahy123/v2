@@ -76,8 +76,9 @@ export const useMovieDetail = (
   
   const fetchMovieDetail = useCallback(async (isRefresh: boolean = false) => {
     try {
-      if (!movieId) {
-        throw new Error('Movie ID is required');
+      if (!movieId || typeof movieId !== 'string' || movieId === 'undefined') {
+        console.log('⚠️ [useMovieDetail] Invalid movieId:', { movieId, type: typeof movieId });
+        return;
       }
 
       if (isRefresh) {
@@ -286,8 +287,10 @@ export const useMovieDetail = (
   
   // Initial load
   useEffect(() => {
-    if (movieId) {
+    if (movieId && typeof movieId === 'string' && movieId !== 'undefined') {
       fetchMovieDetail(false);
+    } else {
+      console.log('⚠️ [useMovieDetail] Skipping fetch due to invalid movieId:', { movieId, type: typeof movieId });
     }
   }, [movieId, fetchMovieDetail]);
 
