@@ -105,7 +105,13 @@ export const movieDetailService = {
         queryParams.toString() ? `?${queryParams.toString()}` : ''
       }`;
       
-      console.log('🎬 [MovieDetailService] Fetching movie detail:', { movieId, userId, url });
+      console.log('🎬 [MovieDetailService] Fetching movie detail:', { 
+        movieId, 
+        movieIdType: typeof movieId,
+        movieIdValid: !!movieId && movieId !== 'undefined',
+        url, 
+        userId 
+      });
       
       const response = await fetch(url, {
         method: 'GET',

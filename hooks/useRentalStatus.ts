@@ -20,13 +20,15 @@ export const useRentalStatus = (
   const [message, setMessage] = useState('');
 
   const checkAccess = useCallback(async () => {
-    if (!userId || !movieId) {
+    if (!userId || !movieId || movieId === 'undefined' || typeof movieId !== 'string') {
+      console.log('⚠️ [useRentalStatus] Invalid params:', { userId, movieId, movieIdType: typeof movieId });
       setHasAccess(false);
       setRental(null);
       setRemainingTime(null);
       setRemainingHours(null);
       setRemainingDays(null);
       setMessage('Thông tin không đầy đủ');
+      setError(null);
       return;
     }
 
@@ -54,9 +56,13 @@ export const useRentalStatus = (
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Có lỗi xảy ra';
+      console.error('❌ [useRentalStatus] Error checking rental access:', err);
       setError(errorMessage);
       setHasAccess(false);
       setRental(null);
+      setRemainingTime(null);
+      setRemainingHours(null);
+      setRemainingDays(null);
       setMessage('Không thể kiểm tra quyền xem');
     } finally {
       setIsLoading(false);
