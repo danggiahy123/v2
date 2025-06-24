@@ -30,8 +30,7 @@ export default function SettingsScreen() {
   };
 
   const handleSubscribedMovies = () => {
-
-    Alert.alert('Phim đăng ký', 'Tính năng đang phát triển');
+    router.push('/settings/subscriptions' as any);
   };
 
   const handleTransactionHistory = () => {

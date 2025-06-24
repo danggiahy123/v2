@@ -100,7 +100,7 @@ const MovieItem = ({ item, onPress }: { item: GridMovie; onPress: () => void }) 
         </View>
 
         <View style={styles.movieInfo}>
-          <Text style={styles.movieTitle} numberOfLines={2}>
+          <Text style={styles.movieTitle} numberOfLines={1}>
             {item.title}
           </Text>
           <View style={styles.movieMeta}>

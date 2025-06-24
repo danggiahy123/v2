@@ -15,7 +15,7 @@
     import { SafeAreaView } from 'react-native-safe-area-context';
     import { useRouter } from 'expo-router';
 
-    import { TabHeader, SearchModal, ViewAllModal } from '../../components/ui';
+    import { TabHeader, SearchModal } from '../../components/ui';
     import { seriesService } from '../../services/seriesService';
     import { SeriesBanner } from '../../components/series';
 
@@ -32,11 +32,6 @@
       const headerOpacity = useRef(new Animated.Value(1)).current;
       const lastScrollY = useRef(0);
       const [searchVisible, setSearchVisible] = useState(false);
-      const [viewAllModalVisible, setViewAllModalVisible] = useState(false);
-      const [selectedCategory, setSelectedCategory] = useState('');
-      const [selectedTitle, setSelectedTitle] = useState('');
-
-      // State cho data
       const [recommended, setRecommended] = useState<Movie[]>([]);
       const [trending, setTrending] = useState<Movie[]>([]);
       const [vietnamese, setVietnamese] = useState<Movie[]>([]);
@@ -104,12 +99,6 @@
         }
       };
 
-      const handleViewAll = (category: string, title: string) => {
-        setSelectedCategory(category);
-        setSelectedTitle(title);
-        setViewAllModalVisible(true);
-      };
-
       const renderMovieItem = ({ item }: { item: Movie }) => (
         <TouchableOpacity 
           style={styles.movieItem}
@@ -126,9 +115,6 @@
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>{title}</Text>
-              <TouchableOpacity onPress={() => handleViewAll(category, title)}>
-                <Text style={styles.seeAllText}>Xem tất cả</Text>
-              </TouchableOpacity>
             </View>
             <FlatList
               data={data}
@@ -202,9 +188,6 @@
               <View style={styles.trendingSection}>
                 <View style={styles.sectionHeader}>
                   <Text style={styles.sectionTitle}>Top Phim Bộ Xu Hướng</Text>
-                  <TouchableOpacity onPress={() => handleViewAll('trending', 'Top Phim Bộ Xu Hướng')}>
-                    <Text style={styles.seeAllText}>Xem tất cả</Text>
-                  </TouchableOpacity>
                 </View>
                 <FlatList
                   data={trending.slice(0, 10)}
@@ -241,13 +224,6 @@
             visible={searchVisible}
             onClose={() => setSearchVisible(false)}
             category="series"
-          />
-
-          <ViewAllModal
-            visible={viewAllModalVisible}
-            onClose={() => setViewAllModalVisible(false)}
-            category={selectedCategory}
-            title={selectedTitle}
           />
         </View>
       );
@@ -392,12 +368,5 @@
         alignItems: 'center',
         marginBottom: 12,
         paddingHorizontal: 16,
-      },
-      seeAllText: {
-        color: '#B0B0B0',
-        fontSize: 15,
-        fontWeight: '600',
-        textDecorationLine: 'underline',
-        textDecorationColor: 'transparent',
       },
     });

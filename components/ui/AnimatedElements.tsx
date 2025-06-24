@@ -1,57 +1,62 @@
-import React, { useRef, useEffect } from 'react';
+/**
+ * UI COMPONENTS WITH ANIMATIONS
+ * 
+ * MÔ TẢ:
+ * Collection of reusable animated UI components.
+ * Each component is optimized for performance and reusability.
+ * 
+ * COMPONENTS:
+ * 1. SkeletonLoader - Loading placeholder with shimmer effect
+ * 2. AnimatedButton - Button with scale and opacity animations
+ * 3. FloatingActionButton - FAB with entrance and rotation animations
+ */
+
+import React, { useEffect, useRef } from 'react';
 import {
   View,
   Text,
-  Animated,
-  StyleSheet,
   TouchableOpacity,
-  Dimensions,
+  StyleSheet,
+  Animated,
   Easing,
+  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-const { width: screenWidth } = Dimensions.get('window');
-
-// **1️⃣ ANIMATED LOADING SKELETON**
+// **1️⃣ SKELETON LOADER WITH SHIMMER**
 interface SkeletonProps {
-  width?: number | string;
-  height?: number;
-  borderRadius?: number;
+  width: number | string;
+  height: number;
   style?: any;
+  borderRadius?: number;
 }
 
 export const SkeletonLoader: React.FC<SkeletonProps> = ({
-  width = '100%',
-  height = 20,
-  borderRadius = 4,
+  width,
+  height,
   style,
+  borderRadius = 4,
 }) => {
-  const shimmerAnim = useRef(new Animated.Value(-1)).current;
+  const animWidth = typeof width === 'string' ? parseInt(width) : width;
+  const translateX = useRef(new Animated.Value(-animWidth)).current;
 
   useEffect(() => {
-    const shimmer = () => {
+    Animated.loop(
       Animated.sequence([
-        Animated.timing(shimmerAnim, {
-          toValue: 1,
-          duration: 1200,
-          easing: Easing.linear,
+        Animated.timing(translateX, {
+          toValue: animWidth,
+          duration: 1000,
+          easing: Easing.ease,
           useNativeDriver: true,
         }),
-        Animated.timing(shimmerAnim, {
-          toValue: -1,
+        Animated.timing(translateX, {
+          toValue: -animWidth,
           duration: 0,
           useNativeDriver: true,
         }),
-      ]).start(() => shimmer());
-    };
-
-    shimmer();
-  }, [shimmerAnim]);
-
-  const translateX = shimmerAnim.interpolate({
-    inputRange: [-1, 1],
-    outputRange: [-screenWidth, screenWidth],
-  });
+      ])
+    ).start();
+  }, [animWidth]);
 
   return (
     <View
@@ -73,88 +78,63 @@ export const SkeletonLoader: React.FC<SkeletonProps> = ({
   );
 };
 
-// **2️⃣ ANIMATED BUTTON WITH PRESS EFFECTS**
+// **2️⃣ ANIMATED BUTTON**
 interface AnimatedButtonProps {
   onPress: () => void;
-  children: React.ReactNode;
-  style?: any;
-  disabled?: boolean;
+  title: string;
   variant?: 'primary' | 'secondary' | 'outline';
   size?: 'small' | 'medium' | 'large';
+  icon?: string;
+  disabled?: boolean;
+  style?: any;
 }
 
 export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
   onPress,
-  children,
-  style,
-  disabled = false,
+  title,
   variant = 'primary',
   size = 'medium',
+  icon,
+  disabled = false,
+  style,
 }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
-  const opacityAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
-    if (disabled) return;
-    
-    Animated.parallel([
-      Animated.spring(scaleAnim, {
-        toValue: 0.95,
-        tension: 150,
-        friction: 4,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacityAnim, {
-        toValue: 0.8,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    Animated.spring(scaleAnim, {
+      toValue: 0.95,
+      useNativeDriver: true,
+    }).start();
   };
 
   const handlePressOut = () => {
-    if (disabled) return;
-
-    Animated.parallel([
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        tension: 150,
-        friction: 4,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacityAnim, {
-        toValue: 1,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+    }).start();
   };
 
   const getVariantStyle = () => {
     switch (variant) {
-      case 'primary': return styles.buttonPrimary;
-      case 'secondary': return styles.buttonSecondary;
-      case 'outline': return styles.buttonOutline;
-      default: return styles.buttonPrimary;
+      case 'secondary':
+        return styles.buttonSecondary;
+      case 'outline':
+        return styles.buttonOutline;
+      default:
+        return styles.buttonPrimary;
     }
   };
 
   const getSizeStyle = () => {
     switch (size) {
-      case 'small': return styles.buttonSmall;
-      case 'medium': return styles.buttonMedium;
-      case 'large': return styles.buttonLarge;
-      default: return styles.buttonMedium;
+      case 'small':
+        return styles.buttonSmall;
+      case 'large':
+        return styles.buttonLarge;
+      default:
+        return styles.buttonMedium;
     }
   };
-
-  const buttonStyle = [
-    styles.animatedButton,
-    getVariantStyle(),
-    getSizeStyle(),
-    { opacity: disabled ? 0.5 : 1 },
-    style,
-  ];
 
   return (
     <TouchableOpacity
@@ -166,14 +146,18 @@ export const AnimatedButton: React.FC<AnimatedButtonProps> = ({
     >
       <Animated.View
         style={[
-          buttonStyle,
-          {
-            transform: [{ scale: scaleAnim }],
-            opacity: opacityAnim,
-          },
+          styles.animatedButton,
+          getVariantStyle(),
+          getSizeStyle(),
+          { transform: [{ scale: scaleAnim }] },
+          disabled && { opacity: 0.6 },
+          style,
         ]}
       >
-        {children}
+        {icon && <Ionicons name={icon as any} size={24} color="#fff" style={{ marginRight: 8 }} />}
+        <Text style={{ color: variant === 'outline' ? '#007AFF' : '#fff', fontWeight: '600' }}>
+          {title}
+        </Text>
       </Animated.View>
     </TouchableOpacity>
   );
@@ -279,114 +263,6 @@ export const FloatingActionButton: React.FC<FABProps> = ({
   );
 };
 
-// **4️⃣ SLIDE IN NOTIFICATION**
-interface NotificationProps {
-  visible: boolean;
-  message: string;
-  type?: 'success' | 'error' | 'warning' | 'info';
-  duration?: number;
-  onHide?: () => void;
-}
-
-export const SlideNotification: React.FC<NotificationProps> = ({
-  visible,
-  message,
-  type = 'info',
-  duration = 3000,
-  onHide,
-}) => {
-  const slideAnim = useRef(new Animated.Value(-100)).current;
-  const opacityAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (visible) {
-      // Slide in
-      Animated.parallel([
-        Animated.spring(slideAnim, {
-          toValue: 0,
-          tension: 100,
-          friction: 8,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacityAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
-
-      // Auto hide
-      if (duration > 0) {
-        const timer = setTimeout(() => {
-          hideNotification();
-        }, duration);
-
-        return () => clearTimeout(timer);
-      }
-    } else {
-      hideNotification();
-    }
-  }, [visible]);
-
-  const hideNotification = () => {
-    Animated.parallel([
-      Animated.timing(slideAnim, {
-        toValue: -100,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacityAnim, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      if (onHide) onHide();
-    });
-  };
-
-  const getNotificationColor = () => {
-    switch (type) {
-      case 'success': return '#4CAF50';
-      case 'error': return '#F44336';
-      case 'warning': return '#FF9800';
-      default: return '#2196F3';
-    }
-  };
-
-  const getIcon = () => {
-    switch (type) {
-      case 'success': return 'checkmark-circle';
-      case 'error': return 'close-circle';
-      case 'warning': return 'warning';
-      default: return 'information-circle';
-    }
-  };
-
-  if (!visible) return null;
-
-  return (
-    <Animated.View
-      style={[
-        styles.notification,
-        {
-          backgroundColor: getNotificationColor(),
-          transform: [{ translateY: slideAnim }],
-          opacity: opacityAnim,
-        },
-      ]}
-    >
-      <Ionicons name={getIcon() as any} size={20} color="#fff" />
-      <Text style={styles.notificationText}>{message}</Text>
-      <TouchableOpacity onPress={hideNotification} style={styles.notificationClose}>
-        <Ionicons name="close" size={16} color="#fff" />
-      </TouchableOpacity>
-    </Animated.View>
-  );
-};
-
-
-
 const styles = StyleSheet.create({
   // Skeleton Loader
   skeleton: {
@@ -444,42 +320,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
   },
-
-  // Notification
-  notification: {
-    position: 'absolute',
-    top: 50,
-    left: 20,
-    right: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 8,
-    zIndex: 1000,
-    elevation: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-  },
-  notificationText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '500',
-    flex: 1,
-    marginLeft: 8,
-  },
-  notificationClose: {
-    padding: 4,
-    marginLeft: 8,
-  },
-
-
 });
 
 export default {
   SkeletonLoader,
   AnimatedButton,
   FloatingActionButton,
-  SlideNotification,
 }; 

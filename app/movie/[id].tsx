@@ -35,8 +35,8 @@ import { VideoPlayer } from '../../components/movie/player/VideoPlayer';
 import { RentalOptionsModal } from '../../components/rental/RentalOptionsModal';
 import { useRentalStatus } from '../../hooks/useRentalStatus';
 import { rentalService } from '../../services/rentalService';
-
-import { SlideNotification, SkeletonLoader } from '../../components/ui/AnimatedElements';
+import { Notification } from '../../components/ui';
+import { SkeletonLoader } from '../../components/ui/AnimatedElements';
 
 // Screen width for responsive design - will be used in future updates
 // const { width: screenWidth } = Dimensions.get('window');
@@ -108,7 +108,7 @@ export default function MovieDetailScreen() {
 
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
-  const [notificationType, setNotificationType] = useState<'success' | 'error' | 'info'>('info');
+  const [notificationType, setNotificationType] = useState<'success' | 'error'>('success');
 
   
   
@@ -247,7 +247,7 @@ export default function MovieDetailScreen() {
           setShowVideoPlayer(true);
         } else {
           // Show notification that rental is required
-          showNotificationMessage('Cần thuê phim để xem video', 'info');
+          showNotificationMessage('Cần thuê phim để xem video', 'error');
         }
       }
     }
@@ -296,7 +296,7 @@ export default function MovieDetailScreen() {
   }, []);
 
   // 📱 NOTIFICATION HELPER
-  const showNotificationMessage = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+  const showNotificationMessage = (message: string, type: 'success' | 'error' = 'success') => {
     setNotificationMessage(message);
     setNotificationType(type);
     setShowNotification(true);
@@ -339,7 +339,7 @@ export default function MovieDetailScreen() {
       await toggleLike(newLikeState);
 
       showNotificationMessage(
-        newLikeState ? 'Added to liked movies!' : 'Removed from liked movies',
+        newLikeState ? 'Đã thêm vào danh sách yêu thích!' : 'Đã xóa khỏi danh sách yêu thích',
         'success'
       );
       console.log('✅ [DEBUG] Like toggle completed');
@@ -347,7 +347,7 @@ export default function MovieDetailScreen() {
       // Like action completed successfully
     } catch (error) {
       console.log('❌ [DEBUG] Like toggle error:', error);
-      showNotificationMessage('Failed to update like status', 'error');
+      showNotificationMessage('Không thể cập nhật trạng thái yêu thích', 'error');
     }
   };
 
@@ -366,14 +366,14 @@ export default function MovieDetailScreen() {
       await toggleFavorite(newFavoriteState);
 
       showNotificationMessage(
-        newFavoriteState ? 'Added to favorites!' : 'Removed from favorites',
+        newFavoriteState ? 'Đã thêm vào bộ sưu tập!' : 'Đã xóa khỏi bộ sưu tập',
         'success'
       );
       
       // Favorite action completed successfully
     } catch (err) {
       console.error('Favorite toggle error:', err);
-      showNotificationMessage('Failed to update favorite status', 'error');
+      showNotificationMessage('Không thể cập nhật trạng thái bộ sưu tập', 'error');
     }
   };
 
@@ -395,13 +395,13 @@ export default function MovieDetailScreen() {
       setCommentText('');
       
       // Hiển thị thông báo thành công
-      showNotificationMessage('Comment added successfully!', 'success');
+      showNotificationMessage('Đã thêm bình luận thành công!', 'success');
       
       console.log('✅ [Comment] Comment added successfully, UI will update automatically');
       
     } catch (error) {
       console.error('❌ [Comment] Submit error:', error);
-      showNotificationMessage('Failed to add comment', 'error');
+      showNotificationMessage('Không thể thêm bình luận', 'error');
     }
   };
 
@@ -439,7 +439,7 @@ export default function MovieDetailScreen() {
     if (!movieDetail) return;
     
     if (movieDetail.is_free) {
-      showNotificationMessage('Phim này miễn phí!', 'info');
+      showNotificationMessage('Phim này miễn phí!', 'success');
       return;
     }
 
@@ -609,7 +609,7 @@ export default function MovieDetailScreen() {
               {hasRentalAccess && currentRental ? (
                 <View style={styles.rentalAccessBanner}>
                   <View style={styles.rentalAccessInfo}>
-                    <Text style={styles.rentalAccessTitle}>✅ Đã thuê phim</Text>
+                    <Text style={styles.rentalAccessTitle}> Đã thuê phim</Text>
                     {/* Debug info */}
                   
                     <Text style={styles.rentalAccessSubtitle}>
@@ -900,7 +900,7 @@ export default function MovieDetailScreen() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Text style={styles.backButtonText}>‹</Text>
+          <Ionicons name="chevron-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>
           {movieDetail?.movie_title || 'Movie Detail'}
@@ -1084,11 +1084,13 @@ export default function MovieDetailScreen() {
 
 
       {/* 📱 NOTIFICATION */}
-      <SlideNotification
+      <Notification
         visible={showNotification}
         message={notificationMessage}
         type={notificationType}
-        onHide={() => setShowNotification(false)}
+        onClose={() => setShowNotification(false)}
+        autoClose={true}
+        duration={3000}
       />
 
       {/* 🎫 RENTAL OPTIONS MODAL */}
@@ -1146,15 +1148,10 @@ const styles = StyleSheet.create({
   backButton: {
     width: 40,
     height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
     borderRadius: 20,
     backgroundColor: 'rgba(255,255,255,0.1)',
-  },
-  backButtonText: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: 'bold',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
     flex: 1,
@@ -1809,7 +1806,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   watchNowButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#D11030',
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
@@ -1852,7 +1849,7 @@ const styles = StyleSheet.create({
   
   // === FREE MOVIE STYLES ===
   freeMovieContainer: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#000',
     margin: 20,
     marginTop: 15,
     borderRadius: 12,
@@ -1860,7 +1857,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   freeWatchButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#D11030',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 24,

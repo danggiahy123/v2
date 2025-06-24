@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { TabHeader, SearchModal, ViewAllModal } from '../../components/ui';
+import { TabHeader, SearchModal } from '../../components/ui';
 import { animeService } from '../../services/animeService';
 import { AnimeBanner } from '../../components/anime';
 import { useRouter } from 'expo-router';
@@ -30,9 +30,6 @@ export default function AnimeScreen() {
   const headerOpacity = useRef(new Animated.Value(1)).current;
   const lastScrollY = useRef(0);
   const [searchVisible, setSearchVisible] = useState(false);
-  const [viewAllModalVisible, setViewAllModalVisible] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [selectedTitle, setSelectedTitle] = useState('');
   const [trending, setTrending] = useState<Anime[]>([]);
   const [series, setSeries] = useState<Anime[]>([]);
   const [movies, setMovies] = useState<Anime[]>([]);
@@ -81,12 +78,6 @@ export default function AnimeScreen() {
     fetchAnimeData();
   }, []);
 
-  const handleViewAll = (category: string, title: string) => {
-    setSelectedCategory(category);
-    setSelectedTitle(title);
-    setViewAllModalVisible(true);
-  };
-
   const renderMovieItem = ({ item }: { item: Anime }) => (
     <TouchableOpacity 
       style={styles.movieItem}
@@ -103,9 +94,6 @@ export default function AnimeScreen() {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>{title}</Text>
-          <TouchableOpacity onPress={() => handleViewAll(category, title)}>
-            <Text style={styles.seeAllText}>Xem tất cả</Text>
-          </TouchableOpacity>
         </View>
         <FlatList
           data={data}
@@ -126,9 +114,6 @@ export default function AnimeScreen() {
       <View style={styles.trendingSection}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Hoạt hình đang thịnh hành</Text>
-          <TouchableOpacity onPress={() => handleViewAll('trending', 'Hoạt hình đang thịnh hành')}>
-            <Text style={styles.seeAllText}>Xem tất cả</Text>
-          </TouchableOpacity>
         </View>
         <FlatList
           data={data.slice(0, 10)}
@@ -227,13 +212,6 @@ export default function AnimeScreen() {
         onClose={() => setSearchVisible(false)}
         category="anime"
       />
-
-      <ViewAllModal
-        visible={viewAllModalVisible}
-        onClose={() => setViewAllModalVisible(false)}
-        category={selectedCategory}
-        title={selectedTitle}
-      />
     </View>
   );
 }
@@ -275,7 +253,7 @@ const styles = StyleSheet.create({
     textDecorationColor: 'transparent',
   },
   movieList: {
-    paddingLeft: 15,
+    paddingHorizontal: 16,
   },
   movieItem: {
     marginRight: 20,
