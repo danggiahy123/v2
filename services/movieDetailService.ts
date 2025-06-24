@@ -26,8 +26,12 @@ const transformMovieDetailResponse = (apiResponse: any): MovieDetail => {
     hasVideoUrl: !!movie.video_url,
     hasEpisodes: !!movie.episodes,
     episodesCount: movie.episodes?.length || 0,
+    firstEpisode: movie.episodes?.[0],
     rawMovie: movie
   });
+  
+  // Log full API response for debugging
+  console.log('🔍 [DEBUG] Full API Response:', JSON.stringify(apiResponse, null, 2));
   
   return {
     movieId: movie._id,

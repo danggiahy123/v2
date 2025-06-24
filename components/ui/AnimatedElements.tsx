@@ -385,81 +385,7 @@ export const SlideNotification: React.FC<NotificationProps> = ({
   );
 };
 
-// **5️⃣ PULSE ANIMATION FOR LIKE BUTTON**
-interface PulseAnimationProps {
-  children: React.ReactNode;
-  trigger: boolean;
-  color?: string;
-}
 
-export const PulseAnimation: React.FC<PulseAnimationProps> = ({
-  children,
-  trigger,
-  color = '#ff6b6b',
-}) => {
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    if (trigger) {
-      // Pulse effect
-      Animated.sequence([
-        Animated.timing(scaleAnim, {
-          toValue: 1.2,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scaleAnim, {
-          toValue: 1,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-      ]).start();
-
-      // Ring pulse effect
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 2,
-          duration: 400,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 0,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [trigger]);
-
-  return (
-    <View style={styles.pulseContainer}>
-      {/* Pulse ring */}
-      <Animated.View
-        style={[
-          styles.pulseRing,
-          {
-            borderColor: color,
-            transform: [{ scale: pulseAnim }],
-            opacity: pulseAnim.interpolate({
-              inputRange: [1, 2],
-              outputRange: [0.7, 0],
-            }),
-          },
-        ]}
-      />
-      
-      {/* Main element */}
-      <Animated.View
-        style={{
-          transform: [{ scale: scaleAnim }],
-        }}
-      >
-        {children}
-      </Animated.View>
-    </View>
-  );
-};
 
 const styles = StyleSheet.create({
   // Skeleton Loader
@@ -548,18 +474,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
 
-  // Pulse Animation
-  pulseContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pulseRing: {
-    position: 'absolute',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 2,
-  },
+
 });
 
 export default {
@@ -567,5 +482,4 @@ export default {
   AnimatedButton,
   FloatingActionButton,
   SlideNotification,
-  PulseAnimation,
 }; 

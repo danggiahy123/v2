@@ -33,7 +33,7 @@ const AnimeDetail: React.FC<AnimeDetailProps> = ({ animeId }) => {
         <View style={{ marginTop: 18 }}>
           <Text style={styles.sectionTitle}>Danh sách tập</Text>
           {anime.episodes.map((ep: any) => (
-            <View key={ep.number} style={styles.episodeItem}>
+            <View key={ep._id || ep.number} style={styles.episodeItem}>
               <Text style={styles.episodeTitle}>Tập {ep.number}: {ep.title}</Text>
               {ep.duration && <Text style={styles.episodeInfo}>Thời lượng: {ep.duration} phút</Text>}
               {ep.is_locked ? <Text style={styles.episodeLocked}>Khoá</Text> : <Text style={styles.episodeUnlocked}>Xem ngay</Text>}
