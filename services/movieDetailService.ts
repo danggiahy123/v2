@@ -95,6 +95,8 @@ export const movieDetailService = {
    * @returns Promise<MovieDetail>
    */
   async getMovieDetail(movieId: string, userId?: string): Promise<MovieDetail> {
+    const serviceStartTime = Date.now();
+    
     try {
       const queryParams = new URLSearchParams();
       if (userId) {
@@ -110,9 +112,11 @@ export const movieDetailService = {
         movieIdType: typeof movieId,
         movieIdValid: !!movieId && movieId !== 'undefined',
         url, 
-        userId 
+        userId,
+        serviceStartTime
       });
       
+      const fetchStartTime = Date.now();
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -120,20 +124,44 @@ export const movieDetailService = {
         },
       });
       
+      const fetchEndTime = Date.now();
+      console.log('🌐 [MovieDetailService] Network request completed:', {
+        networkTime: fetchEndTime - fetchStartTime,
+        status: response.status,
+        ok: response.ok
+      });
+      
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       
+      const jsonStartTime = Date.now();
       const apiResponse: MovieDetailApiResponse = await response.json();
+      const jsonEndTime = Date.now();
+      
+      console.log('📋 [MovieDetailService] JSON parsing completed:', {
+        jsonParseTime: jsonEndTime - jsonStartTime
+      });
       
       if (apiResponse.status !== 'success') {
         throw new Error('Failed to fetch movie detail');
       }
       
       // Transform API response to UI format
+      const transformStartTime = Date.now();
       const movieDetail = transformMovieDetailResponse(apiResponse);
+      const transformEndTime = Date.now();
       
-      console.log('✅ [MovieDetailService] Movie detail fetched successfully:', movieDetail.movie_title);
+      console.log('✅ [MovieDetailService] Movie detail fetched successfully:', {
+        title: movieDetail.movie_title,
+        totalServiceTime: transformEndTime - serviceStartTime,
+        transformTime: transformEndTime - transformStartTime,
+        breakdown: {
+          network: fetchEndTime - fetchStartTime,
+          jsonParse: jsonEndTime - jsonStartTime,
+          transform: transformEndTime - transformStartTime
+        }
+      });
       console.log('🔍 [DEBUG] userInteractions from API:', apiResponse.data.movie.userInteractions);
       console.log('🔍 [DEBUG] transformed userInteractions:', movieDetail.userInteractions);
       

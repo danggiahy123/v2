@@ -1,10 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { rentalService } from '../services/rentalService';
 import {
   UseRentalStatusResult,
   RentalInfo,
   RentalTimeFormatting,
 } from '../types/rental';
+
+// Simple cache for rental status (5 minutes TTL)
+const rentalCache = new Map<string, { data: any; timestamp: number; ttl: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 export const useRentalStatus = (
   userId: string | null,
@@ -19,7 +23,7 @@ export const useRentalStatus = (
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState('');
 
-  const checkAccess = useCallback(async () => {
+  const checkAccess = useCallback(async (forceRefresh: boolean = false) => {
     if (!userId || !movieId || movieId === 'undefined' || typeof movieId !== 'string') {
       console.log('⚠️ [useRentalStatus] Invalid params:', { userId, movieId, movieIdType: typeof movieId });
       setHasAccess(false);
@@ -32,19 +36,54 @@ export const useRentalStatus = (
       return;
     }
 
+    const cacheKey = `${userId}-${movieId}`;
+    const startTime = Date.now();
+    
+    // Check cache first (unless force refresh)
+    if (!forceRefresh) {
+      const cached = rentalCache.get(cacheKey);
+      if (cached && (Date.now() - cached.timestamp) < cached.ttl) {
+        console.log('🎫 [useRentalStatus] Using cached rental data:', { 
+          cacheAge: Date.now() - cached.timestamp,
+          userId, 
+          movieId 
+        });
+        const data = cached.data;
+        setHasAccess(data.hasAccess);
+        setRental(data.rental || null);
+        setRemainingTime(data.remainingTime || null);
+        setRemainingHours(data.remainingHours || null);
+        setRemainingDays(data.remainingDays || null);
+        setMessage(data.message);
+        setError(null);
+        setIsLoading(false);
+        return;
+      }
+    }
+
     setIsLoading(true);
     setError(null);
 
     try {
+      console.log('🎫 [useRentalStatus] Starting rental access check:', { userId, movieId, startTime, forceRefresh });
       const response = await rentalService.checkRentalAccess(userId, movieId);
+      const endTime = Date.now();
       const data = response.data;
+      
+      // Cache the response
+      rentalCache.set(cacheKey, {
+        data,
+        timestamp: Date.now(),
+        ttl: CACHE_TTL
+      });
 
       console.log('🎫 [DEBUG] Rental Status Response:', {
         userId,
         movieId,
         hasAccess: data.hasAccess,
         rental: data.rental,
-        message: data.message
+        message: data.message,
+        responseTime: endTime - startTime
       });
 
       setHasAccess(data.hasAccess);
@@ -74,13 +113,14 @@ export const useRentalStatus = (
     checkAccess();
   }, [checkAccess]);
 
-  // Auto refresh mỗi 30 giây nếu có active rental
+  // Auto refresh mỗi 5 phút nếu có active rental (giảm từ 30s xuống 5 phút)
   useEffect(() => {
     if (!hasAccess || !rental) return;
 
-    const interval = setInterval(() => {
-      checkAccess();
-    }, 30000); // 30 seconds
+          const interval = setInterval(() => {
+        console.log('🔄 [useRentalStatus] Auto-refreshing rental status (5min interval)');
+        checkAccess(true); // Force refresh on interval
+      }, 5 * 60 * 1000); // 5 minutes instead of 30 seconds
 
     return () => clearInterval(interval);
   }, [hasAccess, rental, checkAccess]);

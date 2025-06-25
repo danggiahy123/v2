@@ -952,6 +952,7 @@ export default function MovieDetailScreen() {
             {(() => {
               const episodeToPlay = currentEpisode || defaultEpisode;
               const canShowVideo = movieDetail?.is_free || hasRentalAccess || userId;
+              const renderTime = Date.now();
               console.log('🎬 [DEBUG] Video Player Conditions:', {
                 showVideoPlayer,
                 hasCurrentEpisode: !!currentEpisode,
@@ -960,7 +961,9 @@ export default function MovieDetailScreen() {
                 movieIsFree: movieDetail?.is_free,
                 hasRentalAccess,
                 userId: !!userId,
-                canShowVideo
+                canShowVideo,
+                renderTime,
+                episodeVideoUrl: episodeToPlay?.video_url || (episodeToPlay as any)?.uri
               });
               return canShowVideo;
             })() ? (
