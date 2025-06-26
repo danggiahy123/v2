@@ -6,4 +6,4 @@
 export { ThemedText } from './ThemedText';
 export { ThemedView } from './ThemedView';
 export { ExternalLink } from './ExternalLink';
-export { ErrorBoundary } from './ErrorBoundary'; 
+ 

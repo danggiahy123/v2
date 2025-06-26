@@ -75,9 +75,12 @@ export const useMovieDetail = (
   // =====================================
   
   const fetchMovieDetail = useCallback(async (isRefresh: boolean = false) => {
+    const fetchStartTime = Date.now();
+    
     try {
-      if (!movieId) {
-        throw new Error('Movie ID is required');
+      if (!movieId || typeof movieId !== 'string' || movieId === 'undefined') {
+        console.log('⚠️ [useMovieDetail] Invalid movieId:', { movieId, type: typeof movieId });
+        return;
       }
 
       if (isRefresh) {
@@ -88,13 +91,26 @@ export const useMovieDetail = (
       
       setError(null);
       
-      console.log('🎬 [useMovieDetail] Fetching movie detail:', { movieId, userId, isRefresh });
+      console.log('🎬 [useMovieDetail] Fetching movie detail:', { 
+        movieId, 
+        userId, 
+        isRefresh,
+        fetchStartTime
+      });
       
       const detail = await movieDetailService.getMovieDetail(movieId, userId);
       
+      const fetchEndTime = Date.now();
       setMovieDetail(detail);
       
-      console.log('✅ [useMovieDetail] Movie detail loaded:', detail.movie_title);
+      console.log('✅ [useMovieDetail] Movie detail loaded:', {
+        title: detail.movie_title,
+        fetchTime: fetchEndTime - fetchStartTime,
+        hasEpisodes: !!detail.episodes?.length,
+        episodeCount: detail.episodes?.length,
+        movieType: detail.movie_type,
+        isFree: detail.is_free
+      });
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
@@ -286,8 +302,10 @@ export const useMovieDetail = (
   
   // Initial load
   useEffect(() => {
-    if (movieId) {
+    if (movieId && typeof movieId === 'string' && movieId !== 'undefined') {
       fetchMovieDetail(false);
+    } else {
+      console.log('⚠️ [useMovieDetail] Skipping fetch due to invalid movieId:', { movieId, type: typeof movieId });
     }
   }, [movieId, fetchMovieDetail]);
 

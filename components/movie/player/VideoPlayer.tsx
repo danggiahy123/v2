@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { View, StyleSheet, Alert, ActivityIndicator, Text, TouchableOpacity, Dimensions } from 'react-native';
-import { Video, ResizeMode } from 'expo-av';
+import { VideoView, useVideoPlayer } from 'expo-video';
 import { Ionicons } from '@expo/vector-icons';
 import { userInteractionService } from '../../../services/userInteractionService';
 
@@ -54,7 +54,7 @@ const getVideoUrl = (episode: Episode): string | null => {
   return null;
 };
 
-export const VideoPlayer: React.FC<VideoPlayerProps> = ({
+export const VideoPlayer: React.FC<VideoPlayerProps> = React.memo(({
   episode,
   userId,
   movieId,
@@ -63,7 +63,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   onProgressUpdate,
   onEpisodeComplete,
 }) => {
-  const videoUrl = getVideoUrl(episode);
+  const startTime = Date.now();
+  const videoUrl = useMemo(() => getVideoUrl(episode), [episode]);
   
   console.log('🎬 [VideoPlayer] Component initialized:', {
     episodeId: episode._id,
@@ -73,15 +74,38 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     userId,
     movieId,
     movieType,
-    hasVideoUrl: !!videoUrl
+    hasVideoUrl: !!videoUrl,
+    initTime: startTime
   });
   
-  const [status, setStatus] = useState<any>({});
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!!videoUrl); // Only loading if we have a video URL
   const [error, setError] = useState<string | null>(null);
   const [lastSavedProgress, setLastSavedProgress] = useState(0);
   const [retryCount, setRetryCount] = useState(0);
-  const videoRef = useRef<Video>(null);
+  
+  // expo-video player setup
+  const playerSetupTime = Date.now();
+  console.log('⚡ [VideoPlayer] Creating player:', {
+    videoUrl,
+    setupTime: playerSetupTime,
+    timeSinceInit: playerSetupTime - startTime
+  });
+  
+  const player = useVideoPlayer(videoUrl || '', (player) => {
+    const playerReadyTime = Date.now();
+    console.log('⚡ [VideoPlayer] Player callback executed:', {
+      playerReadyTime,
+      totalSetupTime: playerReadyTime - startTime
+    });
+    player.volume = 1.0;
+    player.muted = false;
+    
+    // Try to hide loading immediately when player is created
+    setTimeout(() => {
+      console.log('🎯 [VideoPlayer] Auto-hiding loading after player setup');
+      setIsLoading(false);
+    }, 1000); // 1 second after player setup
+  });
   const progressSaveIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Clear interval on unmount
@@ -94,11 +118,23 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     };
   }, []);
 
+  // Force hide loading after VideoView is mounted (UI fix)
+  useEffect(() => {
+    if (videoUrl) {
+      const mountTimeout = setTimeout(() => {
+        console.log('🎯 [VideoPlayer] Force hiding loading after mount');
+        setIsLoading(false);
+      }, 2000); // 2 seconds after component mount
+      
+      return () => clearTimeout(mountTimeout);
+    }
+  }, [videoUrl]);
+
   // Auto-save progress every 10 seconds
   useEffect(() => {
-    if (status.isLoaded && status.positionMillis && !status.isBuffering) {
-      const currentTime = Math.floor(status.positionMillis / 1000);
-      const duration = Math.floor(status.durationMillis / 1000);
+    if (player.status === 'readyToPlay' && player.currentTime && player.duration) {
+      const currentTime = Math.floor(player.currentTime);
+      const duration = Math.floor(player.duration);
       const watchPercentage = Math.floor((currentTime / duration) * 100);
 
       // Save progress every 10 seconds and if change is significant
@@ -117,7 +153,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         onEpisodeComplete();
       }
     }
-  }, [status.positionMillis, status.isLoaded, status.isBuffering, status.durationMillis, lastSavedProgress, onProgressUpdate, onEpisodeComplete]);
+  }, [player.currentTime, player.status, player.duration, lastSavedProgress, onProgressUpdate, onEpisodeComplete]);
 
   const saveProgress = async (currentTime: number, watchPercentage: number, duration: number) => {
     try {
@@ -135,38 +171,64 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
   };
 
-  const handlePlaybackStatusUpdate = (playbackStatus: any) => {
-    console.log('📊 [VideoPlayer] Playback status update:', {
-      isLoaded: playbackStatus.isLoaded,
-      isPlaying: playbackStatus.isPlaying,
-      positionMillis: playbackStatus.positionMillis,
-      durationMillis: playbackStatus.durationMillis,
-      isBuffering: playbackStatus.isBuffering,
-      error: playbackStatus.error
+  // Handle player status changes
+  useEffect(() => {
+    const statusChangeTime = Date.now();
+    console.log('📊 [VideoPlayer] Player status:', {
+      status: player.status,
+      currentTime: player.currentTime,
+      duration: player.duration,
+      playing: player.playing,
+      muted: player.muted,
+      volume: player.volume,
+      statusChangeTime,
+      timeSinceInit: statusChangeTime - startTime
     });
     
-    // Log buffering state changes
-    if (playbackStatus.isBuffering !== status.isBuffering) {
-      if (playbackStatus.isBuffering) {
-        console.log('⏳ [VideoPlayer] Started buffering');
-      } else {
-        console.log('✅ [VideoPlayer] Buffering completed'); 
-      }
-    }
-    
-    setStatus(playbackStatus);
-    
-    if (playbackStatus.isLoaded) {
-      console.log('✅ [VideoPlayer] Video loaded successfully');
+    if (player.status === 'readyToPlay') {
+      const loadCompleteTime = Date.now();
+      console.log('✅ [VideoPlayer] Video loaded successfully:', {
+        totalLoadTime: loadCompleteTime - startTime,
+        loadCompleteTime
+      });
       setIsLoading(false);
       setError(null);
       setRetryCount(0);
-    } else if (playbackStatus.error) {
-      console.error('❌ [VideoPlayer] Playback error:', playbackStatus.error);
+    } else if (player.status === 'error') {
+      const errorTime = Date.now();
+      console.error('❌ [VideoPlayer] Playback error:', {
+        errorTime,
+        timeSinceInit: errorTime - startTime
+      });
       setIsLoading(false);
-      setError(playbackStatus.error);
+      setError('Video playback error');
+    } else if (player.status === 'loading') {
+      const loadingTime = Date.now();
+      console.log('🔄 [VideoPlayer] Video loading...', {
+        loadingTime,
+        timeSinceInit: loadingTime - startTime
+      });
+      setIsLoading(true);
+    } else if (player.status === 'idle') {
+      // Handle idle state - video might be ready but not started
+      console.log('⏸️ [VideoPlayer] Player idle state');
+      setIsLoading(false);
     }
-  };
+  }, [player.status, player.currentTime, player.duration]);
+
+  // Add timeout to prevent infinite loading
+  useEffect(() => {
+    if (!videoUrl) return;
+    
+    const loadingTimeout = setTimeout(() => {
+      if (isLoading) {
+        console.log('⏰ [VideoPlayer] Loading timeout - hiding loading overlay');
+        setIsLoading(false);
+      }
+    }, 5000); // 5 second timeout
+    
+    return () => clearTimeout(loadingTimeout);
+  }, [isLoading, videoUrl]);
 
   const handleRetry = () => {
     console.log('🔄 [VideoPlayer] Retrying video load...');
@@ -174,11 +236,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setError(null);
     setRetryCount(prev => prev + 1);
     
-    // Force video reload
-    if (videoRef.current) {
-      videoRef.current.unloadAsync().then(() => {
-        videoRef.current?.loadAsync({ uri: videoUrl! }, {}, false);
-      });
+    // Force video reload by replacing source
+    if (videoUrl) {
+      player.replace(videoUrl);
     }
   };
 
@@ -216,26 +276,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     <View style={styles.wrapper}>
       {/* Video Container */}
       <View style={styles.container}>
-        <Video
-          ref={videoRef}
+        <VideoView
           style={styles.video}
-          source={{ uri: videoUrl }}
-          useNativeControls
-          resizeMode={ResizeMode.CONTAIN}
-          isLooping={false}
-          onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
-          onError={(error) => {
-            console.error('❌ [VideoPlayer] Video component error:', error);
-            setIsLoading(false);
-            setError(error.toString());
-          }}
-          shouldPlay={false} // Don't auto-play
-          onLoad={(status) => {
-            console.log('📱 [VideoPlayer] Video onLoad event:', status);
-          }}
-          onLoadStart={() => {
-            console.log('🔄 [VideoPlayer] Video loading started');
-          }}
+          player={player}
+          allowsFullscreen
+          allowsPictureInPicture
+          contentFit="contain"
+          nativeControls
         />
         
         {/* Loading Overlay */}
@@ -243,11 +290,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           <View style={styles.loadingOverlay}>
             <ActivityIndicator size="large" color="#E50914" />
             <Text style={styles.loadingText}>Đang tải video...</Text>
+            <Text style={styles.debugLoadingText}>
+              Status: {player.status} | Time: {Math.floor((Date.now() - startTime) / 1000)}s
+            </Text>
           </View>
         )}
 
         {/* Buffering Overlay - Shows during playback buffering */}
-        {!isLoading && !error && status.isLoaded && status.isBuffering && (
+        {!isLoading && !error && player.status === 'loading' && (
           <View style={styles.bufferingOverlay}>
             <View style={styles.bufferingIndicator}>
               <ActivityIndicator size="large" color="#E50914" />
@@ -292,16 +342,16 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
               : `Tập ${episode.episode_number}: ${episode.episode_title}` // Hiện đầy đủ cho phim bộ
             }
           </Text>
-          {status.isLoaded && status.durationMillis && (
+          {player.duration && (
             <Text style={styles.videoDuration}>
-              {Math.floor(status.durationMillis / 60000)} phút
+              {Math.floor(player.duration / 60)} phút
             </Text>
           )}
         </View>
       )}
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   wrapper: {
@@ -331,6 +381,12 @@ const styles = StyleSheet.create({
     color: '#fff',
     marginTop: 10,
     fontSize: 16,
+  },
+  debugLoadingText: {
+    color: '#aaa',
+    marginTop: 5,
+    fontSize: 12,
+    textAlign: 'center',
   },
   errorOverlay: {
     position: 'absolute',
