@@ -29,12 +29,7 @@ type SeriesGenreSelectorProps = {
 
 // Mảng gradient màu đẹp cho từng thể loại
 const GRADIENTS: [string, string][] = [
-  ['#FF4B2B', '#FF416C'], // Đỏ - Hồng
-  ['#4776E6', '#8E54E9'], // Xanh dương - Tím
-  ['#00B4DB', '#0083B0'], // Xanh biển
-  ['#FFB75E', '#ED8F03'], // Cam - Vàng
-  ['#56CCF2', '#2F80ED'], // Xanh nhạt - Xanh đậm
-  ['#11998E', '#38EF7D'], // Xanh lá
+  ['#262626', '#262626'], // Đỏ - Hồng
 ];
 
 export const SeriesGenreSelector = ({ visible, onClose }: SeriesGenreSelectorProps) => {
@@ -197,11 +192,11 @@ const styles = StyleSheet.create({
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+   
   },
   genreName: {
     color: '#fff',
-    fontSize: 20,
+    fontSize: 15,
     fontWeight: '700',
     textAlign: 'center',
     textTransform: 'uppercase',
