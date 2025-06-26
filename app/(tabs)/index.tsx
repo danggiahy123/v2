@@ -22,10 +22,15 @@ import { useAppSelector } from '../../store/hooks';
 import { BannerMovie, ContinueWatchingItem, GridMovie } from '../../types/movie';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { TabHeader, SearchModal, ViewAllModal } from '../../components/ui';
+<<<<<<< fearute/linhtinhlayout
 
 import { ContinueWatchingSection } from '../../components/home';
 import GenreGrid from '../../components/genre/GenreGrid';
 
+=======
+import { ContinueWatchingSection } from '../../components/home';
+import GenreGrid from '../../components/genre/GenreGrid';
+>>>>>>> v2
 
 const { width } = Dimensions.get('window');
 
