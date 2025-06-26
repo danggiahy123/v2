@@ -1,28 +1,32 @@
 /**
- * NOTIFICATION COMPONENT - Component hiển thị thông báo toast
- * MÔ TẢ: Toast notification với animation slide từ trên xuống
- * TÍNH NĂNG:
- * - 2 loại: success (xanh) và error (đỏ)
- * - Auto close sau duration (mặc định 3s)
- * - Manual close bằng button "Đóng"
- * - Smooth animation với Animated API
- * - Responsive design
- * - Modal overlay với shadow
- * SỬ DỤNG: Hiển thị feedback cho user actions (login, API calls, etc.)
+ * NOTIFICATION COMPONENT - Minimal & Modern Toast Notification
  */
 import React, { useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, Animated, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Modal, Animated, Dimensions, useColorScheme, Platform, PanResponder } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors } from '../../constants/Colors';
 
 interface NotificationProps {
   visible: boolean;
   message: string;
-  type: 'success' | 'error';
+  type: 'success' | 'error' | 'sync';
   onClose: () => void;
   autoClose?: boolean;
-  duration?: number; 
+  duration?: number;
+  progress?: number;
 }
 
-const { width } = Dimensions.get('window'); 
+interface TypeStyle {
+  color: string;
+  bg: string;
+  icon: keyof typeof Ionicons.glyphMap;
+}
+
+const { width } = Dimensions.get('window');
+const HEADER_HEIGHT = Platform.OS === 'ios' ? 44 : 56;
+const STATUS_BAR_HEIGHT = Platform.OS === 'ios' ? 47 : 24;
+
+const SWIPE_THRESHOLD = -30; // Ngưỡng vuốt để đóng thông báo
 
 const Notification: React.FC<NotificationProps> = ({
   visible,
@@ -30,100 +34,173 @@ const Notification: React.FC<NotificationProps> = ({
   type,
   onClose,
   autoClose = true,
-  duration = 3000, 
+  duration = 3000,
+  progress,
 }) => {
-  // ANIMATION VALUES - Giá trị cho animation (sử dụng useRef để stable)
-  const translateAnim = useRef(new Animated.Value(-100)).current;  // Slide từ trên xuống
-  const opacityAnim = useRef(new Animated.Value(0)).current;       // Fade in/out
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const translateAnim = useRef(new Animated.Value(-100)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.95)).current;
+  const swipeAnim = useRef(new Animated.Value(0)).current;
 
-  /**
-   * ANIMATION EFFECT - Xử lý animation khi notification hiển thị
-   * FLOW: Show -> Slide down + Fade in -> Auto close (nếu enabled)
-   */
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderMove: (_, gestureState) => {
+        // Chỉ cho phép vuốt lên
+        if (gestureState.dy < 0) {
+          swipeAnim.setValue(gestureState.dy);
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dy < SWIPE_THRESHOLD) {
+          // Vuốt đủ xa - đóng thông báo
+          Animated.timing(swipeAnim, {
+            toValue: -100,
+            duration: 200,
+            useNativeDriver: true,
+          }).start(() => handleClose());
+        } else {
+          // Không vuốt đủ xa - trả về vị trí cũ
+          Animated.spring(swipeAnim, {
+            toValue: 0,
+            tension: 120,
+            friction: 12,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    })
+  ).current;
+
   useEffect(() => {
     if (visible) {
-      // SHOW ANIMATION - Slide down và fade in đồng thời
+      swipeAnim.setValue(0);
       Animated.parallel([
-        Animated.timing(translateAnim, {
+        Animated.spring(translateAnim, {
           toValue: 0,
-          duration: 400,
+          tension: 120,
+          friction: 12,
           useNativeDriver: true,
         }),
         Animated.timing(opacityAnim, {
           toValue: 1,
-          duration: 250,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          tension: 120,
+          friction: 12,
           useNativeDriver: true,
         }),
       ]).start();
 
-      // AUTO CLOSE - Tự động đóng sau duration
-      if (autoClose) {
-        const timer = setTimeout(() => {
-          handleClose();
-        }, duration);
+      if (autoClose && type !== 'sync') {
+        const timer = setTimeout(handleClose, duration);
         return () => clearTimeout(timer);
       }
     }
-  }, [visible, autoClose, duration]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [visible, autoClose, duration, type]);
 
-  /**
-   * CLOSE HANDLER - Xử lý đóng notification với animation
-   * FLOW: Slide up + Fade out -> Callback onClose
-   */
   const handleClose = () => {
+    if (type === 'sync' && progress !== undefined && progress < 100) return;
+
     Animated.parallel([
       Animated.timing(translateAnim, {
-        toValue: -100,    // Slide lên trên
-        duration: 400,
+        toValue: -100,
+        duration: 150,
         useNativeDriver: true,
       }),
       Animated.timing(opacityAnim, {
-        toValue: 0,       // Fade out
-        duration: 250,
+        toValue: 0,
+        duration: 100,
         useNativeDriver: true,
       }),
-    ]).start(() => {
-      onClose();          // Gọi callback sau khi animation hoàn thành
-    });
+      Animated.timing(scaleAnim, {
+        toValue: 0.95,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start(() => onClose());
   };
 
-  /**
-   * ICON HELPER - Trả về icon tương ứng với type
-   */
-  const getIcon = () => {
-    return type === 'success' ? '✔' : '✘'; 
+  const getTypeStyles = (): TypeStyle => {
+    const baseColor = '#D11030';
+    const styles: Record<string, TypeStyle> = {
+      success: {
+        color: '#ffffff',
+        bg: baseColor,
+        icon: 'checkmark-outline',
+      },
+      error: {
+        color: '#ffffff',
+        bg: baseColor,
+        icon: 'alert-outline',
+      },
+      sync: {
+        color: '#ffffff',
+        bg: baseColor,
+        icon: 'sync-outline',
+      },
+    };
+    return styles[type] || styles.success;
   };
+
+  const typeStyle = getTypeStyles();
 
   return (
     <Modal animationType="none" transparent={true} visible={visible} onRequestClose={handleClose}>
       <Animated.View
         style={[
           styles.overlay,
-          { opacity: opacityAnim },
-          { transform: [{ translateY: translateAnim }] }, 
+          {
+            opacity: opacityAnim,
+            transform: [
+              { translateY: translateAnim },
+              { scale: scaleAnim }
+            ],
+          },
         ]}
       >
-        <Animated.View
+        <Animated.View 
+          {...panResponder.panHandlers}
           style={[
-            styles.container,
-            type === 'success' ? styles.success : styles.error,
-            { transform: [{ translateY: translateAnim }] },
+            styles.container, 
+            { 
+              backgroundColor: typeStyle.bg,
+              opacity: 0.9,
+              transform: [{ translateY: swipeAnim }]
+            }
           ]}
         >
           <View style={styles.content}>
-            <View
-              style={[
-                styles.iconContainer,
-                type === 'success' ? styles.successIcon : styles.errorIcon,
-              ]}
-            >
-              <Text style={styles.icon}>{getIcon()}</Text>
-            </View>
-            <Text style={styles.message} numberOfLines={2}>{message}</Text>
+            <Ionicons 
+              name={typeStyle.icon}
+              size={16} 
+              color={typeStyle.color}
+              style={styles.icon} 
+            />
+            <Text style={styles.message} numberOfLines={1}>
+              {message}
+            </Text>
           </View>
-          <TouchableOpacity style={styles.button} onPress={handleClose} activeOpacity={0.8}>
-            <Text style={styles.buttonText}>Đóng</Text>
-          </TouchableOpacity>
+
+          {type === 'sync' && progress !== undefined && (
+            <Animated.View 
+              style={[
+                styles.progressBar,
+                { 
+                  width: Animated.multiply(
+                    progress, 
+                    Animated.divide(width - 32, 100)
+                  )
+                }
+              ]} 
+            />
+          )}
         </Animated.View>
       </Animated.View>
     </Modal>
@@ -133,76 +210,35 @@ const Notification: React.FC<NotificationProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     position: 'absolute',
-    top: 0,
+    top: STATUS_BAR_HEIGHT + 25,
     left: 0,
     right: 0,
-    justifyContent: 'flex-start',
     alignItems: 'center',
-    paddingTop: 50,
-    zIndex: 9999,
   },
   container: {
-    width: Math.min(width - 40, 350),
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderRadius: 16,
-    backgroundColor: '#1c1c1e',
-    marginHorizontal: 20,
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 16,
+    minWidth: 100,
+    maxWidth: Math.min(width - 32, 240),
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginHorizontal: 16,
   },
   content: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
-  },
-  success: {
-    borderLeftWidth: 4,
-    borderLeftColor: '#4CAF50',
-  },
-  error: {
-    borderLeftWidth: 4,
-    borderLeftColor: '#F44336',
-  },
-  iconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  successIcon: {
-    backgroundColor: 'rgba(76, 175, 80, 0.15)',
-  },
-  errorIcon: {
-    backgroundColor: 'rgba(244, 67, 54, 0.15)',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
   icon: {
-    fontSize: 18,
-    color: '#ffffff',
+    marginRight: 6,
   },
   message: {
-    fontSize: 15,
-    color: '#ffffff',
-    flex: 1,
-    lineHeight: 20,
-  },
-  button: {
-    alignSelf: 'flex-end',
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    backgroundColor: '#D11030',
-    borderRadius: 20,
-  },
-  buttonText: {
     fontSize: 13,
-    color: '#ffffff',
-    fontWeight: '600',
+    color: '#FFFFFF',
+    fontWeight: '500',
+  },
+  progressBar: {
+    height: 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
   },
 });
 

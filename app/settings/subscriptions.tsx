@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAppSelector } from '../../store/hooks';
 import { rentalService } from '../../services/rentalService';
 import { RentalInfo } from '../../types/rental';
+import { Notification } from '../../components/ui';
 
 export default function SubscriptionsScreen() {
   const router = useRouter();
@@ -27,6 +28,32 @@ export default function SubscriptionsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<'all' | 'active' | 'expired'>('all');
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [selectedRental, setSelectedRental] = useState<RentalInfo | null>(null);
+  const [notification, setNotification] = useState<{
+    visible: boolean;
+    message: string;
+    type: 'success' | 'error' | 'sync';
+  }>({
+    visible: false,
+    message: '',
+    type: 'success'
+  });
+
+  const showNotification = (message: string, type: 'success' | 'error' | 'sync' = 'success') => {
+    setNotification({
+      visible: true,
+      message,
+      type
+    });
+  };
+
+  const hideNotification = () => {
+    setNotification(prev => ({
+      ...prev,
+      visible: false
+    }));
+  };
 
   const loadRentalsCallback = useCallback(async () => {
     if (!userId) return;
@@ -41,7 +68,7 @@ export default function SubscriptionsScreen() {
       setRentals(response.data.rentals);
     } catch (error) {
       console.error('Error loading rental history:', error);
-      Alert.alert('Lỗi', 'Không thể tải lịch sử thuê phim');
+      showNotification('Không thể tải lịch sử thuê phim', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -64,30 +91,26 @@ export default function SubscriptionsScreen() {
 
     const canCancel = rentalService.canCancelRental(rental);
     if (!canCancel) {
-      Alert.alert('Không thể hủy', 'Chỉ có thể hủy rental trong vòng 24h đầu');
+      showNotification('Chỉ có thể hủy rental trong vòng 24h đầu', 'error');
       return;
     }
 
-    Alert.alert(
-      'Xác nhận hủy rental',
-      'Bạn có chắc muốn hủy rental này? Hành động này không thể hoàn tác.',
-      [
-        { text: 'Hủy bỏ', style: 'cancel' },
-        {
-          text: 'Xác nhận',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await rentalService.cancelRental(rental._id, { userId });
-              Alert.alert('Thành công', 'Đã hủy rental thành công');
-              loadRentalsCallback();
-            } catch {
-              Alert.alert('Lỗi', 'Không thể hủy rental');
-            }
-          },
-        },
-      ]
-    );
+    setSelectedRental(rental);
+    setShowCancelModal(true);
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!userId || !selectedRental) return;
+
+    try {
+      await rentalService.cancelRental(selectedRental._id, { userId });
+      setShowCancelModal(false);
+      setSelectedRental(null);
+      showNotification('Đã hủy đăng ký phim thành công', 'success');
+      loadRentalsCallback();
+    } catch {
+      showNotification('Không thể hủy đăng ký phim', 'error');
+    }
   };
 
   const renderRentalItem = (rental: RentalInfo) => {
@@ -279,6 +302,46 @@ export default function SubscriptionsScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* Cancel Modal */}
+      {showCancelModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Xác nhận hủy đăng ký</Text>
+            
+            <Text style={styles.modalMessage}>
+              Bạn có chắc muốn hủy đăng ký phim này? Hành động này không thể hoàn tác.
+            </Text>
+            
+            <TouchableOpacity 
+              style={[styles.modalButton, styles.modalConfirmButton]}
+              onPress={handleConfirmCancel}
+            >
+              <Text style={[styles.modalButtonText, styles.modalConfirmText]}>Xác nhận hủy</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.modalButton, styles.modalCancelButton]}
+              onPress={() => {
+                setShowCancelModal(false);
+                setSelectedRental(null);
+              }}
+            >
+              <Text style={[styles.modalButtonText, styles.modalCancelText]}>Đóng</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Notification Component */}
+      <Notification
+        visible={notification.visible}
+        message={notification.message}
+        type={notification.type}
+        onClose={hideNotification}
+        autoClose={true}
+        duration={3000}
+      />
     </SafeAreaView>
   );
 }
@@ -295,14 +358,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingVertical: 12,
     backgroundColor: '#000',
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#333',
+   
   },
   backButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+
+
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -420,13 +482,13 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   cancelButton: {
+
     width: 28,
     height: 28,
     borderRadius: 14,
     backgroundColor: 'rgba(255, 71, 87, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 12,
   },
   statusTimeRow: {
     flexDirection: 'row',
@@ -523,7 +585,59 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginLeft: 8,
   },
-
-
- 
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#1f1f1f',
+    borderRadius: 16,
+    padding: 24,
+    width: '85%',
+    maxWidth: 340,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  modalMessage: {
+    fontSize: 16,
+    color: '#aaa',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  modalButton: {
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  modalConfirmButton: {
+    backgroundColor: '#D11030',
+  },
+  modalCancelButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalConfirmText: {
+    color: '#fff',
+  },
+  modalCancelText: {
+    color: '#888',
+  },
 });

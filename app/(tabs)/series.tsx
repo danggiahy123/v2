@@ -245,11 +245,11 @@
         marginBottom: 24,
       },
       sectionTitle: {
-        fontSize: 18,
+        fontSize: 20,
         fontWeight: '600',
         color: '#fff',
         marginBottom: 12,
-        paddingHorizontal: 16,
+      
       },
       movieList: {
         paddingLeft: 15,
