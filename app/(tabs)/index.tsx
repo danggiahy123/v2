@@ -19,8 +19,9 @@ import { animeService } from '../../services/animeService';
 import { seriesService } from '../../services/seriesService';
 import { useAppSelector } from '../../store/hooks';
 import { BannerMovie, ContinueWatchingItem, GridMovie } from '../../types/movie';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { TabHeader, SearchModal, ViewAllModal } from '../../components/ui';
+import { ContinueWatchingSection } from '../../components/home';
 
 const { width } = Dimensions.get('window');
 
@@ -69,6 +70,28 @@ export default function HomeScreen() {
     loadHomeData();
   }, [userId]); // loadHomeData is defined below, will be memoized in future optimization
 
+  // Refresh continue watching data when screen is focused (user comes back from movie detail)
+  useFocusEffect(
+    React.useCallback(() => {
+      if (userId) {
+        console.log('🎬 [Home] Screen focused, refreshing continue watching data');
+        // Only refresh continue watching, not full home data
+        const refreshContinueWatching = async () => {
+          try {
+            const continueRes = await movieService.getContinueWatching(userId, 6);
+            if (continueRes?.status === 'success' && continueRes.data) {
+              console.log('🎬 [Home] Continue watching refreshed:', continueRes.data.data);
+              setContinueWatching(continueRes.data.data || []);
+            }
+          } catch (error) {
+            console.error('Error refreshing continue watching:', error);
+          }
+        };
+        refreshContinueWatching();
+      }
+    }, [userId])
+  );
+
   useEffect(() => {
     if (bannerMovies.length > 1) {
       const interval = setInterval(() => {
@@ -110,13 +133,23 @@ export default function HomeScreen() {
 
       if (userId) {
         try {
+          console.log('🎬 [Home] Loading continue watching for userId:', userId);
           const continueRes = await movieService.getContinueWatching(userId, 6);
+          console.log('🎬 [Home] Continue watching response:', {
+            status: continueRes?.status,
+            dataType: typeof continueRes?.data,
+            hasData: !!continueRes?.data?.data,
+            dataLength: continueRes?.data?.data?.length
+          });
           if (continueRes?.status === 'success' && continueRes.data) {
+            console.log('🎬 [Home] Continue watching data updated:', continueRes.data.data);
             setContinueWatching(continueRes.data.data || []);
           }
         } catch (error) {
           console.error('Error loading continue watching:', error);
         }
+      } else {
+        console.log('⚠️ [Home] No userId found, skipping continue watching');
       }
 
       try {
@@ -331,46 +364,28 @@ export default function HomeScreen() {
     );
   };
 
-  const renderContinueWatching = () => {
-    if (!continueWatching || continueWatching.length === 0) return null;
+  const handleContinueWatchingPress = (movieId: string, hasRentalAccess?: boolean) => {
+    console.log('🎬 [Home] Continue watching item pressed:', { movieId, hasRentalAccess });
+    router.push({
+      pathname: '/movie/[id]',
+      params: {
+        id: movieId,
+        fromContinueWatching: 'true',
+        autoPlay: 'true',
+        hasRentalAccess: hasRentalAccess ? 'true' : 'false'
+      }
+    });
+  };
 
+  const renderContinueWatching = () => {
     return (
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Đang xem</Text>
-          <TouchableOpacity onPress={() => handleViewAll('continue', 'Đang xem')}>
-            <Text style={styles.seeAllText}>Xem tất cả</Text>
-          </TouchableOpacity>
-        </View>
-        <FlatList
-          data={continueWatching}
-          horizontal
-          keyExtractor={(item, index) => item.movieId || `continue-${index}`}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.continueList}
-          renderItem={({ item }) => (
-            <TouchableOpacity 
-              style={styles.continueItem}
-              onPress={() => router.push(`/movie/${item.movieId}`)}
-            >
-              <Image
-                source={{ uri: item.poster }}
-                style={styles.continuePoster}
-                resizeMode="cover"
-                onError={() => console.log('Continue watching poster load error')}
-              />
-              <View style={styles.progressBar}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    { width: `${Math.min(Math.max(item.progress * 100, 0), 100)}%` },
-                  ]}
-                />
-              </View>
-            </TouchableOpacity>
-          )}
-        />
-      </View>
+      <ContinueWatchingSection
+        data={continueWatching}
+        onViewAll={() => handleViewAll('continue-watching', 'Tiếp tục xem')}
+        onItemPress={handleContinueWatchingPress}
+        loading={loading}
+        error={null}
+      />
     );
   };
 
@@ -698,37 +713,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: '#222',
   },
-  continuePoster: {
-    width: 130,
-    height: 195, 
-    borderRadius: 10,
-    backgroundColor: '#1A1A1A',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  progressBar: {
-    height: 5, 
-    backgroundColor: '#2A2A2A',
-    marginTop: 8,
-    borderRadius: 3,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#E50914', 
-    borderRadius: 3,
-    shadowColor: '#E50914',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.3,
-    shadowRadius: 2,
-  },
+
   lastSection: {
     paddingHorizontal: 20,
     marginTop: 32,
@@ -749,13 +734,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     marginHorizontal: 4,
   },
-  continueList: {
-    paddingRight: 20,
-  },
-  continueItem: {
-    width: 130,
-    marginRight: 12,
-  },
+
   // Styles cho modal search
   modalContainer: {
     flex: 1,

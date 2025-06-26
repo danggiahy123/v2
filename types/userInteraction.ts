@@ -118,9 +118,9 @@ export interface RateMovieResponse {
 // =====================================
 
 export interface UpdateProgressRequest {
-  episodeId: string;
+  episode_id: string;
   currentTime: number;
-  watchPercentage: number;
+  duration: number;
   userId: string;
   completed?: boolean;
 }
@@ -129,11 +129,12 @@ export interface UpdateProgressResponse {
   status: 'success' | 'error';
   message: string;
   data: {
-    episodeId: string;
-    currentTime: number;
-    watchPercentage: number;
+    episode_id: string;
+    current_time: number;
+    duration: number;
+    watch_percentage: number;
     completed: boolean;
-    lastWatched: string;
+    last_watched: string;
   };
 }
 

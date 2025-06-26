@@ -24,3 +24,6 @@ export * from './layout';
 
 // Anime components
 export * from './anime'; 
+
+// Home components
+export * from './home'; 
