@@ -216,14 +216,14 @@ export const userInteractionService = {
   },
   
   /**
-   * ⏯️ UPDATE WATCHING PROGRESS
+   * 🎬 UPDATE WATCHING PROGRESS
    * 
    * API để cập nhật tiến độ xem phim
-   * ENDPOINT: PUT /api/watching/progress/{episodeId}
+   * ENDPOINT: PUT /api/watching/progress
    * 
-   * @param episodeId - ID của episode
-   * @param currentTime - Thời gian hiện tại (seconds)
-   * @param watchPercentage - Phần trăm đã xem (0-100)
+   * @param episodeId - ID của episode hoặc movie (backend sẽ tự detect)
+   * @param currentTime - Thời gian hiện tại (giây)
+   * @param duration - Tổng thời lượng video (giây)
    * @param userId - ID của user
    * @param completed - Đã xem xong chưa (optional)
    * @returns Promise<UpdateProgressResponse>
@@ -231,27 +231,66 @@ export const userInteractionService = {
   async updateWatchingProgress(
     episodeId: string,
     currentTime: number,
-    watchPercentage: number,
+    duration: number,
     userId: string,
     completed?: boolean
   ): Promise<UpdateProgressResponse> {
     try {
-      const url = `${API_BASE_URL}/api/watching/progress/${episodeId}`;
+      // Validate required fields
+      if (!episodeId) {
+        throw new Error('Episode ID is required');
+      }
+      if (!userId) {
+        throw new Error('User ID is required');
+      }
+
+      // Convert currentTime to integer
+      const currentTimeInt = Math.floor(currentTime);
       
-      const requestBody: UpdateProgressRequest = {
-        episodeId,
-        currentTime,
-        watchPercentage,
+      const url = `${API_BASE_URL}/api/watching/progress`;
+      
+      // Calculate watch percentage
+      const watchPercentage = Math.floor((currentTimeInt / duration) * 100);
+
+      // 🔧 ENHANCED: Handle generated episode IDs  
+      // If episodeId looks like "movieId_epX", extract movie ID and episode number
+      let targetId = episodeId;
+      let episodeNumber = 1; // default for single movies
+      
+      if (episodeId.includes('_ep')) {
+        const parts = episodeId.split('_ep');
+        if (parts.length === 2) {
+          const movieId = parts[0];
+          const epNum = parseInt(parts[1]);
+          
+          console.log('🔧 [UserInteractionService] Generated ID detected:', {
+            originalId: episodeId,
+            movieId,
+            episodeNumber: epNum,
+            willUseMovieId: true
+          });
+          
+          // Use movie ID instead and include episode number for series
+          targetId = movieId;
+          episodeNumber = epNum;
+        }
+      }
+
+      // Prepare request body - always use targetId (either real episode ID or movie ID)
+      const requestBody = {
+        episode_id: targetId,
+        currentTime: currentTimeInt,
+        duration,
         userId,
-        completed
+        completed: completed || watchPercentage >= 90,
+        // Add episode number context for backend
+        ...(episodeId.includes('_ep') && { episode_number: episodeNumber })
       };
       
-      console.log('⏯️ [UserInteractionService] Update progress:', { 
-        episodeId, 
-        currentTime, 
-        watchPercentage, 
-        userId,
-        completed 
+      console.log('🎬 [UserInteractionService] Update watching progress:', {
+        ...requestBody,
+        watchPercentage,
+        url
       });
       
       const response = await fetch(url, {
@@ -263,7 +302,13 @@ export const userInteractionService = {
       });
       
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('❌ [UserInteractionService] API Error:', {
+          status: response.status,
+          error: errorText,
+          request: requestBody
+        });
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
       
       const result: UpdateProgressResponse = await response.json();
@@ -272,7 +317,12 @@ export const userInteractionService = {
         throw new Error(result.message || 'Failed to update progress');
       }
       
-      console.log('✅ [UserInteractionService] Progress updated successfully');
+      console.log('✅ [UserInteractionService] Progress updated successfully:', {
+        episode_id: episodeId,
+        currentTime: currentTimeInt,
+        watchPercentage,
+        completed: completed || watchPercentage >= 90
+      });
       
       return result;
       

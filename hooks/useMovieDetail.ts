@@ -39,7 +39,7 @@ interface UseMovieDetailReturn {
   toggleLike: (isLike: boolean) => Promise<void>;
   toggleFavorite: (isFavorite: boolean) => Promise<void>;
   addComment: (comment: string, isLike?: boolean) => Promise<void>;
-  updateProgress: (episodeId: string, currentTime: number, watchPercentage: number) => Promise<void>;
+  updateProgress: (episodeId: string, currentTime: number, watchPercentage: number, duration: number, isMovie: boolean) => Promise<void>;
   
   // Utilities
   preload: (movieId: string) => Promise<void>;
@@ -50,25 +50,21 @@ interface UseMovieDetailReturn {
  * 🎬 USE MOVIE DETAIL HOOK
  */
 export const useMovieDetail = (
-  movieId: string,
-  options: UseMovieDetailOptions = {}
+  movieId: string | null,
+  options: { userId?: string } = {}
 ): UseMovieDetailReturn => {
-  
-  const {
-    userId,
-    autoRefresh = false,
-    refreshInterval = 30000, // 30 seconds
-    enablePreload = false
-  } = options;
-
-  // =====================================
-  // STATE MANAGEMENT
-  // =====================================
+  const { userId } = options;
   
   const [movieDetail, setMovieDetail] = useState<MovieDetail | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  console.log('🔄 [useMovieDetail] Hook initialized:', {
+    movieId,
+    userId,
+    timestamp: new Date().toISOString()
+  });
 
   // =====================================
   // FETCH MOVIE DETAIL
@@ -76,6 +72,13 @@ export const useMovieDetail = (
   
   const fetchMovieDetail = useCallback(async (isRefresh: boolean = false) => {
     const fetchStartTime = Date.now();
+    
+    console.log('🚀 [useMovieDetail] Starting fetch:', {
+      movieId,
+      userId,
+      isRefresh,
+      timestamp: new Date().toISOString()
+    });
     
     try {
       if (!movieId || typeof movieId !== 'string' || movieId === 'undefined') {
@@ -231,7 +234,8 @@ export const useMovieDetail = (
   const updateProgress = useCallback(async (
     episodeId: string, 
     currentTime: number, 
-    watchPercentage: number
+    watchPercentage: number,
+    duration: number
   ) => {
     if (!userId) {
       throw new Error('User ID is required');
@@ -241,15 +245,18 @@ export const useMovieDetail = (
       console.log('⏯️ [useMovieDetail] Updating progress:', { 
         episodeId, 
         currentTime, 
-        watchPercentage, 
+        watchPercentage,
+        duration,
         userId 
       });
       
+      const completed = watchPercentage >= 90;
       await userInteractionService.updateWatchingProgress(
         episodeId, 
-        currentTime, 
-        watchPercentage, 
-        userId
+        Math.floor(currentTime),
+        duration,
+        userId,
+        completed
       );
       
       // Update local state
@@ -263,8 +270,9 @@ export const useMovieDetail = (
               episodeNumber: prev.userInteractions!.watchingProgress?.episodeNumber || 1,
               watchPercentage,
               currentTime,
+              duration,
               lastWatched: new Date().toISOString(),
-              completed: watchPercentage >= 90
+              completed
             }
           }
         } : null);
@@ -287,10 +295,10 @@ export const useMovieDetail = (
   }, [fetchMovieDetail]);
 
   const preload = useCallback(async (preloadMovieId: string) => {
-    if (enablePreload) {
+    if (preloadMovieId && typeof preloadMovieId === 'string') {
       await movieDetailService.preloadMovieDetail(preloadMovieId, userId);
     }
-  }, [userId, enablePreload]);
+  }, [userId]);
 
   const clearError = useCallback(() => {
     setError(null);
@@ -302,24 +310,29 @@ export const useMovieDetail = (
   
   // Initial load
   useEffect(() => {
+    console.log('🔍 [useMovieDetail] useEffect triggered:', {
+      movieId,
+      movieIdType: typeof movieId,
+      movieIdValid: movieId && typeof movieId === 'string' && movieId !== 'undefined',
+      shouldFetch: !!(movieId && typeof movieId === 'string' && movieId !== 'undefined')
+    });
+    
     if (movieId && typeof movieId === 'string' && movieId !== 'undefined') {
+      console.log('✅ [useMovieDetail] Calling fetchMovieDetail');
       fetchMovieDetail(false);
     } else {
       console.log('⚠️ [useMovieDetail] Skipping fetch due to invalid movieId:', { movieId, type: typeof movieId });
     }
   }, [movieId, fetchMovieDetail]);
 
-  // Auto refresh
+  // Force immediate fetch for debugging
   useEffect(() => {
-    if (!autoRefresh || !movieId) return;
-
-    const interval = setInterval(() => {
-      console.log('🔄 [useMovieDetail] Auto refreshing movie detail');
-      fetchMovieDetail(true);
-    }, refreshInterval);
-
-    return () => clearInterval(interval);
-  }, [autoRefresh, movieId, refreshInterval, fetchMovieDetail]);
+    console.log('🚀 [useMovieDetail] FORCE FETCH IMMEDIATELY');
+    if (movieId && typeof movieId === 'string') {
+      console.log('🔥 [useMovieDetail] Force calling fetchMovieDetail for movieId:', movieId);
+      fetchMovieDetail(false);
+    }
+  }, [fetchMovieDetail, movieId]);
 
   // =====================================
   // RETURN VALUES

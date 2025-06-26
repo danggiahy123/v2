@@ -1,267 +1,286 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { View, StyleSheet, Alert, ActivityIndicator, Text, TouchableOpacity, Dimensions } from 'react-native';
-import { VideoView, useVideoPlayer } from 'expo-video';
+import { VideoView, useVideoPlayer, VideoPlayerStatus } from 'expo-video';
 import { Ionicons } from '@expo/vector-icons';
 import { userInteractionService } from '../../../services/userInteractionService';
+import { Episode, REQUIRED_EPISODE_FIELDS } from '../../../types/episode';
 
 const { width: screenWidth } = Dimensions.get('window');
-
-interface Episode {
-  _id: string;
-  episode_title: string;
-  episode_number: number;
-  video_url?: string;
-  uri?: string; // Alternative field name
-  duration?: number;
-}
 
 interface VideoPlayerProps {
   episode: Episode;
   userId: string;
   movieId: string;
-  movieType?: string; // 'Phim lẻ' | 'Phim bộ'
-  showTitle?: boolean; // Có hiển thị title bên dưới không
+  movieType?: string;
+  showTitle?: boolean;
+  resumeFromTime?: number;
   onProgressUpdate?: (progress: number) => void;
   onEpisodeComplete?: () => void;
 }
 
+interface PlaybackStatus {
+  isPlaying: boolean;
+  positionMillis: number;
+  durationMillis: number;
+  isBuffering: boolean;
+  shouldPlay: boolean;
+  error?: string;
+}
+
+// Helper function to validate episode data
+const validateEpisode = (episode: Episode): { isValid: boolean; missingFields: string[] } => {
+  const missingFields = REQUIRED_EPISODE_FIELDS.filter(field => !episode[field]);
+  return {
+    isValid: missingFields.length === 0,
+    missingFields
+  };
+};
+
 // Helper function to validate video URL
 const isValidVideoUrl = (url: string): boolean => {
-  if (!url) return false;
+  if (!url || url.trim() === '') {
+    console.error('❌ [VideoPlayer] Empty video URL detected');
+    return false;
+  }
   
   // Check if it's a valid HTTP/HTTPS URL
   try {
     const urlObj = new URL(url);
     return urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
   } catch {
-    // If it's not a valid URL, check if it's a relative path (which we consider invalid for video playback)
+    console.error('❌ [VideoPlayer] Invalid video URL format:', url);
     return false;
   }
 };
 
 // Helper function to get video URL from episode
 const getVideoUrl = (episode: Episode): string | null => {
-  const url = episode.video_url || episode.uri;
-  if (!url) return null;
-  
-  // If it's already a valid URL, return it
-  if (isValidVideoUrl(url)) {
-    return url;
+  if (!episode.uri || episode.uri.trim() === '') {
+    console.error('❌ [VideoPlayer] Episode has no video URL:', episode);
+    return null;
   }
   
-  // If it's a relative path like "media/movie.mp4", we know it's not a real video
-  console.log('⚠️ [VideoPlayer] Invalid video URL detected:', url);
+  // If it's already a valid URL, return it
+  if (isValidVideoUrl(episode.uri)) {
+    return episode.uri;
+  }
+  
+  console.error('❌ [VideoPlayer] Invalid video URL in episode:', { 
+    episodeId: episode._id,
+    episodeTitle: episode.episode_title,
+    uri: episode.uri 
+  });
   return null;
 };
 
-export const VideoPlayer: React.FC<VideoPlayerProps> = React.memo(({
+const VideoPlayer: React.FC<VideoPlayerProps> = ({
   episode,
   userId,
   movieId,
   movieType = 'Phim bộ',
   showTitle = false,
+  resumeFromTime,
   onProgressUpdate,
   onEpisodeComplete,
 }) => {
-  const startTime = Date.now();
-  const videoUrl = useMemo(() => getVideoUrl(episode), [episode]);
-  
-  console.log('🎬 [VideoPlayer] Component initialized:', {
-    episodeId: episode._id,
-    episodeTitle: episode.episode_title,
-    videoUrl: videoUrl,
-    originalUrl: episode.video_url || episode.uri,
-    userId,
-    movieId,
-    movieType,
-    hasVideoUrl: !!videoUrl,
-    initTime: startTime
-  });
-  
-  const [isLoading, setIsLoading] = useState(!!videoUrl); // Only loading if we have a video URL
+  const videoUrlMemo = useMemo(() => getVideoUrl(episode), [episode]);
+  const [isLoading, setIsLoading] = useState(!!videoUrlMemo);
   const [error, setError] = useState<string | null>(null);
   const [lastSavedProgress, setLastSavedProgress] = useState(0);
   const [retryCount, setRetryCount] = useState(0);
   
-  // expo-video player setup
-  const playerSetupTime = Date.now();
-  console.log('⚡ [VideoPlayer] Creating player:', {
-    videoUrl,
-    setupTime: playerSetupTime,
-    timeSinceInit: playerSetupTime - startTime
-  });
-  
-  const player = useVideoPlayer(videoUrl || '', (player) => {
-    const playerReadyTime = Date.now();
-    console.log('⚡ [VideoPlayer] Player callback executed:', {
-      playerReadyTime,
-      totalSetupTime: playerReadyTime - startTime
-    });
+  // Initialize video player at the component level
+  const player = useVideoPlayer(videoUrlMemo || '', (player) => {
     player.volume = 1.0;
     player.muted = false;
     
-    // Try to hide loading immediately when player is created
-    setTimeout(() => {
-      console.log('🎯 [VideoPlayer] Auto-hiding loading after player setup');
-      setIsLoading(false);
-    }, 1000); // 1 second after player setup
+    console.log('⚡ [VideoPlayer] Player ready');
+    setIsLoading(false);
+    
+    if (resumeFromTime && resumeFromTime > 0) {
+      player.currentTime = resumeFromTime;
+    }
+    player.play();
   });
-  const progressSaveIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Clear interval on unmount
+  // Store player reference
+  const playerRef = useRef(player);
+
+  // Update player reference when URL changes
   useEffect(() => {
-    const intervalRef = progressSaveIntervalRef.current;
+    if (!videoUrlMemo) return;
+
+    try {
+      const currentPlayer = playerRef.current;
+      if (currentPlayer) {
+        currentPlayer.pause();
+        currentPlayer.replace(videoUrlMemo);
+        
+        // Reset state
+        setIsLoading(true);
+        setError(null);
+        setLastSavedProgress(0);
+        setRetryCount(0);
+
+        // Start playback after a short delay
+        setTimeout(() => {
+          if (resumeFromTime && resumeFromTime > 0) {
+            currentPlayer.currentTime = resumeFromTime;
+          }
+          currentPlayer.play();
+          setIsLoading(false);
+        }, 500);
+      }
+    } catch (err) {
+      console.error('❌ [VideoPlayer] Error updating player:', err);
+      setError('Không thể cập nhật trình phát video');
+      setIsLoading(false);
+    }
+  }, [videoUrlMemo]);
+
+  // Cleanup on unmount
+  useEffect(() => {
     return () => {
-      if (intervalRef) {
-        clearInterval(intervalRef);
+      try {
+        const currentPlayer = playerRef.current;
+        if (currentPlayer && currentPlayer.status !== 'error') {
+          console.log('🧹 [VideoPlayer] Cleaning up player');
+          currentPlayer.pause();
+          // Let the garbage collector handle cleanup
+          // instead of manually nulling the ref
+        }
+      } catch (err) {
+        console.log('⚠️ [VideoPlayer] Cleanup error:', err);
+        // Silently handle cleanup errors
       }
     };
   }, []);
 
-  // Force hide loading after VideoView is mounted (UI fix)
+  // Handle player status changes
   useEffect(() => {
-    if (videoUrl) {
-      const mountTimeout = setTimeout(() => {
-        console.log('🎯 [VideoPlayer] Force hiding loading after mount');
-        setIsLoading(false);
-      }, 2000); // 2 seconds after component mount
-      
-      return () => clearTimeout(mountTimeout);
+    const currentPlayer = playerRef.current;
+    if (!currentPlayer) return;
+
+    if (currentPlayer.status === 'error') {
+      console.error('❌ [VideoPlayer] Player error - Status:', currentPlayer.status);
+      setError('Video playback error');
+      setIsLoading(false);
     }
-  }, [videoUrl]);
+  }, [player.status]);
 
-  // Auto-save progress every 10 seconds
-  useEffect(() => {
-    if (player.status === 'readyToPlay' && player.currentTime && player.duration) {
-      const currentTime = Math.floor(player.currentTime);
-      const duration = Math.floor(player.duration);
-      const watchPercentage = Math.floor((currentTime / duration) * 100);
+  // Handle playback status update
+  const handlePlaybackStatusUpdate = useCallback((currentTime: number, duration: number, isPlaying: boolean) => {
+    const currentPlayer = playerRef.current;
+    if (!currentPlayer) return;
 
-      // Save progress every 10 seconds and if change is significant
-      if (currentTime - lastSavedProgress >= 10 && watchPercentage > 0) {
-        saveProgress(currentTime, watchPercentage, duration);
-        setLastSavedProgress(currentTime);
+    // Convert milliseconds to seconds
+    const currentTimeSec = Math.floor(currentTime / 1000);
+    const durationSec = Math.floor(duration / 1000);
+
+    if (!currentTimeSec || !durationSec) {
+      console.log('⚠️ [VideoPlayer] Missing time values:', { currentTimeSec, durationSec });
+      return;
+    }
+
+    const watchPercentage = Math.floor((currentTimeSec / durationSec) * 100);
+    
+    if (
+      (!isPlaying && currentTimeSec > 0 && currentTimeSec !== lastSavedProgress) || // Paused
+      (currentTimeSec % 10 === 0 && currentTimeSec !== lastSavedProgress) || // Every 10 seconds
+      (currentTimeSec >= durationSec - 1 && currentTimeSec !== lastSavedProgress) || // Video ended
+      (Math.abs(currentTimeSec - lastSavedProgress) > 5) // Seeking
+    ) {
+      saveProgress(currentTimeSec, watchPercentage, durationSec);
+      setLastSavedProgress(currentTimeSec);
+    }
+  }, [lastSavedProgress]);
+
+  // Save progress to backend
+  const saveProgress = async (currentTime: number, watchPercentage: number, duration: number) => {
+    try {
+      // Validate required data
+      if (!userId) {
+        throw new Error('User ID is required');
       }
 
-      // Callback for parent component
+      // Get the episode ID
+      const episodeId = episode._id;
+      if (!episodeId) {
+        throw new Error('Episode ID is required');
+      }
+
+      const completed = watchPercentage >= 90;
+      
+      // Save progress
+      await userInteractionService.updateWatchingProgress(
+        episodeId,
+        currentTime,
+        duration,
+        userId,
+        completed
+      );
+      
+      console.log(`✅ [VideoPlayer] Progress saved successfully: ${watchPercentage}%`);
+
+      // Call callbacks if provided
       if (onProgressUpdate) {
         onProgressUpdate(watchPercentage);
       }
 
-      // Check if episode is completed (90% watched)
-      if (watchPercentage >= 90 && onEpisodeComplete) {
+      if (completed && onEpisodeComplete) {
         onEpisodeComplete();
       }
-    }
-  }, [player.currentTime, player.status, player.duration, lastSavedProgress, onProgressUpdate, onEpisodeComplete]);
-
-  const saveProgress = async (currentTime: number, watchPercentage: number, duration: number) => {
-    try {
-      const completed = watchPercentage >= 90;
-      await userInteractionService.updateWatchingProgress(
-        episode._id,
-        currentTime,
-        watchPercentage,
-        userId,
-        completed
-      );
-      console.log(`⏯️ [VideoPlayer] Progress saved: ${watchPercentage}%`);
     } catch (error) {
       console.error('❌ [VideoPlayer] Failed to save progress:', error);
     }
   };
 
-  // Handle player status changes
+  // Update progress periodically
   useEffect(() => {
-    const statusChangeTime = Date.now();
-    console.log('📊 [VideoPlayer] Player status:', {
-      status: player.status,
-      currentTime: player.currentTime,
-      duration: player.duration,
-      playing: player.playing,
-      muted: player.muted,
-      volume: player.volume,
-      statusChangeTime,
-      timeSinceInit: statusChangeTime - startTime
-    });
-    
-    if (player.status === 'readyToPlay') {
-      const loadCompleteTime = Date.now();
-      console.log('✅ [VideoPlayer] Video loaded successfully:', {
-        totalLoadTime: loadCompleteTime - startTime,
-        loadCompleteTime
-      });
-      setIsLoading(false);
-      setError(null);
-      setRetryCount(0);
-    } else if (player.status === 'error') {
-      const errorTime = Date.now();
-      console.error('❌ [VideoPlayer] Playback error:', {
-        errorTime,
-        timeSinceInit: errorTime - startTime
-      });
-      setIsLoading(false);
-      setError('Video playback error');
-    } else if (player.status === 'loading') {
-      const loadingTime = Date.now();
-      console.log('🔄 [VideoPlayer] Video loading...', {
-        loadingTime,
-        timeSinceInit: loadingTime - startTime
-      });
-      setIsLoading(true);
-    } else if (player.status === 'idle') {
-      // Handle idle state - video might be ready but not started
-      console.log('⏸️ [VideoPlayer] Player idle state');
-      setIsLoading(false);
-    }
-  }, [player.status, player.currentTime, player.duration]);
+    const currentPlayer = playerRef.current;
+    if (!currentPlayer) return;
 
-  // Add timeout to prevent infinite loading
-  useEffect(() => {
-    if (!videoUrl) return;
-    
-    const loadingTimeout = setTimeout(() => {
-      if (isLoading) {
-        console.log('⏰ [VideoPlayer] Loading timeout - hiding loading overlay');
-        setIsLoading(false);
-      }
-    }, 5000); // 5 second timeout
-    
-    return () => clearTimeout(loadingTimeout);
-  }, [isLoading, videoUrl]);
+    const intervalId = setInterval(() => {
+      handlePlaybackStatusUpdate(
+        currentPlayer.currentTime * 1000,
+        currentPlayer.duration * 1000,
+        currentPlayer.playing
+      );
+    }, 1000);
 
-  const handleRetry = () => {
-    console.log('🔄 [VideoPlayer] Retrying video load...');
-    setIsLoading(true);
-    setError(null);
-    setRetryCount(prev => prev + 1);
-    
-    // Force video reload by replacing source
-    if (videoUrl) {
-      player.replace(videoUrl);
-    }
-  };
+    return () => clearInterval(intervalId);
+  }, [handlePlaybackStatusUpdate]);
 
-  // No valid video URL available
-  if (!videoUrl) {
-    console.log('❌ [VideoPlayer] No valid video URL available:', {
+  // Validate episode data
+  const { isValid, missingFields } = validateEpisode(episode);
+  const hasValidUrl = !!videoUrlMemo;
+
+  if (!isValid || !hasValidUrl) {
+    console.error('❌ [VideoPlayer] Cannot play video:', { 
       episode,
-      hasVideoUrl: !!videoUrl,
-      originalUrl: episode.video_url || episode.uri
+      missingFields,
+      hasValidUrl,
+      videoUrl: episode.uri
     });
     
     return (
       <View style={styles.wrapper}>
         <View style={styles.container}>
-          <View style={styles.placeholderContainer}>
-            <Ionicons name="videocam-off" size={64} color="#666" />
-            <Text style={styles.placeholderTitle}>Video đang được cập nhật</Text>
-            <Text style={styles.placeholderSubtitle}>
-              Tập phim này sẽ sớm có sẵn. Vui lòng quay lại sau.
+          <View style={styles.errorOverlay}>
+            <Ionicons name="warning" size={48} color="#ff6b6b" />
+            <Text style={styles.errorText}>Không thể phát video</Text>
+            <Text style={styles.errorSubText}>
+              {!hasValidUrl 
+                ? 'Video không khả dụng. Vui lòng thử lại sau.'
+                : 'Thông tin tập phim không hợp lệ'
+              }
             </Text>
-            {(episode.video_url || episode.uri) && (
+            {__DEV__ && (
               <Text style={styles.debugText}>
-                URL: {episode.video_url || episode.uri}
+                {!hasValidUrl 
+                  ? `URI không hợp lệ: "${episode.uri}"`
+                  : `Thiếu các trường: ${missingFields.join(', ')}`
+                }
               </Text>
             )}
           </View>
@@ -269,35 +288,45 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = React.memo(({
       </View>
     );
   }
-
-  console.log('✅ [VideoPlayer] Rendering video player with URL:', videoUrl);
   
+  console.log('🎬 [VideoPlayer] Component initialized:', {
+    episodeId: episode._id,
+    episodeTitle: episode.episode_title,
+    videoUrl: videoUrlMemo,
+    originalUrl: episode.uri,
+    userId,
+    movieType,
+    hasVideoUrl: !!videoUrlMemo,
+    initTime: Date.now()
+  });
+  
+  const currentPlayer = playerRef.current;
+
   return (
     <View style={styles.wrapper}>
       {/* Video Container */}
       <View style={styles.container}>
-        <VideoView
-          style={styles.video}
-          player={player}
-          allowsFullscreen
-          allowsPictureInPicture
-          contentFit="contain"
-          nativeControls
-        />
+        {currentPlayer && (
+          <VideoView
+            style={styles.video}
+            player={currentPlayer}
+            allowsFullscreen
+            allowsPictureInPicture
+            contentFit="contain"
+            nativeControls
+          />
+        )}
         
         {/* Loading Overlay */}
         {isLoading && (
           <View style={styles.loadingOverlay}>
             <ActivityIndicator size="large" color="#E50914" />
             <Text style={styles.loadingText}>Đang tải video...</Text>
-            <Text style={styles.debugLoadingText}>
-              Status: {player.status} | Time: {Math.floor((Date.now() - startTime) / 1000)}s
-            </Text>
           </View>
         )}
 
-        {/* Buffering Overlay - Shows during playback buffering */}
-        {!isLoading && !error && player.status === 'loading' && (
+        {/* Buffering Overlay */}
+        {!isLoading && !error && currentPlayer?.status === 'loading' && (
           <View style={styles.bufferingOverlay}>
             <View style={styles.bufferingIndicator}>
               <ActivityIndicator size="large" color="#E50914" />
@@ -306,29 +335,26 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = React.memo(({
           </View>
         )}
 
-        {/* Error Overlay with Retry */}
+        {/* Error Overlay */}
         {error && (
           <View style={styles.errorOverlay}>
             <Ionicons name="warning" size={48} color="#ff6b6b" />
-            <Text style={styles.errorText}>Không thể phát video</Text>
-            <Text style={styles.errorSubText}>
-              Máy chủ video chưa được cấu hình đúng cách
-            </Text>
+            <Text style={styles.errorText}>{error}</Text>
             <TouchableOpacity 
               style={styles.retryButton}
-              onPress={handleRetry}
-              disabled={retryCount >= 3}
+              onPress={() => {
+                setError(null);
+                setIsLoading(true);
+                const player = playerRef.current;
+                if (player && videoUrlMemo) {
+                  player.pause();
+                  player.replace(videoUrlMemo);
+                }
+              }}
             >
               <Ionicons name="refresh" size={20} color="#fff" />
-              <Text style={styles.retryButtonText}>
-                {retryCount >= 3 ? 'Đã thử tối đa' : 'Thử lại'}
-              </Text>
+              <Text style={styles.retryButtonText}>Thử lại</Text>
             </TouchableOpacity>
-            {retryCount > 0 && (
-              <Text style={styles.retryCountText}>
-                Lần thử: {retryCount}/3
-              </Text>
-            )}
           </View>
         )}
       </View>
@@ -342,16 +368,16 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = React.memo(({
               : `Tập ${episode.episode_number}: ${episode.episode_title}` // Hiện đầy đủ cho phim bộ
             }
           </Text>
-          {player.duration && (
+          {currentPlayer?.duration && (
             <Text style={styles.videoDuration}>
-              {Math.floor(player.duration / 60)} phút
+              {Math.floor(currentPlayer.duration / 60)} phút
             </Text>
           )}
         </View>
       )}
     </View>
   );
-});
+};
 
 const styles = StyleSheet.create({
   wrapper: {
@@ -514,4 +540,13 @@ const styles = StyleSheet.create({
   },
 });
 
-export default VideoPlayer; 
+// Memoize với shallow comparison của props để tránh re-render không cần thiết
+export default React.memo(VideoPlayer, (prevProps, nextProps) => {
+  return (
+    prevProps.episode._id === nextProps.episode._id &&
+    prevProps.userId === nextProps.userId &&
+    prevProps.movieType === nextProps.movieType &&
+    prevProps.showTitle === nextProps.showTitle &&
+    prevProps.resumeFromTime === nextProps.resumeFromTime
+  );
+}); 

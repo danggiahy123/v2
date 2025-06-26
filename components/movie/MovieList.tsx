@@ -30,6 +30,8 @@ import { movieService } from '../../services/movieService';
 import { animeService } from '../../services/animeService';
 import { seriesService } from '../../services/seriesService';
 import type { GridMovie } from '../../types/movie';
+import { ContinueWatchingBadge } from './ContinueWatchingBadge';
+import { useAppSelector } from '../../store/hooks';
 
 const { width } = Dimensions.get('window');
 const ITEMS_PER_PAGE = 20;
@@ -45,8 +47,8 @@ interface MovieListProps {
   showAll?: boolean;
 }
 
-// Movie Item Component với animation
-const MovieItem = ({ item, onPress }: { item: GridMovie; onPress: () => void }) => {
+// Movie Item Component với animation và continue watching badge
+const MovieItem = ({ item, onPress, userId }: { item: GridMovie; onPress: () => void; userId?: string }) => {
   const scaleAnim = new Animated.Value(1);
 
   const handlePressIn = () => {
@@ -90,6 +92,15 @@ const MovieItem = ({ item, onPress }: { item: GridMovie; onPress: () => void }) 
             </View>
           </View>
 
+          {/* Continue Watching Badge - TODO: Implement after creating wrapper component */}
+          {/* {userId && (
+            <ContinueWatchingBadge
+              movieId={item.movieId}
+              userId={userId}
+              style={styles.continueBadge}
+            />
+          )} */}
+
           {/* Rating Badge */}
           {item.rating && (
             <View style={styles.ratingBadge}>
@@ -126,6 +137,10 @@ export default function MovieList({ category, title, onClose, showAll = false }:
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Get authenticated user for continue watching badges
+  const authState = useAppSelector((state) => state.auth);
+  const userId = authState?.isLoggedIn && authState?.userId ? authState.userId : undefined;
 
   useEffect(() => {
     loadMovies();
@@ -219,7 +234,7 @@ export default function MovieList({ category, title, onClose, showAll = false }:
   };
 
   const renderMovie = ({ item }: { item: GridMovie }) => (
-    <MovieItem item={item} onPress={() => handleMoviePress(item)} />
+    <MovieItem item={item} onPress={() => handleMoviePress(item)} userId={userId} />
   );
 
   const renderFooter = () => {

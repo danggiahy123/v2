@@ -1,3 +1,5 @@
+import { Episode } from './episode';
+
 /**
  * 🎬 MOVIE DETAIL TYPES
  * 
@@ -31,6 +33,11 @@ export interface MovieDetail {
   _id?: string;
   createdAt?: string;
   updatedAt?: string;
+  release_date?: string;
+  
+  // Image properties
+  poster?: string;
+  image?: string;
   
   // Rating & Statistics
   totalRating?: number;
@@ -69,6 +76,7 @@ export interface WatchingProgress {
   episodeNumber: number;
   watchPercentage: number;
   currentTime: number;
+  duration?: number;
   lastWatched: string;
   completed: boolean;
 }
@@ -81,22 +89,6 @@ export interface Genre {
   _id: string;
   name: string;
   slug: string;
-}
-
-export interface Episode {
-  _id: string;
-  episode_number: number;
-  episode_title: string;
-  episode_duration?: number;
-  episode_description?: string;
-  video_url?: string;
-  thumbnail_url?: string;
-  is_free?: boolean;
-  air_date?: string;
-  movie_id?: string;
-  duration?: number;
-  createdAt?: string;
-  updatedAt?: string;
 }
 
 export interface Comment {

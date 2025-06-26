@@ -53,14 +53,23 @@ export interface NavigableMovieItem {
 
 /**
  * CONTINUE WATCHING ITEM - Phim đang xem dở
- * FEATURES: Progress tracking và last watched time
+ * FEATURES: Enhanced progress tracking với remaining time và episode info
  */
 export interface ContinueWatchingItem {
   movieId: string;                // Unique movie identifier
   title: string;                  // Tên phim
   poster: string;                 // URL poster image
-  progress: number;               // Tiến độ xem (0-100%)
+  movieType: 'Phim lẻ' | 'Phim bộ'; // Loại phim
+  progress: number;               // Tiến độ xem (0-1)
+  progressPercentage: number;     // Tiến độ xem (0-100%)
+  currentTime: number;            // Thời gian hiện tại (seconds)
+  duration: number;               // Tổng thời lượng (seconds)
+  remainingTime: number;          // Thời gian còn lại (seconds)
+  remainingTimeFormatted: string; // "15 phút còn lại"
   lastWatchedAt: string;          // Thời gian xem cuối cùng
+  episodeId: string;              // ID của episode
+  episodeNumber?: number;         // Số tập (cho phim bộ)
+  episodeTitle?: string;          // Tên tập (cho phim bộ)
 }
 
 /**
@@ -122,8 +131,11 @@ export interface SeriesEpisode {
   episode_title: string;
   uri: string;
   episode_number: number;
-  episode_description?: string;
-  duration?: number;
+  episode_description: string;
+  duration: number;
+  movie_id: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Series movie type
@@ -198,4 +210,6 @@ export interface SeriesGridResponse {
     total: number;
     showAll: boolean;
   };
-} 
+}
+
+export type WatchingContext = 'resume' | 'start_new' | 'continue_episode' | 'error'; 

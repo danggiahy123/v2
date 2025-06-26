@@ -23,7 +23,6 @@ const transformMovieDetailResponse = (apiResponse: any): MovieDetail => {
     movieId: movie._id,
     movieType: movie.movie_type,
     hasUri: !!movie.uri,
-    hasVideoUrl: !!movie.video_url,
     hasEpisodes: !!movie.episodes,
     episodesCount: movie.episodes?.length || 0,
     firstEpisode: movie.episodes?.[0],
@@ -32,6 +31,66 @@ const transformMovieDetailResponse = (apiResponse: any): MovieDetail => {
   
   // Log full API response for debugging
   console.log('🔍 [DEBUG] Full API Response:', JSON.stringify(apiResponse, null, 2));
+
+  // Transform episodes data to ensure all required fields
+  const transformedEpisodes = (movie.episodes || []).map((ep: any) => {
+    // Log episode data for debugging
+    console.log('🎬 [DEBUG] Processing episode:', {
+      id: ep._id,
+      title: ep.episode_title,
+      originalUri: ep.uri,
+      hasUri: !!ep.uri,
+      episode_number: ep.episode_number
+    });
+
+    // Ensure URI is preserved from original data
+    const episodeUri = ep.uri || '';
+    
+    // 🔧 ROBUST FIX: Use _id from API if available, otherwise create one
+    // This handles both old backend (no _id) and new backend (with _id)
+    const episodeId = ep._id || `${movie._id}_ep${ep.episode_number}`;
+    
+    // Skip episodes without valid episode_number (essential field)
+    if (!ep.episode_number) {
+      console.warn('⚠️ [MovieDetailService] Skipping episode without episode_number:', {
+        title: ep.episode_title,
+        episode_data: ep
+      });
+      return null;
+    }
+
+    // Ensure all required fields are present
+    const transformedEpisode = {
+      _id: episodeId,
+      episode_title: ep.episode_title || `Tập ${ep.episode_number || 1}`,
+      episode_number: ep.episode_number || 1,
+      episode_description: ep.episode_description || '',
+      uri: episodeUri,
+      duration: ep.duration || 0,
+      movie_id: ep.movie_id || movie._id,
+      createdAt: ep.createdAt || ep.created_at || new Date().toISOString(),
+      updatedAt: ep.updatedAt || ep.updated_at || new Date().toISOString(),
+      is_free: ep.is_free,
+      release_date: ep.release_date
+    };
+
+    // Log transformed episode
+    console.log('✅ [DEBUG] Transformed episode:', {
+      id: transformedEpisode._id,
+      title: transformedEpisode.episode_title,
+      uri: transformedEpisode.uri,
+      hasUri: !!transformedEpisode.uri
+    });
+
+    return transformedEpisode;
+  }).filter(Boolean); // Remove null episodes
+
+  // Log final episodes array
+  console.log('📝 [DEBUG] Final episodes array:', {
+    totalEpisodes: transformedEpisodes.length,
+    episodesWithUri: transformedEpisodes.filter((ep: { uri: string }) => ep.uri).length,
+    firstEpisodeUri: transformedEpisodes[0]?.uri
+  });
   
   return {
     movieId: movie._id,
@@ -48,8 +107,7 @@ const transformMovieDetailResponse = (apiResponse: any): MovieDetail => {
     backdrop_path: movie.backdrop_path,
     
     // Video properties for single movies
-    uri: movie.uri,
-    video_url: movie.video_url,
+    uri: movie.uri || '',
     duration: movie.duration,
     
     // Additional properties from API
@@ -66,7 +124,7 @@ const transformMovieDetailResponse = (apiResponse: any): MovieDetail => {
     
     // Related data
     genres: movie.genres || [],
-    episodes: movie.episodes || [],  // API may not return this for single movies
+    episodes: transformedEpisodes,
     userInteractions: userInteractions,
     recentComments: recentComments,
     relatedMovies: relatedMovies,
@@ -140,7 +198,13 @@ export const movieDetailService = {
       const jsonEndTime = Date.now();
       
       console.log('📋 [MovieDetailService] JSON parsing completed:', {
-        jsonParseTime: jsonEndTime - jsonStartTime
+        jsonParseTime: jsonEndTime - jsonStartTime,
+        hasData: !!apiResponse.data,
+        hasMovie: !!apiResponse.data?.movie,
+        hasEpisodes: !!apiResponse.data?.movie?.episodes,
+        episodesType: typeof apiResponse.data?.movie?.episodes,
+        episodesArray: Array.isArray(apiResponse.data?.movie?.episodes),
+        episodesLength: apiResponse.data?.movie?.episodes?.length || 0
       });
       
       if (apiResponse.status !== 'success') {

@@ -29,16 +29,16 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useMovieDetail } from '../../hooks/useMovieDetail';
-import { Episode } from '../../types/movieDetail';
+import { Episode, REQUIRED_EPISODE_FIELDS } from '../../types/episode';
 import { useAppSelector } from '../../store/hooks'; //check auth
-import { VideoPlayer } from '../../components/movie/player/VideoPlayer';
+import VideoPlayer from '../../components/movie/player/VideoPlayer';
 import { RentalOptionsModal } from '../../components/rental/RentalOptionsModal';
 import { useRentalStatus } from '../../hooks/useRentalStatus';
 import { rentalService } from '../../services/rentalService';
 
-
 import { Notification } from '../../components/ui';
 import { SkeletonLoader } from '../../components/ui/AnimatedElements';
+import { getResumeWatchingInfo, getResumeButtonText, shouldShowContinueBadge } from '../../utils/watchingHelper';
 
 
 // Screen width for responsive design - will be used in future updates
@@ -48,10 +48,21 @@ import { SkeletonLoader } from '../../components/ui/AnimatedElements';
  * 🎬 MOVIE DETAIL SCREEN COMPONENT
  */
 export default function MovieDetailScreen() {
-  const { id, autoPlay } = useLocalSearchParams<{ id: string; autoPlay?: string }>();
+  const { id, autoPlay, fromContinueWatching, hasRentalAccess: initialRentalAccess } = useLocalSearchParams<{ 
+    id: string; 
+    autoPlay?: string; 
+    fromContinueWatching?: string;
+    hasRentalAccess?: string;
+  }>();
   
   // Debug log for params
-  console.log('🔍 [MovieDetail] Route params:', { id, autoPlay, idType: typeof id });
+  console.log('🔍 [MovieDetail] Route params:', { 
+    id, 
+    autoPlay, 
+    fromContinueWatching,
+    initialRentalAccess,
+    idType: typeof id 
+  });
   
   // Early return if no movie ID
   if (!id || typeof id !== 'string') {
@@ -106,12 +117,17 @@ export default function MovieDetailScreen() {
     refresh,
     toggleLike,
     toggleFavorite,
-    addComment, // Uncommented - sẽ dùng cho comment input
+    addComment,
     clearError
   } = useMovieDetail(id, { userId });
 
+  // Force refresh on component mount to ensure fresh data
+  useEffect(() => {
+    console.log('🔄 [MovieDetail] Component mounted, forcing refresh');
+    refresh();
+  }, []);
+
   // Comment input state - will be used when comment input is implemented
-  // const [showCommentInput, setShowCommentInput] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -119,25 +135,24 @@ export default function MovieDetailScreen() {
   
   // 🎬 NEW ENHANCED FEATURES STATE - Video always visible
   const [showVideoPlayer, setShowVideoPlayer] = useState(false);
-  const [episodeVideoUrl, setEpisodeVideoUrl] = useState<string | null>(null);
   const [currentEpisode, setCurrentEpisode] = useState<Episode | null>(null);
 
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
   const [notificationType, setNotificationType] = useState<'success' | 'error'>('success');
 
-  
-  
   // 🎫 RENTAL STATE
   const [showRentalModal, setShowRentalModal] = useState(false);
   const {
     hasAccess: hasRentalAccess,
     rental: currentRental,
     remainingTime,
-    // isLoading: isCheckingRental,
     checkAccess: checkRentalAccess,
-    // message: rentalMessage
-  } = useRentalStatus(userId || null, movieDetail ? id : null);
+  } = useRentalStatus(
+    userId || null, 
+    movieDetail ? id : null,
+    initialRentalAccess === 'true' // Parse string to boolean
+  );
   
   const [activeTab, setActiveTab] = useState<'related' | 'comments'>('related');
 
@@ -145,90 +160,116 @@ export default function MovieDetailScreen() {
   const hasLiked = Boolean(movieDetail?.userInteractions?.hasLiked);
   const isFavorite = Boolean(movieDetail?.userInteractions?.isFavorite);
   
-  // 🎬 GET DEFAULT EPISODE FOR VIDEO PLAYER
-  const getDefaultEpisode = (): Episode | null => {
+  // 📱 NOTIFICATION HELPER
+  const showNotificationMessage = (message: string, type: 'success' | 'error' = 'success') => {
+    setNotificationMessage(message);
+    setNotificationType(type);
+    setShowNotification(true);
+  };
+  
+  // 🎬 GET DEFAULT EPISODE FOR VIDEO PLAYER WITH SMART RESUME
+  const getDefaultEpisode = (): { 
+    episode: Episode | null; 
+    error?: string;
+    resumeFromTime?: number;
+    shouldAutoPlay?: boolean;
+    resumeMessage?: string;
+  } => {
     if (!movieDetail) {
       console.log('🎬 [DEBUG] getDefaultEpisode: No movieDetail');
-      return null;
+      return { episode: null, error: 'Không có thông tin phim' };
     }
 
-    console.log('🎬 [DEBUG] getDefaultEpisode:', {
-      movieType: movieDetail.movie_type,
-      hasEpisodes: !!movieDetail.episodes?.length,
-      episodeCount: movieDetail.episodes?.length,
-      hasUri: !!movieDetail.uri,
-      hasVideoUrl: !!movieDetail.video_url,
-      movieTitle: movieDetail.movie_title
+    // 🔧 ENHANCED: Handle series without episodes
+    if (movieDetail.movie_type === 'Phim bộ') {
+      if (!movieDetail.episodes || movieDetail.episodes.length === 0) {
+        console.log('❌ [DEBUG] Series movie has no episodes');
+        return { 
+          episode: null, 
+          error: 'Phim bộ này chưa có tập phim nào. Vui lòng thử lại sau hoặc liên hệ admin.' 
+        };
+      }
+
+      // Check if any episode has valid URI
+      const episodesWithUri = movieDetail.episodes.filter(ep => ep.uri && ep.uri.trim() !== '');
+      if (episodesWithUri.length === 0) {
+        console.log('❌ [DEBUG] Series has episodes but no valid URIs');
+        return { 
+          episode: null, 
+          error: 'Tập phim đang được cập nhật. Vui lòng thử lại sau.' 
+        };
+      }
+    }
+
+    // For single movies, check if we have episode data
+    if (movieDetail.movie_type === 'Phim lẻ') {
+      // Single movies should have URI directly or in episodes
+      const hasDirectUri = movieDetail.uri && movieDetail.uri.trim() !== '';
+      const hasEpisodeUri = movieDetail.episodes && movieDetail.episodes.length > 0 && 
+                           movieDetail.episodes[0].uri && movieDetail.episodes[0].uri.trim() !== '';
+      
+      if (!hasDirectUri && !hasEpisodeUri) {
+        console.log('❌ [DEBUG] Single movie has no valid URI');
+        return { 
+          episode: null, 
+          error: 'Phim đang được cập nhật. Vui lòng thử lại sau.' 
+        };
+      }
+    }
+
+    // Sử dụng helper utility để xác định episode cần resume
+    const resumeInfo = getResumeWatchingInfo({
+      movieDetail,
+      autoPlay: autoPlay === 'true',
+      fromContinueWatching: fromContinueWatching === 'true'
     });
 
-    // FOR PHIM BỘ (Series): Get first episode
-    if (movieDetail.movie_type === 'Phim bộ') {
-      if (movieDetail.episodes && movieDetail.episodes.length > 0) {
-        console.log('🎬 [DEBUG] Returning first episode for Phim bộ');
-        return movieDetail.episodes[0];
-      }
-      console.log('🎬 [DEBUG] No episodes found for Phim bộ');
-      return null;
-    }
-
-    // FOR PHIM LẺ (Single Movie): Create virtual episode
-    if (movieDetail.movie_type === 'Phim lẻ') {
-      // Try to get video URL from multiple sources
-      let videoUrl = movieDetail.uri || movieDetail.video_url;
-      
-      // If no video URL in movie, check if there's an episode with video
-      if (!videoUrl && movieDetail.episodes && movieDetail.episodes.length > 0) {
-        const firstEpisode = movieDetail.episodes[0] as any; // Cast to any to access all fields
-        videoUrl = firstEpisode.video_url || firstEpisode.uri;
-        console.log('🎬 [DEBUG] Found video URL in episode:', {
-          episodeId: firstEpisode._id,
-          video_url: firstEpisode.video_url,
-          uri: firstEpisode.uri,
-          finalVideoUrl: videoUrl
-        });
-      }
-      
-      // Fallback: Use episodeVideoUrl state if available
-      if (!videoUrl && episodeVideoUrl) {
-        videoUrl = episodeVideoUrl;
-        console.log('🎬 [DEBUG] Using episode video URL from state:', videoUrl);
-      }
-      
-      console.log('🎬 [DEBUG] Phim lẻ video URLs:', {
-        movieUri: movieDetail.uri,
-        movieVideoUrl: movieDetail.video_url,
-        hasEpisodes: !!movieDetail.episodes?.length,
-        episodeVideoUrl: movieDetail.episodes?.[0]?.video_url,
-        finalUrl: videoUrl
-      });
-      
-      if (!videoUrl) {
-        console.log('🎬 [DEBUG] No video URL found for Phim lẻ');
-        return null;
-      }
-
-      const episode = {
-        _id: movieDetail._id || movieDetail.movieId || id,
-        episode_title: movieDetail.movie_title,
-        episode_number: 1,
-        episode_description: movieDetail.description,
-        video_url: videoUrl,
-        duration: movieDetail.duration || 0,
-        movie_id: movieDetail._id || movieDetail.movieId || id,
-        createdAt: movieDetail.createdAt || new Date().toISOString(),
-        updatedAt: movieDetail.updatedAt || new Date().toISOString()
+    if (!resumeInfo.episode) {
+      console.log('❌ [DEBUG] No valid episode found from resume info');
+      return { 
+        episode: null, 
+        error: 'Không tìm thấy tập phim phù hợp để phát' 
       };
-      
-      console.log('🎬 [DEBUG] Created virtual episode for Phim lẻ:', episode);
-      return episode;
     }
 
-    console.log('🎬 [DEBUG] Unknown movie type:', movieDetail.movie_type);
-    return null;
+    // 🔧 ENHANCED: Validate episode URI
+    if (!resumeInfo.episode.uri || resumeInfo.episode.uri.trim() === '') {
+      console.log('❌ [DEBUG] Selected episode has no valid URI:', {
+        episodeId: resumeInfo.episode._id,
+        episodeTitle: resumeInfo.episode.episode_title
+      });
+      return { 
+        episode: null, 
+        error: 'Tập phim này đang được cập nhật. Vui lòng chọn tập khác.' 
+      };
+    }
+
+    console.log('🎬 [DEBUG] Resume info:', {
+      hasEpisode: !!resumeInfo.episode,
+      episodeTitle: resumeInfo.episode?.episode_title,
+      episodeUri: resumeInfo.episode?.uri,
+      shouldAutoPlay: resumeInfo.shouldAutoPlay,
+      resumeFromTime: resumeInfo.resumeFromTime,
+      resumeMessage: resumeInfo.resumeMessage,
+    });
+
+    return {
+      episode: resumeInfo.episode,
+      resumeFromTime: resumeInfo.resumeFromTime,
+      shouldAutoPlay: resumeInfo.shouldAutoPlay,
+      resumeMessage: resumeInfo.resumeMessage
+    };
   };
 
-  const defaultEpisode = getDefaultEpisode();
-  
+  const { episode: defaultEpisode, error: defaultEpisodeError } = getDefaultEpisode();
+
+  // Handle notifications in useEffect
+  useEffect(() => {
+    if (defaultEpisodeError) {
+      showNotificationMessage(defaultEpisodeError, 'error');
+    }
+  }, [defaultEpisodeError]);
+
   console.log('🎨 [UI State]', { 
     hasLiked, 
     isFavorite, 
@@ -236,7 +277,8 @@ export default function MovieDetailScreen() {
     hasDefaultEpisode: !!defaultEpisode,
     movieType: movieDetail?.movie_type,
     duration: movieDetail?.duration,
-    formattedDuration: movieDetail?.duration ? formatDuration(movieDetail.duration) : 'N/A'
+    formattedDuration: movieDetail?.duration ? formatDuration(movieDetail.duration) : 'N/A',
+    defaultEpisodeError
   });
 
   // 🔍 DEBUG: Duration formatting for all movies
@@ -256,10 +298,15 @@ export default function MovieDetailScreen() {
       // Movie detail loaded successfully - no offline caching needed for student project
       console.log('✅ [MovieDetail] Movie data loaded:', movieDetail.movie_title);
       
+      // Kiểm tra quyền xem phim
+      if (!movieDetail.is_free && !hasRentalAccess && initialRentalAccess !== 'true') {
+        showNotificationMessage('Bạn cần thuê phim này để xem', 'error');
+      }
+      
       // Auto play video if autoPlay parameter is set
       if (autoPlay === 'true') {
         // For free movies or if user has rental access
-        if (movieDetail.is_free || hasRentalAccess) {
+        if (movieDetail.is_free || hasRentalAccess || initialRentalAccess === 'true') {
           setShowVideoPlayer(true);
         } else {
           // Show notification that rental is required
@@ -267,32 +314,99 @@ export default function MovieDetailScreen() {
         }
       }
     }
-  }, [movieDetail, loading, id, autoPlay, hasRentalAccess]);
+  }, [movieDetail, loading, id, autoPlay, hasRentalAccess, initialRentalAccess]);
 
-  // Fetch episode video URL when needed
-  useEffect(() => {
-    const fetchEpisodeVideoUrl = async () => {
-      if (!movieDetail?.userInteractions?.watchingProgress) return;
-      if (episodeVideoUrl) return; // Already loaded
-      
-      const progress = movieDetail.userInteractions.watchingProgress;
-      console.log('🎬 [DEBUG] Fetching episode video URL:', progress.episodeId);
-      
-      try {
-        const response = await fetch(`https://backend-app-lou3.onrender.com/api/episodes/${progress.episodeId}`);
-        const data = await response.json();
-        
-        if (data.status === 'success' && data.data.episode.uri) {
-          setEpisodeVideoUrl(data.data.episode.uri);
-          console.log('🎬 [DEBUG] Episode video URL loaded:', data.data.episode.uri);
-        }
-      } catch (error) {
-        console.error('❌ [DEBUG] Failed to fetch episode video URL:', error);
+  // 🔧 ENHANCED: Episode validation with better error messages
+  const validateEpisode = (episode: Episode): { isValid: boolean; missingFields: string[]; errorMessage?: string } => {
+    const missingFields: string[] = [];
+    
+    REQUIRED_EPISODE_FIELDS.forEach(field => {
+      if (!episode[field]) {
+        missingFields.push(field);
       }
-    };
+    });
+    
+    // Special validation for URI
+    if (!episode.uri || episode.uri.trim() === '') {
+      return {
+        isValid: false,
+        missingFields: ['uri'],
+        errorMessage: 'Tập phim này đang được cập nhật. Vui lòng thử lại sau.'
+      };
+    }
 
-    fetchEpisodeVideoUrl();
-  }, [movieDetail, episodeVideoUrl]);
+    return { 
+      isValid: missingFields.length === 0, 
+      missingFields,
+      errorMessage: missingFields.length > 0 ? 
+        `Thiếu thông tin: ${missingFields.join(', ')}` : undefined
+    };
+  };
+
+  // 🔧 ENHANCED: URL validation with better handling
+  const isValidVideoUrl = (url: string): boolean => {
+    if (!url || url.trim() === '') return false;
+    
+    try {
+      new URL(url);
+      return true;
+    } catch {
+      // If URL parsing fails, check if it's a relative path or file identifier
+      return url.length > 0 && url.trim() !== '';
+    }
+  };
+
+  // 🎬 ENHANCED: Episode press handler with better error handling
+  const handleEpisodePress = (episode: Episode) => {
+    console.log('🎬 [DEBUG] Episode pressed:', {
+      episodeId: episode._id,
+      episodeTitle: episode.episode_title,
+      episodeNumber: episode.episode_number,
+      hasUri: !!episode.uri,
+      uri: episode.uri
+    });
+
+    // 🔧 Enhanced validation
+    const validation = validateEpisode(episode);
+    if (!validation.isValid) {
+      console.log('❌ [DEBUG] Episode validation failed:', validation);
+      showNotificationMessage(
+        validation.errorMessage || `Episode không hợp lệ: ${validation.missingFields.join(', ')}`, 
+        'error'
+      );
+      return;
+    }
+
+    // URL validation
+    if (!isValidVideoUrl(episode.uri)) {
+      console.log('❌ [DEBUG] Invalid video URL:', episode.uri);
+      showNotificationMessage('URL video không hợp lệ hoặc đang được cập nhật', 'error');
+      return;
+    }
+
+    // Check user authentication for paid content
+    if (!movieDetail?.is_free && !userId) {
+      console.log('🔐 [DEBUG] User not authenticated for paid content');
+      showNotificationMessage('Vui lòng đăng nhập để xem nội dung này', 'error');
+      router.push('/login');
+      return;
+    }
+
+    // Check rental access for paid content  
+    if (!movieDetail?.is_free && userId && !hasRentalAccess) {
+      console.log('🎫 [DEBUG] User needs to rent movie');
+      showNotificationMessage('Bạn cần thuê phim để xem tập này', 'error');
+      setShowRentalModal(true);
+      return;
+    }
+
+    console.log('✅ [DEBUG] Episode validation passed, setting up video player');
+    
+    setCurrentEpisode(episode);
+    setShowVideoPlayer(true);
+    
+    showNotificationMessage(`Đang phát: ${episode.episode_title}`, 'success');
+  };
 
   // 🎹 KEYBOARD HANDLING
   useEffect(() => {
@@ -310,15 +424,6 @@ export default function MovieDetailScreen() {
       keyboardDidHideListener?.remove();
     };
   }, []);
-
-  // 📱 NOTIFICATION HELPER
-  const showNotificationMessage = (message: string, type: 'success' | 'error' = 'success') => {
-    setNotificationMessage(message);
-    setNotificationType(type);
-    setShowNotification(true);
-  };
-
-
 
   // =====================================
   // ENHANCED EVENT HANDLERS
@@ -422,30 +527,6 @@ export default function MovieDetailScreen() {
   };
 
 
-  const handleEpisodePress = (episode: Episode) => {
-    console.log('🎬 Switching to episode:', episode.episode_title);
-    
-    // Get video URL from episode
-    const videoUrl = (episode as any).uri || (episode as any).video_url;
-    
-    if (videoUrl) {
-      // Create a new episode object with video URL
-      const episodeWithVideo = {
-        ...episode,
-        video_url: videoUrl,
-        uri: videoUrl
-      };
-      
-      setCurrentEpisode(episodeWithVideo);
-      setEpisodeVideoUrl(videoUrl);
-      setShowVideoPlayer(true);
-      console.log('🎬 Playing episode video:', videoUrl);
-    } else {
-      console.log('🎬 No video URL found for episode');
-      showNotificationMessage('Không tìm thấy video cho tập này', 'error');
-    }
-  };
-
   const handleRelatedMoviePress = (movieId: string) => {
     router.push(`/movie/${movieId}`);
   };
@@ -461,6 +542,12 @@ export default function MovieDetailScreen() {
 
     if (!userId) {
       showNotificationMessage('Vui lòng đăng nhập để thuê phim', 'error');
+      return;
+    }
+
+    // Nếu đã có quyền xem từ Continue Watching hoặc đã thuê
+    if (initialRentalAccess === 'true' || hasRentalAccess) {
+      setShowVideoPlayer(true);
       return;
     }
 
@@ -703,27 +790,60 @@ export default function MovieDetailScreen() {
   };
 
   const renderEpisodes = () => {
-    if (!movieDetail?.episodes || movieDetail.episodes.length === 0) return null;
-
-    return (
-      
+    // Don't render if it's not a series
+    if (movieDetail?.movie_type !== 'Phim bộ') return null;
+    
+    // Handle series without episodes
+    if (!movieDetail?.episodes || movieDetail.episodes.length === 0) {
+      return (
         <View style={styles.episodesContainer}>
-          <Text style={styles.sectionTitle}>Episodes ({movieDetail.episodes.length})</Text>
-          {movieDetail.episodes.map((episode, index) => (
-              <TouchableOpacity
-              key={episode._id || index}
-                style={styles.episodeItem}
-                onPress={() => handleEpisodePress(episode)}
-              >
-                <Text style={styles.episodeNumber}>Ep {episode.episode_number}</Text>
-                <Text style={styles.episodeTitle}>{episode.episode_title}</Text>
-                <Text style={styles.episodeDuration}>
-                {formatDuration(episode.episode_duration || episode.duration || 0)}
-                </Text>
-              </TouchableOpacity>
-          ))}
+          <Text style={styles.sectionTitle}>Episodes</Text>
+          <View style={styles.emptyEpisodesContainer}>
+            <Text style={styles.emptyEpisodesText}>
+              Phim bộ này chưa có tập phim nào.
+            </Text>
+            <Text style={styles.emptyEpisodesSubtext}>
+              Vui lòng thử lại sau hoặc liên hệ admin.
+            </Text>
+          </View>
         </View>
-      
+      );
+    }
+
+    // Render episodes list
+    return (
+      <View style={styles.episodesContainer}>
+        <Text style={styles.sectionTitle}>Episodes ({movieDetail.episodes.length})</Text>
+        {movieDetail.episodes.map((episode, index) => {
+          const hasValidUri = episode.uri && episode.uri.trim() !== '';
+          
+          return (
+            <TouchableOpacity
+              key={episode._id || index}
+              style={[
+                styles.episodeItem,
+                !hasValidUri && styles.episodeItemDisabled
+              ]}
+              onPress={() => handleEpisodePress(episode)}
+              disabled={!hasValidUri}
+            >
+              <Text style={styles.episodeNumber}>Ep {episode.episode_number}</Text>
+              <Text style={[
+                styles.episodeTitle,
+                !hasValidUri && styles.episodeTitleDisabled
+              ]}>
+                {episode.episode_title}
+              </Text>
+              <Text style={styles.episodeDuration}>
+                {formatDuration(episode.duration)}
+              </Text>
+              {!hasValidUri && (
+                <Text style={styles.episodeStatus}>Đang cập nhật</Text>
+              )}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
     );
   };
 
@@ -907,7 +1027,7 @@ export default function MovieDetailScreen() {
   // =====================================
 
   return (
-      <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#000" />
       
       {/* 📱 CUSTOM HEADER - Tránh tai thỏ iPhone */}
@@ -946,58 +1066,98 @@ export default function MovieDetailScreen() {
         {/* {renderAuthStatus()} */}
         
         {/* 🎬 VIDEO PLAYER SECTION - Conditional based on movie type and rental status */}
-        {showVideoPlayer && (currentEpisode || defaultEpisode) && (
+        {showVideoPlayer && (currentEpisode || (!currentEpisode && defaultEpisode)) && (
           <View style={styles.videoPlayerContainer}>
-            {/* Show video if: free movie OR user has rental access OR user is logged in */}
+            {/* Show video if: free movie OR user has rental access */}
             {(() => {
-              const episodeToPlay = currentEpisode || defaultEpisode;
-              const canShowVideo = movieDetail?.is_free || hasRentalAccess || userId;
+              // Nếu đã chọn tập phim cụ thể, không sử dụng defaultEpisode
+              const episodeToPlay = currentEpisode || (!currentEpisode && defaultEpisode);
+              const canShowVideo = movieDetail?.is_free || hasRentalAccess;
               const renderTime = Date.now();
+
               console.log('🎬 [DEBUG] Video Player Conditions:', {
-                showVideoPlayer,
+                canShowVideo: true,
+                episodeToPlay: episodeToPlay?.episode_title,
+                episodeVideoUrl: episodeToPlay?.uri,
                 hasCurrentEpisode: !!currentEpisode,
                 hasDefaultEpisode: !!defaultEpisode,
-                episodeToPlay: episodeToPlay?.episode_title,
-                movieIsFree: movieDetail?.is_free,
                 hasRentalAccess,
-                userId: !!userId,
-                canShowVideo,
-                renderTime,
-                episodeVideoUrl: episodeToPlay?.video_url || (episodeToPlay as any)?.uri
+                movieIsFree: movieDetail?.is_free,
+                renderTime: Date.now(),
+                userId: !!userId
               });
-              return canShowVideo;
-            })() ? (
-              <VideoPlayer
-                episode={currentEpisode || defaultEpisode!}
-                userId={userId || 'anonymous'}
-                movieId={id}
-                movieType={movieDetail?.movie_type}
-                showTitle={false}
-                onProgressUpdate={(progress) => {
-                  console.log(`⏯️ [VIDEO] Progress: ${progress}%`);
-                }}
-                onEpisodeComplete={() => {
-                  console.log('🎬 [VIDEO] Episode completed!');
-                  showNotificationMessage('Episode completed!', 'success');
-                }}
-              />
-            ) : (
-              <View style={styles.videoPlaceholder}>
-                <View style={styles.videoPlaceholderContent}>
-                  <Ionicons name="lock-closed" size={48} color="#666" />
-                  <Text style={styles.videoPlaceholderTitle}>Cần thuê phim để xem</Text>
-                  <Text style={styles.videoPlaceholderSubtitle}>
-                    Vui lòng thuê phim để có thể xem video
+
+              // Validate episode before rendering
+              if (!episodeToPlay?._id || !episodeToPlay?.episode_title || !episodeToPlay?.episode_number) {
+                console.error('❌ [VideoPlayer] Invalid episode data:', episodeToPlay);
+                return (
+                  <View style={styles.placeholderContainer}>
+                    <Text style={styles.placeholderText}>
+                      Thông tin tập phim không hợp lệ
+                    </Text>
+                  </View>
+                );
+              }
+
+              // Validate video URL
+              const videoUrl = episodeToPlay?.uri;
+              if (!videoUrl) {
+                console.log('❌ [VideoPlayer] No video URL available:', { episodeToPlay });
+                return null;
+              }
+
+              return canShowVideo && showVideoPlayer && episodeToPlay ? (
+                <VideoPlayer
+                  episode={episodeToPlay}
+                  userId={userId || 'anonymous'}
+                  movieType={movieDetail?.movie_type}
+                  movieId={id}
+                  showTitle={false}
+                  resumeFromTime={(() => {
+                    // Nếu đang chuyển tập mới, không sử dụng resumeFromTime
+                    if (currentEpisode) return undefined;
+
+                    const watchingProgress = movieDetail?.userInteractions?.watchingProgress;
+                    const savedTime = watchingProgress?.currentTime;
+                    const watchPercentage = watchingProgress?.watchPercentage;
+                    
+                    // Validate saved time
+                    if (!savedTime || savedTime <= 0) return undefined;
+                    if (watchPercentage && watchPercentage >= 90) return undefined;
+                    if (savedTime > 7200) return undefined;
+                    
+                    const episodeDuration = episodeToPlay?.duration;
+                    if (episodeDuration && savedTime >= episodeDuration - 10) {
+                      console.log('⚠️ [AUTO-RESUME] Resume time too close to episode end, skipping');
+                      return undefined;
+                    }
+                    
+                    console.log('🎯 [AUTO-RESUME] Validated resume time:', {
+                      savedTime,
+                      watchPercentage,
+                      willResume: true
+                    });
+                    
+                    return savedTime;
+                  })()}
+                  onProgressUpdate={(progress: number) => {
+                    console.log(`⏯️ [VIDEO] Progress: ${progress}%`);
+                  }}
+                  onEpisodeComplete={() => {
+                    console.log('🎬 [VIDEO] Episode completed!');
+                    showNotificationMessage('Episode completed!', 'success');
+                  }}
+                />
+              ) : (
+                <View style={styles.placeholderContainer}>
+                  <Text style={styles.placeholderText}>
+                    {!movieDetail?.is_free && !hasRentalAccess
+                      ? 'Vui lòng thuê phim để xem'
+                      : 'Bấm vào nút play để xem phim'}
                   </Text>
-                  <TouchableOpacity 
-                    style={styles.videoPlaceholderButton}
-                    onPress={() => setShowVideoPlayer(false)}
-                  >
-                    <Text style={styles.videoPlaceholderButtonText}>Đóng</Text>
-                  </TouchableOpacity>
                 </View>
-              </View>
-            )}
+              );
+            })()}
           </View>
         )}
         
@@ -1721,40 +1881,18 @@ const styles = StyleSheet.create({
   },
   
   // Video Placeholder
-  videoPlaceholder: {
+  placeholderContainer: {
     height: 250,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#1a1a1a',
   },
-  videoPlaceholderContent: {
-    alignItems: 'center',
-    padding: 20,
-  },
-  videoPlaceholderTitle: {
+  placeholderText: {
     fontSize: 18,
     color: '#fff',
     fontWeight: 'bold',
     marginTop: 16,
     marginBottom: 8,
-  },
-  videoPlaceholderSubtitle: {
-    fontSize: 14,
-    color: '#aaa',
-    textAlign: 'center',
-    marginBottom: 20,
-    lineHeight: 20,
-  },
-  videoPlaceholderButton: {
-    backgroundColor: '#E50914',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 6,
-  },
-  videoPlaceholderButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
   },
   
   // Debug Toggle Styles
@@ -1892,5 +2030,45 @@ const styles = StyleSheet.create({
     color: '#888',
     fontSize: 10,
     fontStyle: 'italic',
+  },
+
+  // === EMPTY EPISODES STYLES ===
+  emptyEpisodesContainer: {
+    backgroundColor: '#1a1a1a',
+    padding: 20,
+    margin: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  emptyEpisodesText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  emptyEpisodesSubtext: {
+    color: '#aaa',
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+
+  // === DISABLED EPISODE STYLES ===
+  episodeItemDisabled: {
+    opacity: 0.5,
+    backgroundColor: '#1a1a1a',
+  },
+  episodeTitleDisabled: {
+    color: '#666',
+  },
+  episodeStatus: {
+    color: '#FFA500',
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 4,
+    textAlign: 'center',
   },
 }); 

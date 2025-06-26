@@ -6,15 +6,16 @@ import {
   RentalTimeFormatting,
 } from '../types/rental';
 
-// Simple cache for rental status (5 minutes TTL)
+// Simple cache for rental status (1 minute TTL)
 const rentalCache = new Map<string, { data: any; timestamp: number; ttl: number }>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL = 1 * 60 * 1000; // 1 minute
 
 export const useRentalStatus = (
   userId: string | null,
-  movieId: string | null
+  movieId: string | null,
+  initialRentalAccess?: boolean
 ): UseRentalStatusResult => {
-  const [hasAccess, setHasAccess] = useState(false);
+  const [hasAccess, setHasAccess] = useState(initialRentalAccess || false);
   const [rental, setRental] = useState<RentalInfo | null>(null);
   const [remainingTime, setRemainingTime] = useState<number | null>(null);
   const [remainingHours, setRemainingHours] = useState<number | null>(null);
@@ -22,8 +23,16 @@ export const useRentalStatus = (
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState('');
+  const initialAccessChecked = useRef(false);
 
   const checkAccess = useCallback(async (forceRefresh: boolean = false) => {
+    // Skip initial check if we have initialRentalAccess
+    if (initialRentalAccess && !initialAccessChecked.current && !forceRefresh) {
+      console.log('🎫 [useRentalStatus] Using initialRentalAccess:', { initialRentalAccess });
+      initialAccessChecked.current = true;
+      return;
+    }
+
     if (!userId || !movieId || movieId === 'undefined' || typeof movieId !== 'string') {
       console.log('⚠️ [useRentalStatus] Invalid params:', { userId, movieId, movieIdType: typeof movieId });
       setHasAccess(false);
@@ -106,21 +115,21 @@ export const useRentalStatus = (
     } finally {
       setIsLoading(false);
     }
-  }, [userId, movieId]);
+  }, [userId, movieId, initialRentalAccess]);
 
   // Auto check on mount and when dependencies change
   useEffect(() => {
     checkAccess();
   }, [checkAccess]);
 
-  // Auto refresh mỗi 5 phút nếu có active rental (giảm từ 30s xuống 5 phút)
+  // Auto refresh mỗi 1 phút nếu có active rental
   useEffect(() => {
     if (!hasAccess || !rental) return;
 
-          const interval = setInterval(() => {
-        console.log('🔄 [useRentalStatus] Auto-refreshing rental status (5min interval)');
-        checkAccess(true); // Force refresh on interval
-      }, 5 * 60 * 1000); // 5 minutes instead of 30 seconds
+    const interval = setInterval(() => {
+      console.log('🔄 [useRentalStatus] Auto-refreshing rental status (1min interval)');
+      checkAccess(true); // Force refresh on interval
+    }, 1 * 60 * 1000); // 1 minute
 
     return () => clearInterval(interval);
   }, [hasAccess, rental, checkAccess]);
