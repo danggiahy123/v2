@@ -14,7 +14,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { TabHeader, SearchModal } from '../../components/ui';
 import { animeService } from '../../services/animeService';
-import { AnimeBanner } from '../../components/anime';
+import { Banner, GenreSelector } from '../../components/anime';
 import { useRouter } from 'expo-router';
 
 type Anime = {
@@ -30,6 +30,7 @@ export default function AnimeScreen() {
   const headerOpacity = useRef(new Animated.Value(1)).current;
   const lastScrollY = useRef(0);
   const [searchVisible, setSearchVisible] = useState(false);
+  const [genreSelectorVisible, setGenreSelectorVisible] = useState(false);
   const [trending, setTrending] = useState<Anime[]>([]);
   const [series, setSeries] = useState<Anime[]>([]);
   const [movies, setMovies] = useState<Anime[]>([]);
@@ -151,6 +152,8 @@ export default function AnimeScreen() {
           title="Hoạt hình"
           onSearchPress={() => setSearchVisible(true)}
           onNotificationPress={() => {}}
+          onGenrePress={() => setGenreSelectorVisible(true)}
+          showGenreButton
           opacity={headerOpacity}
         />
         <View style={styles.loading}>
@@ -169,6 +172,8 @@ export default function AnimeScreen() {
           title="Hoạt hình"
           onSearchPress={() => setSearchVisible(true)}
           onNotificationPress={() => {}}
+          onGenrePress={() => setGenreSelectorVisible(true)}
+          showGenreButton
           opacity={headerOpacity}
         />
         <View style={styles.error}>
@@ -193,7 +198,7 @@ export default function AnimeScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.content}>
-          <AnimeBanner />
+          <Banner />
           {renderTrendingSection(trending)}
           {renderSection('Hoạt hình phim bộ', series, 'series')}
           {renderSection('Hoạt hình chiếu rạp', movies, 'movies')}
@@ -204,6 +209,8 @@ export default function AnimeScreen() {
         title="Hoạt hình"
         onSearchPress={() => setSearchVisible(true)}
         onNotificationPress={() => {}}
+        onGenrePress={() => setGenreSelectorVisible(true)}
+        showGenreButton
         opacity={headerOpacity}
       />
 
@@ -211,6 +218,11 @@ export default function AnimeScreen() {
         visible={searchVisible}
         onClose={() => setSearchVisible(false)}
         category="anime"
+      />
+
+      <GenreSelector
+        visible={genreSelectorVisible}
+        onClose={() => setGenreSelectorVisible(false)}
       />
     </View>
   );
