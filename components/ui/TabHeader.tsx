@@ -57,6 +57,7 @@ import { LinearGradient } from 'expo-linear-gradient';
  * @param actionButtons - Custom action buttons thay thế default (optional)
  * @param leftComponent - Custom left content thay thế title/logo (optional)
  * @param style - Additional custom styles (optional)
+ * @param children - Additional content to render below logo/title (optional)
  */
 interface TabHeaderProps {
   title?: string;
@@ -73,6 +74,7 @@ interface TabHeaderProps {
   actionButtons?: React.ReactNode;
   leftComponent?: React.ReactNode;
   style?: any;
+  children?: React.ReactNode; // Thêm children
 }
 
 export default function TabHeader({ 
@@ -90,6 +92,7 @@ export default function TabHeader({
   actionButtons,
   leftComponent,
   style,
+  children, // nhận children
 }: TabHeaderProps) {
   const insets = useSafeAreaInsets();
 
@@ -154,6 +157,7 @@ export default function TabHeader({
           pointerEvents="none"
         />
       )}
+
       
       {/* LEFT SECTION WITH TITLE AND GENRE */}
       <View style={styles.leftSection}>
@@ -183,20 +187,22 @@ export default function TabHeader({
             ) : null}
           </>
         )}
-      </View>
 
-      {/* RIGHT ACTION BUTTONS */}
-      {actionButtons || defaultActionButtons}
+      </View>
+      {/* Children nằm dưới logo + icon */}
+      {children}
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     paddingTop: Platform.OS === 'ios' ? 35 : 25,
+
     paddingBottom: 10,
     paddingHorizontal: 20,
     position: 'absolute',
@@ -206,11 +212,14 @@ const styles = StyleSheet.create({
     zIndex: 999,
     elevation: 999,
   },
+
   leftSection: {
     flex: 1,
   },
   titleContainer: {
+
     alignItems: 'flex-start',
+    flexShrink: 1,
   },
   title: {
     fontSize: 24,
