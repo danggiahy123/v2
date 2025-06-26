@@ -1,7 +1,3 @@
-
-
-
-
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
@@ -20,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAppSelector } from '../../store/hooks';
 import { rentalService } from '../../services/rentalService';
 import { RentalInfo } from '../../types/rental';
+import { clearRentalCache } from '../../hooks/useRentalStatus';
 
 export default function RentalHistoryScreen() {
   const router = useRouter();
@@ -101,6 +98,33 @@ export default function RentalHistoryScreen() {
           onPress: async () => {
             try {
               await rentalService.cancelRental(rental._id, { userId });
+              Alert.alert('Thành công', 'Đã hủy rental thành công');
+              loadRentals();
+            } catch {
+              Alert.alert('Lỗi', 'Không thể hủy rental');
+            }
+          },
+        },
+      ]
+    );
+  };
+    Alert.alert(
+      'Xác nhận hủy rental',
+      'Bạn có chắc muốn hủy rental này? Hành động này không thể hoàn tác.',
+      [
+        { text: 'Hủy bỏ', style: 'cancel' },
+        {
+          text: 'Xác nhận',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await rentalService.cancelRental(rental._id, { userId });
+              
+              // Clear rental cache for this specific movie
+              if (userId && rental.movieId._id) {
+                clearRentalCache(userId, rental.movieId._id);
+              }
+              
               Alert.alert('Thành công', 'Đã hủy rental thành công');
               loadRentals();
             } catch {

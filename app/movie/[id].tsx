@@ -9,7 +9,7 @@
  * - Video player integration
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -25,9 +25,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   Keyboard,
+  ActivityIndicator,
+  FlatList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, router } from 'expo-router';
+import { useLocalSearchParams, router, useRouter } from 'expo-router';
 import { useMovieDetail } from '../../hooks/useMovieDetail';
 import { Episode, REQUIRED_EPISODE_FIELDS } from '../../types/episode';
 import { useAppSelector } from '../../store/hooks'; //check auth
@@ -39,6 +41,7 @@ import { rentalService } from '../../services/rentalService';
 import { Notification } from '../../components/ui';
 import { SkeletonLoader } from '../../components/ui/AnimatedElements';
 import { getResumeWatchingInfo, getResumeButtonText, shouldShowContinueBadge } from '../../utils/watchingHelper';
+import { useFocusEffect } from '@react-navigation/native';
 
 
 // Screen width for responsive design - will be used in future updates
@@ -147,7 +150,9 @@ export default function MovieDetailScreen() {
     hasAccess: hasRentalAccess,
     rental: currentRental,
     remainingTime,
+    isLoading: isLoadingRentalStatus,
     checkAccess: checkRentalAccess,
+    forceRefresh: forceRefreshRental,
   } = useRentalStatus(
     userId || null, 
     movieDetail ? id : null,
@@ -167,6 +172,10 @@ export default function MovieDetailScreen() {
     setShowNotification(true);
   };
   
+  // 🎫 RENTAL NOTIFICATION DELAY STATE
+  const [hasShownRentalNotification, setHasShownRentalNotification] = useState(false);
+  const [hasShownEpisodeError, setHasShownEpisodeError] = useState(false);
+  
   // 🎬 GET DEFAULT EPISODE FOR VIDEO PLAYER WITH SMART RESUME
   const getDefaultEpisode = (): { 
     episode: Episode | null; 
@@ -175,9 +184,10 @@ export default function MovieDetailScreen() {
     shouldAutoPlay?: boolean;
     resumeMessage?: string;
   } => {
+    // Don't show error if still loading
     if (!movieDetail) {
-      console.log('🎬 [DEBUG] getDefaultEpisode: No movieDetail');
-      return { episode: null, error: 'Không có thông tin phim' };
+      console.log('🎬 [DEBUG] getDefaultEpisode: No movieDetail (still loading)');
+      return { episode: null }; // No error when loading
     }
 
     // 🔧 ENHANCED: Handle series without episodes
@@ -265,10 +275,24 @@ export default function MovieDetailScreen() {
 
   // Handle notifications in useEffect
   useEffect(() => {
-    if (defaultEpisodeError) {
+    // Only show error notification if movieDetail is loaded and there's actually an error
+    if (defaultEpisodeError && movieDetail && !loading && !hasShownEpisodeError) {
+      console.log('🚨 [DEBUG] Showing episode error:', {
+        error: defaultEpisodeError,
+        movieTitle: movieDetail.movie_title,
+        movieType: movieDetail.movie_type,
+        hasEpisodes: !!movieDetail.episodes?.length
+      });
       showNotificationMessage(defaultEpisodeError, 'error');
+      setHasShownEpisodeError(true);
     }
-  }, [defaultEpisodeError]);
+  }, [defaultEpisodeError, movieDetail, loading, hasShownEpisodeError]);
+
+  // 🔄 RESET NOTIFICATION STATE WHEN MOVIE CHANGES
+  useEffect(() => {
+    setHasShownRentalNotification(false);
+    setHasShownEpisodeError(false);
+  }, [id, movieDetail?.movie_title]);
 
   console.log('🎨 [UI State]', { 
     hasLiked, 
@@ -278,7 +302,10 @@ export default function MovieDetailScreen() {
     movieType: movieDetail?.movie_type,
     duration: movieDetail?.duration,
     formattedDuration: movieDetail?.duration ? formatDuration(movieDetail.duration) : 'N/A',
-    defaultEpisodeError
+    defaultEpisodeError,
+    loading,
+    hasMovieDetail: !!movieDetail,
+    hasShownEpisodeError
   });
 
   // 🔍 DEBUG: Duration formatting for all movies
@@ -298,23 +325,127 @@ export default function MovieDetailScreen() {
       // Movie detail loaded successfully - no offline caching needed for student project
       console.log('✅ [MovieDetail] Movie data loaded:', movieDetail.movie_title);
       
-      // Kiểm tra quyền xem phim
-      if (!movieDetail.is_free && !hasRentalAccess && initialRentalAccess !== 'true') {
-        showNotificationMessage('Bạn cần thuê phim này để xem', 'error');
-      }
+      // 🔧 DEBUG: Log movie detail data structure
+      console.log('🔍 [DEBUG] Movie detail structure:', {
+        movieId: movieDetail._id,
+        movieTitle: movieDetail.movie_title,
+        movieType: movieDetail.movie_type,
+        hasEpisodes: !!movieDetail.episodes?.length,
+        episodeCount: movieDetail.episodes?.length,
+        episodes: movieDetail.episodes?.map(ep => ({
+          id: ep._id,
+          title: ep.episode_title,
+          number: ep.episode_number,
+          hasUri: !!ep.uri
+        })),
+        userInteractions: movieDetail.userInteractions,
+        watchingProgress: movieDetail.userInteractions?.watchingProgress
+      });
       
       // Auto play video if autoPlay parameter is set
       if (autoPlay === 'true') {
         // For free movies or if user has rental access
         if (movieDetail.is_free || hasRentalAccess || initialRentalAccess === 'true') {
-          setShowVideoPlayer(true);
+          // 🔧 FIX: Get the correct episode to resume based on movie type
+          const { episode: resumeEpisode, resumeFromTime, resumeMessage } = getResumeWatchingInfo({
+            movieDetail,
+            autoPlay: true,
+            fromContinueWatching: fromContinueWatching === 'true'
+          });
+          
+          console.log('🎯 [AUTO-PLAY] Resume info:', {
+            resumeEpisode: resumeEpisode?.episode_title,
+            resumeEpisodeId: resumeEpisode?._id,
+            resumeEpisodeNumber: resumeEpisode?.episode_number,
+            resumeFromTime,
+            resumeMessage,
+            movieType: movieDetail.movie_type,
+            fromContinueWatching: fromContinueWatching === 'true',
+            autoPlay: autoPlay === 'true'
+          });
+          
+          if (resumeEpisode) {
+            // 🔧 FIX: Set currentEpisode for series, keep null for single movies
+            if (movieDetail.movie_type === 'Phim bộ') {
+              setCurrentEpisode(resumeEpisode);
+              console.log('📺 [AUTO-PLAY] Set current episode for series:', {
+                episodeId: resumeEpisode._id,
+                episodeTitle: resumeEpisode.episode_title,
+                episodeNumber: resumeEpisode.episode_number
+              });
+            } else {
+              // For single movies, don't set currentEpisode, use defaultEpisode
+              console.log('🎬 [AUTO-PLAY] Using default episode for single movie');
+            }
+            
+            // Show video player
+            setShowVideoPlayer(true);
+            
+            // Show resume message if available
+            if (resumeMessage) {
+              showNotificationMessage(resumeMessage, 'success');
+            }
+            
+            console.log('🎯 [AUTO-PLAY] Video player activated with episode:', resumeEpisode.episode_title);
+          }
         } else {
-          // Show notification that rental is required
-          showNotificationMessage('Cần thuê phim để xem video', 'error');
+          console.log('⚠️ [AUTO-PLAY] No access to play video - showing rental modal');
+          setShowRentalModal(true);
         }
       }
     }
-  }, [movieDetail, loading, id, autoPlay, hasRentalAccess, initialRentalAccess]);
+  }, [movieDetail, loading, autoPlay, hasRentalAccess, initialRentalAccess, fromContinueWatching]);
+
+  // 🎫 SEPARATE EFFECT FOR RENTAL ACCESS CHECK
+  useEffect(() => {
+    if (movieDetail && !loading && !movieDetail.is_free && !isLoadingRentalStatus) {
+      // Only show rental notification after rental status is loaded and user doesn't have access
+      // Skip if we're still loading rental status or have initial access
+      if (initialRentalAccess !== 'true' && hasRentalAccess === false && !hasShownRentalNotification) {
+        console.log('🎫 [DEBUG] User needs to rent movie:', {
+          movieTitle: movieDetail.movie_title,
+          hasRentalAccess,
+          initialRentalAccess,
+          userId: !!userId,
+          isLoadingRentalStatus,
+          hasShownRentalNotification
+        });
+        
+        // Add small delay to ensure all status are properly loaded
+        const timeoutId = setTimeout(() => {
+          if (hasRentalAccess === false && !hasShownRentalNotification) {
+            if (userId) {
+              showNotificationMessage('Bạn cần thuê phim này để xem', 'error');
+            } else {
+              showNotificationMessage('Vui lòng đăng nhập để thuê phim', 'error');
+            }
+            setHasShownRentalNotification(true);
+          }
+        }, 500); // 500ms delay
+
+        return () => clearTimeout(timeoutId);
+      } else if (hasRentalAccess === true) {
+        console.log('✅ [DEBUG] User has rental access:', {
+          movieTitle: movieDetail.movie_title,
+          hasRentalAccess,
+          initialRentalAccess
+        });
+        setHasShownRentalNotification(false); // Reset for future navigation
+      }
+    }
+  }, [movieDetail, loading, hasRentalAccess, initialRentalAccess, userId, isLoadingRentalStatus, hasShownRentalNotification]);
+
+  // 🔄 REFRESH RENTAL STATUS WHEN SCREEN FOCUS
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('🔄 [MovieDetail] Screen focused - checking rental status');
+      if (userId && movieDetail && !movieDetail.is_free) {
+        // Force refresh rental status when user returns to this screen
+        // This ensures button text is updated after rental cancellation
+        forceRefreshRental();
+      }
+    }, [userId, movieDetail, forceRefreshRental])
+  );
 
   // 🔧 ENHANCED: Episode validation with better error messages
   const validateEpisode = (episode: Episode): { isValid: boolean; missingFields: string[]; errorMessage?: string } => {
@@ -555,7 +686,8 @@ export default function MovieDetailScreen() {
   };
 
   const handleRentalSuccess = () => {
-    checkRentalAccess();
+    console.log('🎫 [DEBUG] Rental success - forcing refresh');
+    forceRefreshRental(); // Force refresh rental status
     showNotificationMessage('Thuê phim thành công!', 'success');
   };
 
@@ -1078,9 +1210,21 @@ export default function MovieDetailScreen() {
               console.log('🎬 [DEBUG] Video Player Conditions:', {
                 canShowVideo: true,
                 episodeToPlay: episodeToPlay?.episode_title,
+                episodeToPlayId: episodeToPlay?._id,
+                episodeToPlayNumber: episodeToPlay?.episode_number,
                 episodeVideoUrl: episodeToPlay?.uri,
                 hasCurrentEpisode: !!currentEpisode,
                 hasDefaultEpisode: !!defaultEpisode,
+                currentEpisodeInfo: currentEpisode ? {
+                  id: currentEpisode._id,
+                  title: currentEpisode.episode_title,
+                  number: currentEpisode.episode_number
+                } : null,
+                defaultEpisodeInfo: defaultEpisode ? {
+                  id: defaultEpisode._id,
+                  title: defaultEpisode.episode_title,
+                  number: defaultEpisode.episode_number
+                } : null,
                 hasRentalAccess,
                 movieIsFree: movieDetail?.is_free,
                 renderTime: Date.now(),
@@ -1114,9 +1258,25 @@ export default function MovieDetailScreen() {
                   movieId={id}
                   showTitle={false}
                   resumeFromTime={(() => {
-                    // Nếu đang chuyển tập mới, không sử dụng resumeFromTime
-                    if (currentEpisode) return undefined;
+                    // 🔧 FIX: Handle resume time correctly for auto-play vs manual play
+                    // Case 1: Auto-play from Continue Watching - use resume info from getResumeWatchingInfo
+                    if (autoPlay === 'true' && fromContinueWatching === 'true') {
+                      const { resumeFromTime: autoResumeTime } = getResumeWatchingInfo({
+                        movieDetail,
+                        autoPlay: true,
+                        fromContinueWatching: true
+                      });
+                      console.log('🔥 [RESUME] Auto-play from Continue Watching:', autoResumeTime);
+                      return autoResumeTime;
+                    }
+                    
+                    // Case 2: Manual episode selection - don't resume, start from beginning
+                    if (currentEpisode) {
+                      console.log('🔥 [RESUME] Manual episode selection - start from beginning');
+                      return undefined;
+                    }
 
+                    // Case 3: Default episode for single movies or first episode - check for saved progress
                     const watchingProgress = movieDetail?.userInteractions?.watchingProgress;
                     const savedTime = watchingProgress?.currentTime;
                     const watchPercentage = watchingProgress?.watchPercentage;
@@ -1132,10 +1292,10 @@ export default function MovieDetailScreen() {
                       return undefined;
                     }
                     
-                    console.log('🎯 [AUTO-RESUME] Validated resume time:', {
+                    console.log('🎯 [AUTO-RESUME] Using saved progress for default episode:', {
                       savedTime,
                       watchPercentage,
-                      willResume: true
+                      episodeTitle: episodeToPlay?.episode_title
                     });
                     
                     return savedTime;

@@ -68,28 +68,75 @@ export const getResumeWatchingInfo = ({
     // For series, get the first episode or the last watched episode
     const watchingProgress = movieDetail.userInteractions?.watchingProgress;
     
+    console.log('🔍 [getResumeWatchingInfo] Debug series episode selection:', {
+      hasWatchingProgress: !!watchingProgress,
+      watchingProgressEpisodeId: watchingProgress?.episodeId,
+      watchingProgressCurrentTime: watchingProgress?.currentTime,
+      totalEpisodes: movieDetail.episodes.length,
+      availableEpisodeIds: movieDetail.episodes.map(ep => ({ id: ep._id, title: ep.episode_title, number: ep.episode_number }))
+    });
+    
     if (watchingProgress?.episodeId) {
       // Try to find the last watched episode
       const lastWatchedEpisode = movieDetail.episodes.find(ep => ep._id === watchingProgress.episodeId);
+      
+      console.log('🔍 [getResumeWatchingInfo] Episode matching result:', {
+        searchingForEpisodeId: watchingProgress.episodeId,
+        foundEpisode: lastWatchedEpisode ? {
+          id: lastWatchedEpisode._id,
+          title: lastWatchedEpisode.episode_title,
+          number: lastWatchedEpisode.episode_number,
+          hasUri: !!lastWatchedEpisode.uri
+        } : null
+      });
+      
       if (lastWatchedEpisode && lastWatchedEpisode.uri) {
         defaultEpisode = lastWatchedEpisode;
         resumeFromTime = watchingProgress.currentTime || 0;
-        resumeMessage = 'Tiếp tục xem';
+        
+        // 🔧 FIX: Create proper resume message with episode info
+        if (resumeFromTime > 0) {
+          const minutes = Math.floor(resumeFromTime / 60);
+          const seconds = Math.floor(resumeFromTime % 60);
+          const timeStr = minutes > 0 ? `${minutes}:${seconds.toString().padStart(2, '0')}` : `0:${seconds.toString().padStart(2, '0')}`;
+          resumeMessage = `Tiếp tục từ ${timeStr} - Tập ${lastWatchedEpisode.episode_number}`;
+        } else {
+          resumeMessage = `Bắt đầu xem Tập ${lastWatchedEpisode.episode_number}`;
+        }
+        
         watchingContext = 'resume';
+        
+        console.log('✅ [getResumeWatchingInfo] Found last watched episode:', {
+          episodeId: lastWatchedEpisode._id,
+          episodeTitle: lastWatchedEpisode.episode_title,
+          episodeNumber: lastWatchedEpisode.episode_number,
+          resumeFromTime,
+          resumeMessage
+        });
       }
     }
     
     // If no last watched episode found, find first episode with valid URI
     if (!defaultEpisode && movieDetail.episodes.length > 0) {
       defaultEpisode = movieDetail.episodes.find(ep => ep.uri && ep.uri.trim() !== '') || null;
+      if (defaultEpisode) {
+        resumeMessage = `Bắt đầu xem Tập ${defaultEpisode.episode_number}`;
+        console.log('📺 [getResumeWatchingInfo] Using first available episode:', {
+          episodeId: defaultEpisode._id,
+          episodeTitle: defaultEpisode.episode_title,
+          episodeNumber: defaultEpisode.episode_number
+        });
+      }
     }
 
     // Log episode selection
     console.log('🎬 [getResumeWatchingInfo] Series episode selected:', {
       episodeId: defaultEpisode?._id,
       episodeTitle: defaultEpisode?.episode_title,
+      episodeNumber: defaultEpisode?.episode_number,
       episodeUri: defaultEpisode?.uri,
       resumeFromTime,
+      resumeMessage,
       watchingContext
     });
   } else {
@@ -107,12 +154,29 @@ export const getResumeWatchingInfo = ({
       updatedAt: movieDetail.updatedAt || new Date().toISOString()
     };
 
+    // 🔧 FIX: Check for watching progress in single movies too
+    const watchingProgress = movieDetail.userInteractions?.watchingProgress;
+    if (watchingProgress?.currentTime && watchingProgress.currentTime > 0) {
+      resumeFromTime = watchingProgress.currentTime;
+      resumeMessage = 'Tiếp tục xem';
+      watchingContext = 'resume';
+      
+      console.log('🎬 [getResumeWatchingInfo] Single movie resume:', {
+        currentTime: watchingProgress.currentTime,
+        watchPercentage: watchingProgress.watchPercentage,
+        resumeFromTime,
+        resumeMessage
+      });
+    }
+
     // Log virtual episode creation
     console.log('🎬 [getResumeWatchingInfo] Created virtual episode:', {
       episodeId: defaultEpisode._id,
       movieId: movieDetail._id,
       hasValidId: !!defaultEpisode._id,
-      uri: defaultEpisode.uri
+      uri: defaultEpisode.uri,
+      resumeFromTime,
+      watchingContext
     });
   }
 
