@@ -114,14 +114,7 @@ export const ContinueWatchingCard: React.FC<ContinueWatchingCardProps> = ({
             </Text>
           </View>
         </View>
-      </View>
-
-      {/* Movie Type Badge */}
-      <View style={styles.typeBadge}>
-        <Text style={styles.typeBadgeText}>
-          {item.episodeNumber ? 'Series' : 'Movie'}
-        </Text>
-      </View>
+      </View>  
     </TouchableOpacity>
   );
 };
@@ -180,8 +173,14 @@ const styles = StyleSheet.create({
   },
   playIconContainer: {
     position: 'absolute',
-    top: -30,
+    width: 40,
+    height: 40,
+    top: 2,
     right: 12,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   textContent: {
     flex: 1,
