@@ -22,7 +22,7 @@ type Genre = {
   movie_count: number;
 };
 
-type GenreSelectorProps = {
+type SeriesGenreSelectorProps = {
   visible: boolean;
   onClose: () => void;
 };
@@ -35,11 +35,9 @@ const GRADIENTS: [string, string][] = [
   ['#FFB75E', '#ED8F03'], // Cam - Vàng
   ['#56CCF2', '#2F80ED'], // Xanh nhạt - Xanh đậm
   ['#11998E', '#38EF7D'], // Xanh lá
-  ['#834D9B', '#D04ED6'], // Tím
-  ['#1A2980', '#26D0CE'], // Xanh dương - Ngọc
 ];
 
-export const GenreSelector = ({ visible, onClose }: GenreSelectorProps) => {
+export const SeriesGenreSelector = ({ visible, onClose }: SeriesGenreSelectorProps) => {
   const [genres, setGenres] = useState<Genre[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -50,7 +48,7 @@ export const GenreSelector = ({ visible, onClose }: GenreSelectorProps) => {
 
   const fetchGenres = async () => {
     try {
-      const response = await fetch('https://backend-app-lou3.onrender.com/api/genres?type=children&parent_id=6847d080101e640d01a0c37f');
+      const response = await fetch('https://backend-app-lou3.onrender.com/api/genres?type=children&parent_id=68418dc73556ab3de6e4c434');
       const data = await response.json();
       if (data.status === 'success' && data.data.genres) {
         setGenres(data.data.genres);
@@ -64,7 +62,7 @@ export const GenreSelector = ({ visible, onClose }: GenreSelectorProps) => {
 
   const handleGenreSelect = (genre: Genre) => {
     router.push({
-      pathname: "/anime/genre/[id]",
+      pathname: "/series/genre/[id]",
       params: { id: genre._id }
     });
     onClose();
@@ -84,6 +82,9 @@ export const GenreSelector = ({ visible, onClose }: GenreSelectorProps) => {
       >
         <View style={styles.contentContainer}>
           <Text style={styles.genreName}>{item.genre_name}</Text>
+          {item.movie_count > 0 && (
+            <Text style={styles.movieCount}>{item.movie_count} phim</Text>
+          )}
           <View style={styles.overlay} />
         </View>
       </LinearGradient>
@@ -208,6 +209,13 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
     letterSpacing: 1,
+    zIndex: 1,
+  },
+  movieCount: {
+    color: '#fff',
+    fontSize: 14,
+    opacity: 0.9,
+    marginTop: 4,
     zIndex: 1,
   },
 }); 

@@ -67,14 +67,14 @@ interface TabHeaderProps {
   onGenrePress?: () => void;
   showGenreButton?: boolean;
   opacity?: Animated.AnimatedValue;
-  translateY?: Animated.AnimatedValue;  // 🆕 Added translateY for slide animation
+  translateY?: Animated.AnimatedValue;
   backgroundColor?: string;
   gradientColors?: [string, string, ...string[]];
   showGradient?: boolean;
   actionButtons?: React.ReactNode;
   leftComponent?: React.ReactNode;
   style?: any;
-  children?: React.ReactNode; // Thêm children
+  children?: React.ReactNode;
 }
 
 export default function TabHeader({ 
@@ -92,29 +92,19 @@ export default function TabHeader({
   actionButtons,
   leftComponent,
   style,
-  children, // nhận children
+  children,
 }: TabHeaderProps) {
   const insets = useSafeAreaInsets();
-
-  // PERFORMANCE OPTIMIZATION - Tối ưu hiệu suất component
   
-  // Memoized animated values để tránh tạo mới mỗi lần render
-  // Chỉ tạo 1 lần và sử dụng lại, giảm memory allocation
   const defaultOpacity = useMemo(() => new Animated.Value(1), []);
   const defaultTranslateY = useMemo(() => new Animated.Value(0), []);
   const animatedOpacity = opacity || defaultOpacity;
   const animatedTranslateY = translateY || defaultTranslateY;
   
-  // Memoize gradient colors array để tránh re-render LinearGradient không cần thiết
-  // LinearGradient re-render khi colors array reference thay đổi
   const memoizedGradientColors = useMemo(() => gradientColors, [gradientColors]);
 
-  // DEFAULT ACTION BUTTONS - Render search, notification, and genre buttons
-  // Chỉ render button khi có onPress handler để tránh vô hiệu hóa button
-  // activeOpacity={0.7} cung cấp visual feedback khi touch
   const defaultActionButtons = (
     <View style={styles.actions}>
-     
       {onSearchPress && (
         <TouchableOpacity 
           style={styles.actionButton} 
@@ -141,7 +131,7 @@ export default function TabHeader({
     { 
       paddingTop: insets.top,
       opacity: animatedOpacity,
-      transform: [{ translateY: animatedTranslateY }], // 🆕 Added slide animation
+      transform: [{ translateY: animatedTranslateY }],
       backgroundColor,
     },
     Platform.OS === 'ios' && styles.iosContainer,
@@ -158,115 +148,80 @@ export default function TabHeader({
         />
       )}
 
-      
-      {/* LEFT SECTION WITH TITLE AND GENRE */}
-      <View style={styles.leftSection}>
-        {leftComponent ? (
-          leftComponent
-        ) : (
-          <>
-            {title ? (
-              <View style={styles.titleContainer}>
-                <Text style={styles.title}>{title}</Text>
-                {showGenreButton && (
-                  <TouchableOpacity 
-                    style={styles.genreButton} 
-                    onPress={onGenrePress}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.genreText}>Thể loại</Text>
-                    <Ionicons name="chevron-down" size={16} color="#999" />
-                  </TouchableOpacity>
-                )}
-              </View>
-            ) : showLogo ? (
-              <Image 
-                source={require('../../assets/anh/logo.png')} 
-                style={styles.logoImage} 
-              />
-            ) : null}
-          </>
+      <View style={styles.headerContent}>
+        <View style={styles.topRow}>
+          <View style={styles.leftSection}>
+            {leftComponent ? (
+              leftComponent
+            ) : (
+              <>
+                {title ? (
+                  <Text style={styles.title}>{title}</Text>
+                ) : showLogo ? (
+                  <Image 
+                    source={require('../../assets/anh/logo.png')} 
+                    style={styles.logoImage} 
+                  />
+                ) : null}
+              </>
+            )}
+          </View>
+          
+          {actionButtons || defaultActionButtons}
+        </View>
+
+        {showGenreButton && (
+          <TouchableOpacity 
+            style={styles.genreButton} 
+            onPress={onGenrePress}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.genreText}>Thể loại</Text>
+            <Ionicons name="chevron-up" size={16} color="#999" />
+          </TouchableOpacity>
         )}
 
+        {children}
       </View>
-      {/* Children nằm dưới logo + icon */}
-      {children}
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    paddingTop: Platform.OS === 'ios' ? 35 : 25,
-
-    paddingBottom: 10,
-    paddingHorizontal: 20,
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    zIndex: 999,
-    elevation: 999,
+    zIndex: 100,
   },
-
+  iosContainer: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  gradient: {
+    ...StyleSheet.absoluteFillObject,
+    height: '200%',
+  },
+  headerContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
   leftSection: {
     flex: 1,
   },
-  titleContainer: {
-
-    alignItems: 'flex-start',
-    flexShrink: 1,
-  },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#ffffff',
-    textShadowColor: 'rgba(0, 0, 0, 0.8)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
-    marginBottom: 12,
-    paddingTop: 8,
-  },
-  genreButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 4,
-    marginTop: 4,
-  },
-  genreText: {
-    color: '#999',
-    fontSize: 17,
-    marginRight: 4,
-  },
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    paddingTop: 8,
-  },
-  actionButton: {
-    padding: 8,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  iosContainer: {
-    paddingTop: 48,
-  },
-  gradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 150,
-    zIndex: -1,
+    fontSize: 28,
+    fontWeight: '700',
+    color: 'white',
   },
   logoImage: {
     width: 160,
@@ -278,7 +233,26 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
-  genreIcon: {
-    marginLeft: 4,
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  actionButton: {
+    marginLeft: 16,
+    padding: 4,
+  },
+  genreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    alignSelf: 'flex-start',
+  },
+  genreText: {
+    color: '#999',
+    fontSize: 14,
+    marginRight: 4,
   },
 }); 
