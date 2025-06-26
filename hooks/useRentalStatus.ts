@@ -10,6 +10,19 @@ import {
 const rentalCache = new Map<string, { data: any; timestamp: number; ttl: number }>();
 const CACHE_TTL = 1 * 60 * 1000; // 1 minute
 
+// Function to clear cache for specific user-movie combination
+export const clearRentalCache = (userId: string, movieId: string) => {
+  const cacheKey = `${userId}-${movieId}`;
+  rentalCache.delete(cacheKey);
+  console.log('🗑️ [useRentalStatus] Cache cleared for:', { userId, movieId });
+};
+
+// Function to clear all rental cache
+export const clearAllRentalCache = () => {
+  rentalCache.clear();
+  console.log('🗑️ [useRentalStatus] All rental cache cleared');
+};
+
 export const useRentalStatus = (
   userId: string | null,
   movieId: string | null,
@@ -117,6 +130,14 @@ export const useRentalStatus = (
     }
   }, [userId, movieId, initialRentalAccess]);
 
+  // Function to force refresh (clear cache and refetch)
+  const forceRefresh = useCallback(() => {
+    if (userId && movieId) {
+      clearRentalCache(userId, movieId);
+      checkAccess(true);
+    }
+  }, [userId, movieId, checkAccess]);
+
   // Auto check on mount and when dependencies change
   useEffect(() => {
     checkAccess();
@@ -143,6 +164,7 @@ export const useRentalStatus = (
     isLoading,
     error,
     checkAccess,
+    forceRefresh, // Export force refresh function
     message,
   };
 }; 

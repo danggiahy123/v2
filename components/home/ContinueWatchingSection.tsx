@@ -100,13 +100,9 @@ export const ContinueWatchingSection: React.FC<ContinueWatchingSectionProps> = (
       {/* Section Header */}
       <View style={styles.sectionHeader}>
         <View style={styles.titleContainer}>
-          <Ionicons name="play-circle" size={20} color="#E50914" />
           <Text style={styles.sectionTitle}>Tiếp tục xem</Text>
-          <View style={styles.countBadge}>
-            <Text style={styles.countText}>{data.length}</Text>
-          </View>
         </View>
-        
+
         {data.length > 0 && (
           <TouchableOpacity onPress={onViewAll} style={styles.viewAllButton}>
             <Text style={styles.seeAllText}>Xem tất cả</Text>

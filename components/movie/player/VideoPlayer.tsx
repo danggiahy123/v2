@@ -84,21 +84,70 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   onEpisodeComplete,
 }) => {
   const videoUrlMemo = useMemo(() => getVideoUrl(episode), [episode]);
-  const [isLoading, setIsLoading] = useState(!!videoUrlMemo);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastSavedProgress, setLastSavedProgress] = useState(0);
   const [retryCount, setRetryCount] = useState(0);
+  const [currentEpisodeId, setCurrentEpisodeId] = useState(episode._id);
+  const [hasNotifiedCompletion, setHasNotifiedCompletion] = useState(false);
+  const [hasSetResumeTime, setHasSetResumeTime] = useState(false);
   
-  // Initialize video player at the component level
+  // Reset states when episode changes
+  useEffect(() => {
+    if (episode._id !== currentEpisodeId) {
+      console.log('🔄 [VideoPlayer] Episode changed, resetting player:', {
+        oldEpisodeId: currentEpisodeId,
+        newEpisodeId: episode._id,
+        newTitle: episode.episode_title
+      });
+
+      // Reset states
+      setIsLoading(true);
+      setIsPlaying(false);
+      setError(null);
+      setLastSavedProgress(0);
+      setRetryCount(0);
+      setCurrentEpisodeId(episode._id);
+      setHasNotifiedCompletion(false);
+      setHasSetResumeTime(false);
+
+      // Stop current playback
+      if (playerRef.current) {
+        playerRef.current.pause();
+        
+        // Small delay before loading new video to ensure clean state
+        setTimeout(() => {
+          if (playerRef.current && videoUrlMemo) {
+            console.log('🎬 [VideoPlayer] Loading new episode:', episode.episode_title);
+            playerRef.current.replace(videoUrlMemo);
+            
+            // 🔧 FIX: Set resume time ONLY once and track it
+            if (resumeFromTime && resumeFromTime > 0 && !hasSetResumeTime) {
+              console.log('⏯️ [VideoPlayer] Setting resume time:', resumeFromTime);
+              playerRef.current.currentTime = resumeFromTime;
+              setHasSetResumeTime(true);
+            }
+            
+            // Start playback
+            playerRef.current.play();
+          }
+        }, 100);
+      }
+    }
+  }, [episode._id, videoUrlMemo, resumeFromTime, hasSetResumeTime]);
+
+  // Initialize video player
   const player = useVideoPlayer(videoUrlMemo || '', (player) => {
+    console.log('⚡ [VideoPlayer] Player initialized for:', episode.episode_title);
     player.volume = 1.0;
     player.muted = false;
     
-    console.log('⚡ [VideoPlayer] Player ready');
-    setIsLoading(false);
-    
-    if (resumeFromTime && resumeFromTime > 0) {
+    // 🔧 FIX: Set resume time ONLY once during initialization
+    if (resumeFromTime && resumeFromTime > 0 && !hasSetResumeTime) {
+      console.log('⏯️ [VideoPlayer] Setting initial resume time:', resumeFromTime);
       player.currentTime = resumeFromTime;
+      setHasSetResumeTime(true);
     }
     player.play();
   });
@@ -106,13 +155,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   // Store player reference
   const playerRef = useRef(player);
 
-  // Update player reference when URL changes
+  // Update player when URL changes
   useEffect(() => {
     if (!videoUrlMemo) return;
 
     try {
       const currentPlayer = playerRef.current;
       if (currentPlayer) {
+        console.log('🔄 [VideoPlayer] Updating player URL for:', episode.episode_title);
         currentPlayer.pause();
         currentPlayer.replace(videoUrlMemo);
         
@@ -124,19 +174,21 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
         // Start playback after a short delay
         setTimeout(() => {
-          if (resumeFromTime && resumeFromTime > 0) {
+          // 🔧 FIX: Only set resume time if not already set
+          if (resumeFromTime && resumeFromTime > 0 && !hasSetResumeTime) {
+            console.log('⏯️ [VideoPlayer] Setting resume time on URL update:', resumeFromTime);
             currentPlayer.currentTime = resumeFromTime;
+            setHasSetResumeTime(true);
           }
           currentPlayer.play();
-          setIsLoading(false);
-        }, 500);
+        }, 100);
       }
     } catch (err) {
       console.error('❌ [VideoPlayer] Error updating player:', err);
       setError('Không thể cập nhật trình phát video');
       setIsLoading(false);
     }
-  }, [videoUrlMemo]);
+  }, [videoUrlMemo, resumeFromTime, hasSetResumeTime]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -193,7 +245,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       saveProgress(currentTimeSec, watchPercentage, durationSec);
       setLastSavedProgress(currentTimeSec);
     }
-  }, [lastSavedProgress]);
+  }, [lastSavedProgress, hasNotifiedCompletion]);
 
   // Save progress to backend
   const saveProgress = async (currentTime: number, watchPercentage: number, duration: number) => {
@@ -227,7 +279,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         onProgressUpdate(watchPercentage);
       }
 
-      if (completed && onEpisodeComplete) {
+      // 🔧 FIX: Only call onEpisodeComplete once per episode
+      if (completed && onEpisodeComplete && !hasNotifiedCompletion) {
+        console.log('🎬 [VideoPlayer] Episode completed! Calling onEpisodeComplete callback');
+        setHasNotifiedCompletion(true);
         onEpisodeComplete();
       }
     } catch (error) {
@@ -250,6 +305,28 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
     return () => clearInterval(intervalId);
   }, [handlePlaybackStatusUpdate]);
+
+  // Add new effect to handle loading state based on player status
+  useEffect(() => {
+    if (!player) return;
+
+    const handlePlayingState = () => {
+      if (player.playing) {
+        setIsPlaying(true);
+        setIsLoading(false);
+      } else {
+        setIsPlaying(false);
+      }
+    };
+
+    // Initial check
+    handlePlayingState();
+
+    // Setup interval to check playing state
+    const intervalId = setInterval(handlePlayingState, 200);
+
+    return () => clearInterval(intervalId);
+  }, [player]);
 
   // Validate episode data
   const { isValid, missingFields } = validateEpisode(episode);
@@ -317,8 +394,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           />
         )}
         
-        {/* Loading Overlay */}
-        {isLoading && (
+        {/* Loading Overlay - Only show when loading and not playing */}
+        {(isLoading && !isPlaying) && (
           <View style={styles.loadingOverlay}>
             <ActivityIndicator size="large" color="#E50914" />
             <Text style={styles.loadingText}>Đang tải video...</Text>

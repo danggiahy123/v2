@@ -1,5 +1,40 @@
 const API_BASE_URL = 'https://backend-app-lou3.onrender.com';
 
+interface BannerMovie {
+  movieId: string;
+  title: string;
+  poster: string;
+  description: string;
+  releaseYear?: number;
+  movieType: string;
+  producer: string;
+  genres: string[];
+}
+
+interface GridMovie {
+  movieId: string;
+  title: string;
+  poster: string;
+  movieType: string;
+  producer: string;
+}
+
+interface BannerAnimeResponse {
+  status: string;
+  data: {
+    banner: {
+      title: string;
+      type: string;
+      movies: BannerMovie[];
+    };
+    recommended: {
+      title: string;
+      type: string;
+      movies: GridMovie[];
+    };
+  };
+}
+
 export const animeService = {
   // Lấy tất cả anime (trending, series, movies)
   async getAllAnime(params?: { showAll?: boolean }) {
@@ -45,5 +80,18 @@ export const animeService = {
   async getAnimeCategories() {
     const res = await fetch(`${API_BASE_URL}/api/anime/categories`);
     return res.json();
+  },
+  // Lấy banner hoạt hình
+  async getBannerAnime(params?: { bannerLimit?: number; limit?: number; days?: number; showAll?: boolean }) {
+    const queryParams = new URLSearchParams();
+    if (params?.bannerLimit) queryParams.append('bannerLimit', params.bannerLimit.toString());
+    if (params?.limit && !params?.showAll) queryParams.append('limit', params.limit.toString());
+    if (params?.days) queryParams.append('days', params.days.toString());
+    if (params?.showAll) queryParams.append('showAll', 'true');
+    
+    const url = `${API_BASE_URL}/api/anime/banner-anime${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Failed to fetch banner anime');
+    return response.json() as Promise<BannerAnimeResponse>;
   }
 }; 
