@@ -8,12 +8,16 @@ import {
   ActivityIndicator,
   BackHandler,
   ScrollView,
+  SafeAreaView,
+  Modal,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import QRCode from 'react-native-qrcode-svg';
+import { Ionicons } from '@expo/vector-icons';
 import { rentalService } from '../../services/rentalService';
 import { usePaymentStatus } from '../../hooks/usePaymentStatus';
 import { CreateRentalResponse } from '../../types/rental';
+import Notification from '../../components/ui/Notification';
 
 export default function QRPaymentScreen() {
   const router = useRouter();
@@ -23,6 +27,13 @@ export default function QRPaymentScreen() {
   const [movieId, setMovieId] = useState<string>('');
   const checkingStartedRef = useRef(false);
   const initializedRef = useRef(false);
+  const [showNotification, setShowNotification] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState('');
+  const [notificationType, setNotificationType] = useState<'success' | 'error' | 'sync'>('sync');
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showFailedModal, setShowFailedModal] = useState(false);
+  const [isCancelled, setIsCancelled] = useState(false);
 
   const { status, countdown, isChecking, startChecking, stopChecking, resetStatus } = usePaymentStatus();
 
@@ -76,7 +87,6 @@ export default function QRPaymentScreen() {
   // Handle payment success
   useEffect(() => {
     if (status === 'success') {
-      // Khi payment status check thành công, gọi confirm payment để tạo rental
       const confirmPayment = async () => {
         try {
           if (orderData && userId) {
@@ -87,81 +97,50 @@ export default function QRPaymentScreen() {
           }
         } catch (error) {
           console.warn('Confirm payment error (but payment was successful):', error);
-          // Không hiển thị lỗi vì payment đã thành công
         }
       };
 
       confirmPayment();
-
-      Alert.alert(
-        'Thanh toán thành công!',
-        'Bạn đã thuê phim thành công. Có thể xem ngay bây giờ.',
-        [
-          {
-            text: 'Xem ngay',
-            onPress: () => {
-              // Navigate directly to movie with playVideo flag
-              router.replace(`/movie/${movieId}?autoPlay=true`);
-            },
-          },
-          {
-            text: 'Về trang chủ',
-            onPress: () => {
-              router.replace('/');
-            },
-            style: 'cancel'
-          },
-        ],
-        { cancelable: false }
-      );
+      setShowSuccessModal(true);
     }
   }, [status, movieId, router, orderData, userId]);
 
   // Handle payment failed
   useEffect(() => {
-    if (status === 'failed') {
-      Alert.alert(
-        'Thanh toán thất bại',
-        'Không thể xác nhận thanh toán. Vui lòng thử lại.',
-        [
-          {
-            text: 'Thử lại',
-            onPress: () => {
-              if (orderData && userId) {
-                resetStatus();
-                checkingStartedRef.current = false;
-                startChecking(orderData.orderCode, userId);
-                checkingStartedRef.current = true;
-              }
-            },
-          },
-          {
-            text: 'Quay lại',
-            onPress: () => router.back(),
-            style: 'cancel',
-          },
-        ]
-      );
+    if (status === 'failed' && !isCancelled) {
+      setNotificationType('error');
+      setNotificationMessage('Thanh toán thất bại');
+      setShowNotification(true);
+      setShowFailedModal(true);
     }
-  }, [status, orderData, userId, resetStatus, router]);
+  }, [status, orderData, userId, resetStatus, router, isCancelled]);
 
   const handleCancel = useCallback(() => {
-    Alert.alert(
-      'Hủy thanh toán',
-      'Bạn có chắc muốn hủy thanh toán? Đơn hàng sẽ bị hủy.',
-      [
-        { text: 'Tiếp tục thanh toán', style: 'cancel' },
-        {
-          text: 'Hủy thanh toán',
-          style: 'destructive',
-          onPress: () => {
-            stopChecking();
-            router.back();
-          },
-        },
-      ]
-    );
-  }, [stopChecking, router]);
+    setShowCancelModal(true);
+  }, []);
+
+  const handleConfirmCancel = () => {
+    setIsCancelled(true);
+    setNotificationType('sync');
+    setNotificationMessage('Đã hủy thanh toán');
+    setShowNotification(true);
+    stopChecking();
+    setShowCancelModal(false);
+    
+    setTimeout(() => {
+      router.back();
+    }, 1000); // Delay 1s để người dùng thấy thông báo hủy
+  };
+
+  const handleRetryPayment = () => {
+    setShowFailedModal(false);
+    if (orderData && userId) {
+      resetStatus();
+      checkingStartedRef.current = false;
+      startChecking(orderData.orderCode, userId);
+      checkingStartedRef.current = true;
+    }
+  };
 
   // Handle back button
   useEffect(() => {
@@ -217,123 +196,245 @@ export default function QRPaymentScreen() {
     }
   };
 
+  const handleWatchNow = () => {
+    setShowSuccessModal(false);
+    router.replace(`/movie/${movieId}?autoPlay=true`);
+  };
+
+  const handleGoHome = () => {
+    setShowSuccessModal(false);
+    router.replace('/');
+  };
+
   if (!orderData) {
     return (
-      <View style={[styles.container, styles.centered]}>
+      <SafeAreaView style={[styles.container, styles.centered]}>
         <ActivityIndicator size="large" color="#007AFF" />
         <Text style={styles.loadingText}>Đang tải...</Text>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={handleCancel}>
-          <Text style={styles.backButtonText}>← Quay lại</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Thanh toán thuê phim</Text>
-      </View>
+    <>
+      <SafeAreaView style={styles.container}>
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity style={styles.backButton} onPress={handleCancel}>
+            <Ionicons name="chevron-back" size={24} color="#fff" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Thanh toán thuê phim</Text>
+            <View style={styles.placeholder} />
+          </View>
 
-      {/* Payment Info */}
-      <View style={styles.paymentInfo}>
-        <Text style={styles.movieTitle}>{orderData.movieTitle}</Text>
-        <Text style={styles.rentalType}>
-          Gói thuê: {orderData.rentalType === '48h' ? 'Thuê 48 giờ' : 'Thuê 30 ngày'}
-        </Text>
-        <Text style={styles.amount}>
-          Số tiền: {rentalService.formatPrice(orderData.amount)}
-        </Text>
-        <Text style={styles.orderCode}>Mã đơn hàng: {orderData.orderCode}</Text>
-      </View>
+          {/* Payment Info */}
+          <View style={styles.paymentInfo}>
+            <Text style={styles.movieTitle}>{orderData.movieTitle}</Text>
+            <Text style={styles.rentalType}>
+              Gói thuê: {orderData.rentalType === '48h' ? 'Thuê 48 giờ' : 'Thuê 30 ngày'}
+            </Text>
+            <Text style={styles.amount}>
+              Số tiền: {rentalService.formatPrice(orderData.amount)}
+            </Text>
+            <Text style={styles.orderCode}>Mã đơn hàng: {orderData.orderCode}</Text>
+          </View>
 
-      {/* Payment Status */}
-      <View style={[styles.statusContainer, { backgroundColor: getStatusColor() + '20' }]}>
-        <View style={styles.statusRow}>
-          {isChecking && (
-            <ActivityIndicator size="small" color={getStatusColor()} style={styles.statusIcon} />
-          )}
-          <Text style={[styles.statusText, { color: getStatusColor() }]}>
-            {getStatusText()}
-          </Text>
-        </View>
-        
-        {status !== 'success' && (
-          <Text style={styles.countdownText}>
-            Thời gian còn lại: {formatCountdown(countdown)}
-          </Text>
+          {/* Payment Status */}
+          <View style={[styles.statusContainer, { backgroundColor: getStatusColor() + '20' }]}>
+            <View style={styles.statusRow}>
+              {isChecking && (
+                <ActivityIndicator size="small" color={getStatusColor()} style={styles.statusIcon} />
+              )}
+              <Text style={[styles.statusText, { color: getStatusColor() }]}>
+                {getStatusText()}
+              </Text>
+            </View>
+            
+            {status !== 'success' && (
+              <Text style={styles.countdownText}>
+                Thời gian còn lại: {formatCountdown(countdown)}
+              </Text>
+            )}
+          </View>
+
+          {/* QR Code Section */}
+          <View style={styles.qrSection}>
+            <Text style={styles.qrTitle}>Quét mã QR để thanh toán</Text>
+            
+            <View style={styles.qrContainer}>
+              <QRCode
+                value={orderData.qrCode}
+                size={200}
+                backgroundColor="white"
+                color="black"
+              />
+            </View>
+
+            <Text style={styles.qrInstructions}>
+              Sử dụng app ngân hàng hoặc ví điện tử để quét mã QR
+            </Text>
+          </View>
+
+          {/* Payment Info Details */}
+          <View style={styles.paymentDetails}>
+            <Text style={styles.detailsTitle}>Thông tin chuyển khoản</Text>
+            
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Ngân hàng:</Text>
+              <Text style={styles.detailValue}>{orderData.paymentInfo.accountName}</Text>
+            </View>
+            
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Số tài khoản:</Text>
+              <Text style={styles.detailValue}>{orderData.paymentInfo.accountNumber}</Text>
+            </View>
+            
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Số tiền:</Text>
+              <Text style={[styles.detailValue, styles.amountHighlight]}>
+                {rentalService.formatPrice(orderData.amount)}
+              </Text>
+            </View>
+          </View>
+
+          {/* Action Buttons */}
+          <View style={styles.actionButtons}>
+            <TouchableOpacity 
+              style={styles.payosButton} 
+              onPress={handleOpenPayOS}
+              disabled={status === 'success'}
+            >
+              <Text style={styles.payosButtonText}>Mở PayOS</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.cancelButton} 
+              onPress={handleCancel}
+              disabled={status === 'success'}
+            >
+              <Text style={styles.cancelButtonText}>Hủy thanh toán</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Instructions */}
+          <View style={styles.instructions}>
+            <Text style={styles.instructionsTitle}>Hướng dẫn thanh toán:</Text>
+            <Text style={styles.instructionText}>1. Quét mã QR bằng app ngân hàng</Text>
+            <Text style={styles.instructionText}>2. Xác nhận thông tin chuyển khoản</Text>
+            <Text style={styles.instructionText}>3. Thực hiện thanh toán</Text>
+            <Text style={styles.instructionText}>4. Chờ hệ thống xác nhận (tự động)</Text>
+          </View>
+        </ScrollView>
+
+        <Notification
+          visible={showNotification}
+          message={notificationMessage}
+          type={notificationType}
+          onClose={() => setShowNotification(false)}
+          autoClose={notificationType !== 'sync'}
+          duration={3000}
+          progress={notificationType === 'sync' ? countdown : undefined}
+        />
+
+        {/* Cancel Modal */}
+        {showCancelModal && (
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Xác nhận hủy thanh toán</Text>
+              
+              <Text style={styles.modalMessage}>
+                Bạn có chắc muốn hủy thanh toán này? Đơn hàng sẽ bị hủy và không thể khôi phục.
+              </Text>
+              
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.modalConfirmButton]}
+                onPress={handleConfirmCancel}
+              >
+                <Text style={[styles.modalButtonText, styles.modalConfirmText]}>Xác nhận hủy</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={() => setShowCancelModal(false)}
+              >
+                <Text style={[styles.modalButtonText, styles.modalCancelText]}>Đóng</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         )}
-      </View>
 
-      {/* QR Code Section */}
-      <View style={styles.qrSection}>
-        <Text style={styles.qrTitle}>Quét mã QR để thanh toán</Text>
-        
-        <View style={styles.qrContainer}>
-          <QRCode
-            value={orderData.qrCode}
-            size={200}
-            backgroundColor="white"
-            color="black"
-          />
-        </View>
+        {/* Success Modal */}
+        {showSuccessModal && (
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.successIconContainer}>
+                <Ionicons name="checkmark-circle" size={60} color="#4CAF50" />
+              </View>
+              
+              <Text style={styles.modalTitle}>Thanh toán thành công!</Text>
+              
+              <Text style={styles.modalMessage}>
+                Bạn đã thuê phim thành công. Có thể xem ngay bây giờ.
+              </Text>
+              
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.modalWatchButton]}
+                onPress={handleWatchNow}
+              >
+                <Text style={[styles.modalButtonText, styles.modalConfirmText]}>
+                  <Ionicons name="play" size={16} /> Xem ngay
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.modalHomeButton]}
+                onPress={handleGoHome}
+              >
+                <Text style={[styles.modalButtonText, styles.modalCancelText]}>
+                  <Ionicons name="home" size={16} /> Về trang chủ
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
-        <Text style={styles.qrInstructions}>
-          Sử dụng app ngân hàng hoặc ví điện tử để quét mã QR
-        </Text>
-      </View>
-
-      {/* Payment Info Details */}
-      <View style={styles.paymentDetails}>
-        <Text style={styles.detailsTitle}>Thông tin chuyển khoản</Text>
-        
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Ngân hàng:</Text>
-          <Text style={styles.detailValue}>{orderData.paymentInfo.accountName}</Text>
-        </View>
-        
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Số tài khoản:</Text>
-          <Text style={styles.detailValue}>{orderData.paymentInfo.accountNumber}</Text>
-        </View>
-        
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Số tiền:</Text>
-          <Text style={[styles.detailValue, styles.amountHighlight]}>
-            {rentalService.formatPrice(orderData.amount)}
-          </Text>
-        </View>
-      </View>
-
-      {/* Action Buttons */}
-      <View style={styles.actionButtons}>
-        <TouchableOpacity 
-          style={styles.payosButton} 
-          onPress={handleOpenPayOS}
-          disabled={status === 'success'}
-        >
-          <Text style={styles.payosButtonText}>Mở PayOS</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.cancelButton} 
-          onPress={handleCancel}
-          disabled={status === 'success'}
-        >
-          <Text style={styles.cancelButtonText}>Hủy thanh toán</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Instructions */}
-      <View style={styles.instructions}>
-        <Text style={styles.instructionsTitle}>Hướng dẫn thanh toán:</Text>
-        <Text style={styles.instructionText}>1. Quét mã QR bằng app ngân hàng</Text>
-        <Text style={styles.instructionText}>2. Xác nhận thông tin chuyển khoản</Text>
-        <Text style={styles.instructionText}>3. Thực hiện thanh toán</Text>
-        <Text style={styles.instructionText}>4. Chờ hệ thống xác nhận (tự động)</Text>
-      </View>
-    </ScrollView>
+        {/* Failed Modal */}
+        {showFailedModal && (
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.failedIconContainer}>
+                <Ionicons name="alert-circle" size={60} color="#FF6B6B" />
+              </View>
+              
+              <Text style={styles.modalTitle}>Thanh toán thất bại</Text>
+              
+              <Text style={styles.modalMessage}>
+                Không thể xác nhận thanh toán. Vui lòng thử lại.
+              </Text>
+              
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.modalRetryButton]}
+                onPress={handleRetryPayment}
+              >
+                <Text style={[styles.modalButtonText, styles.modalConfirmText]}>
+                  <Ionicons name="refresh" size={16} /> Thử lại
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={() => router.back()}
+              >
+                <Text style={[styles.modalButtonText, styles.modalCancelText]}>
+                  Quay lại
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+      </SafeAreaView>
+    </>
   );
 }
 
@@ -341,6 +442,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000',
+  },
+  scrollView: {
+    flex: 1,
   },
   content: {
     paddingBottom: 40,
@@ -357,21 +461,22 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
-    paddingTop: 60,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+    backgroundColor: '#000',
   },
   backButton: {
-    marginRight: 15,
+    padding: 8,
   },
-  backButtonText: {
-    color: '#007AFF',
-    fontSize: 16,
-  },
-  title: {
-    fontSize: 20,
+  headerTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#fff',
-    flex: 1,
+  },
+  placeholder: {
+    width: 24,
   },
   paymentInfo: {
     backgroundColor: '#1a1a1a',
@@ -484,7 +589,7 @@ const styles = StyleSheet.create({
   },
   payosButton: {
     flex: 1,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#D11030',
     padding: 15,
     borderRadius: 10,
     alignItems: 'center',
@@ -519,5 +624,79 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#888',
     marginBottom: 5,
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#1f1f1f',
+    borderRadius: 16,
+    padding: 24,
+    width: '85%',
+    maxWidth: 340,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  modalMessage: {
+    fontSize: 16,
+    color: '#aaa',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  modalButton: {
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  modalConfirmButton: {
+    backgroundColor: '#D11030',
+  },
+  modalCancelButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#333',
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalConfirmText: {
+    color: '#fff',
+  },
+  modalCancelText: {
+    color: '#888',
+  },
+  successIconContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  failedIconContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalWatchButton: {
+    backgroundColor: '#D11030',
+  },
+  modalRetryButton: {
+    backgroundColor: '#FF6B6B',
+  },
+  modalHomeButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#333',
   },
 }); 

@@ -179,12 +179,8 @@ export default function SearchModal({ visible, onClose, category }: SearchModalP
             style={styles.headerGradient}
           >
             <View style={styles.header}>
-              <TouchableOpacity
-                onPress={handleBackPress}
-                style={styles.backButton}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Ionicons name="arrow-back" size={24} color="#FFF" />
+              <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
+                <Ionicons name="chevron-back" size={24} color="#fff" />
               </TouchableOpacity>
               
               <View style={styles.searchInputContainer}>
@@ -322,6 +318,7 @@ const styles = StyleSheet.create({
   backButton: {
     padding: 4,
     marginRight: 12,
+    paddingTop: 15,
   },
   searchInputContainer: {
     flex: 1,

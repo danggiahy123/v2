@@ -239,11 +239,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
     color: '#fff',
     marginBottom: 12,
-    paddingHorizontal: 16,
+   
   },
   seeAllText: {
     color: '#B0B0B0',

@@ -35,6 +35,7 @@ import { VideoPlayer } from '../../components/movie/player/VideoPlayer';
 import { RentalOptionsModal } from '../../components/rental/RentalOptionsModal';
 import { useRentalStatus } from '../../hooks/useRentalStatus';
 import { rentalService } from '../../services/rentalService';
+
 import { Notification } from '../../components/ui';
 import { SkeletonLoader } from '../../components/ui/AnimatedElements';
 
@@ -1142,14 +1143,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingVertical: 12,
     backgroundColor: '#000',
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#333',
+
   },
   backButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
     justifyContent: 'center',
     alignItems: 'center',
   },
