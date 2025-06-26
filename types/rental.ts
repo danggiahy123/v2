@@ -168,6 +168,7 @@ export interface UseRentalStatusResult {
   isLoading: boolean;
   error: string | null;
   checkAccess: () => Promise<void>;
+  forceRefresh: () => void;
   message: string;
 }
 

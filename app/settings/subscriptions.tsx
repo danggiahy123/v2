@@ -11,6 +11,7 @@ import {
   SafeAreaView,
   StatusBar,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +19,7 @@ import { useAppSelector } from '../../store/hooks';
 import { rentalService } from '../../services/rentalService';
 import { RentalInfo } from '../../types/rental';
 import { Notification } from '../../components/ui';
+import { clearRentalCache } from '../../hooks/useRentalStatus';
 
 export default function SubscriptionsScreen() {
   const router = useRouter();
@@ -105,6 +107,12 @@ export default function SubscriptionsScreen() {
     try {
       await rentalService.cancelRental(selectedRental._id, { userId });
       setShowCancelModal(false);
+      
+      // Clear rental cache for this specific movie
+      if (userId && selectedRental.movieId._id) {
+        clearRentalCache(userId, selectedRental.movieId._id);
+      }
+      
       setSelectedRental(null);
       showNotification('Đã hủy đăng ký phim thành công', 'success');
       loadRentalsCallback();

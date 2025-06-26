@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAppSelector } from '../../store/hooks';
 import { rentalService } from '../../services/rentalService';
 import { RentalInfo } from '../../types/rental';
+import { clearRentalCache } from '../../hooks/useRentalStatus';
 
 export default function RentalHistoryScreen() {
   const router = useRouter();
@@ -97,6 +98,12 @@ export default function RentalHistoryScreen() {
           onPress: async () => {
             try {
               await rentalService.cancelRental(rental._id, { userId });
+              
+              // Clear rental cache for this specific movie
+              if (userId && rental.movieId._id) {
+                clearRentalCache(userId, rental.movieId._id);
+              }
+              
               Alert.alert('Thành công', 'Đã hủy rental thành công');
               loadRentals();
             } catch {
