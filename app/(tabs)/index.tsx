@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
   Animated,
+  Modal,
 } from 'react-native';
 // SafeAreaView imported but not used - will be used in future updates
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,7 +22,11 @@ import { useAppSelector } from '../../store/hooks';
 import { BannerMovie, ContinueWatchingItem, GridMovie } from '../../types/movie';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { TabHeader, SearchModal, ViewAllModal } from '../../components/ui';
+<<<<<<< feature/progress-watching
 import { ContinueWatchingSection } from '../../components/home';
+=======
+import GenreGrid from '../../components/genre/GenreGrid';
+>>>>>>> v2
 
 const { width } = Dimensions.get('window');
 
@@ -56,6 +61,8 @@ export default function HomeScreen() {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedTitle, setSelectedTitle] = useState('');
   const [viewAllModalVisible, setViewAllModalVisible] = useState(false);
+  const [genres, setGenres] = useState<any[]>([]);
+  const [genreModalVisible, setGenreModalVisible] = useState(false);
 
   const bannerFlatListRef = useRef<FlatList>(null);
 
@@ -68,6 +75,13 @@ export default function HomeScreen() {
 
   useEffect(() => {
     loadHomeData();
+    // Fetch genres from API
+    fetch('https://backend-app-lou3.onrender.com/api/genres?type=parent')
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') setGenres(data.data.genres);
+      })
+      .catch(err => console.error('Error fetching genres:', err));
   }, [userId]); // loadHomeData is defined below, will be memoized in future optimization
 
   // Refresh continue watching data when screen is focused (user comes back from movie detail)
@@ -256,6 +270,13 @@ export default function HomeScreen() {
     }
   );
 
+  const handleGenrePress = (item: any) => {
+    setSelectedCategory(item._id);
+    setSelectedTitle(item.genre_name);
+    setViewAllModalVisible(true);
+    setGenreModalVisible(false);
+  };
+
   const renderBanner = () => {
     if (!bannerMovies.length) return null;
 
@@ -298,18 +319,6 @@ export default function HomeScreen() {
             </View>
           )}
         />
-
-        <View style={styles.bannerIndicators}>
-          {bannerMovies.map((_, index) => (
-            <View
-              key={index}
-              style={[
-                styles.indicator,
-                index === currentBannerIndex && styles.activeIndicator,
-              ]}
-            />
-          ))}
-        </View>
         <View style={styles.bannerContent}>
           <Text style={styles.bannerTitle} numberOfLines={2}>
             {currentBannerMovie.title || 'Untitled'}
@@ -337,6 +346,207 @@ export default function HomeScreen() {
 
   const renderMovieGrid = (movies: GridMovie[], title: string, category?: string) => {
     if (!movies.length) return null;
+
+    // Check different section types
+    const isRecommended = title.toLowerCase().includes('đề xuất');
+    const isTrending = title.toLowerCase().includes('thịnh hành');
+    const isSports = title.toLowerCase().includes('thể thao');
+    const isAnime = title.toLowerCase().includes('anime');
+    const isVietnamese = title.toLowerCase().includes('việt nam');
+
+    if (isRecommended) {
+      return (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>{title}</Text>
+            <TouchableOpacity onPress={() => handleViewAll(category || 'recommended', title)}>
+              <Text style={styles.seeAllText}>Xem tất cả</Text>
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={movies.slice(0, 4)}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(item, index) => `${category}-${item.movieId}-${index}`}
+            contentContainerStyle={styles.largeMovieList}
+            renderItem={({ item }) => (
+              <TouchableOpacity 
+                style={styles.largeMovieItem}
+                onPress={() => router.push(`/movie/${item.movieId}`)}
+              >
+                <Image source={{ uri: item.poster }} style={styles.largeMoviePoster} resizeMode="cover" />
+                <LinearGradient
+                  colors={['transparent', 'rgba(0,0,0,0.8)']}
+                  style={styles.largeMovieGradient}
+                >
+                  <Text style={styles.largeMovieTitle} numberOfLines={2}>{item.title}</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            )}
+          />
+        </View>
+      );
+    }
+
+    if (isTrending) {
+      return (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>{title}</Text>
+            <TouchableOpacity onPress={() => handleViewAll(category || 'trending', title)}>
+              <Text style={styles.seeAllText}>Xem tất cả</Text>
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={movies.slice(0, 6)}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(item, index) => `${category}-${item.movieId}-${index}`}
+            contentContainerStyle={styles.trendingList}
+            renderItem={({ item, index }) => (
+              <TouchableOpacity 
+                style={[
+                  styles.trendingItem,
+                  { transform: [{ translateY: index % 2 === 0 ? 30 : 0 }] }
+                ]}
+                onPress={() => router.push(`/movie/${item.movieId}`)}
+              >
+                <View style={styles.trendingRank}>
+                  <Text style={styles.trendingRankText}>{index + 1}</Text>
+                </View>
+                <Image source={{ uri: item.poster }} style={styles.trendingPoster} resizeMode="cover" />
+                <LinearGradient
+                  colors={['transparent', 'rgba(0,0,0,0.9)']}
+                  style={styles.trendingGradient}
+                >
+                  <Text style={styles.trendingTitle} numberOfLines={2}>{item.title}</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            )}
+          />
+        </View>
+      );
+    }
+
+    if (isSports) {
+      return (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>{title}</Text>
+            <TouchableOpacity onPress={() => handleViewAll(category || 'sports', title)}>
+              <Text style={styles.seeAllText}>Xem tất cả</Text>
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={movies.slice(0, 6)}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(item, index) => `${category}-${item.movieId}-${index}`}
+            contentContainerStyle={styles.sportsList}
+            renderItem={({ item }) => (
+              <TouchableOpacity 
+                style={styles.sportsItem}
+                onPress={() => router.push(`/movie/${item.movieId}`)}
+              >
+                <Image source={{ uri: item.poster }} style={styles.sportsPoster} resizeMode="cover" />
+                <View style={styles.sportsOverlay}>
+                  <LinearGradient
+                    colors={['transparent', '#000']}
+                    style={styles.sportsGradient}
+                  />
+                  <View style={styles.sportsContent}>
+                    <Text style={styles.sportsTitle} numberOfLines={2}>{item.title}</Text>
+                    <View style={styles.sportsBadge}>
+                      <Text style={styles.sportsBadgeText}>SPORTS</Text>
+                    </View>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            )}
+          />
+        </View>
+      );
+    }
+
+    if (isAnime) {
+      return (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>{title}</Text>
+            <TouchableOpacity onPress={() => handleViewAll(category || 'anime', title)}>
+              <Text style={styles.seeAllText}>Xem tất cả</Text>
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={movies.slice(0, 6)}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(item, index) => `${category}-${item.movieId}-${index}`}
+            contentContainerStyle={styles.animeList}
+            renderItem={({ item }) => (
+              <TouchableOpacity 
+                style={styles.animeItem}
+                onPress={() => router.push(`/movie/${item.movieId}`)}
+              >
+                <View style={styles.animeImageContainer}>
+                  <Image source={{ uri: item.poster }} style={styles.animePoster} resizeMode="cover" />
+                  <View style={styles.animeShine} />
+                </View>
+                <Text style={styles.animeTitle} numberOfLines={2}>{item.title}</Text>
+              </TouchableOpacity>
+            )}
+          />
+        </View>
+      );
+    }
+
+    if (isVietnamese) {
+      return (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>{title}</Text>
+            <TouchableOpacity onPress={() => handleViewAll(category || 'vietnamese', title)}>
+              <Text style={styles.seeAllText}>Xem tất cả</Text>
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={movies.slice(0, 6)}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(item, index) => `${category}-${item.movieId}-${index}`}
+            contentContainerStyle={styles.vietnameseList}
+            renderItem={({ item, index }) => (
+              <TouchableOpacity 
+                style={[
+                  styles.vietnameseItem,
+                  { transform: [{ translateY: index % 2 === 0 ? -15 : 15 }] }
+                ]}
+                onPress={() => router.push(`/movie/${item.movieId}`)}
+              >
+                <View style={styles.vietnameseStack}>
+                  {/* Background Card */}
+                  <View style={[styles.vietnameseCard, styles.vietnameseCardBack]} />
+                  {/* Middle Card */}
+                  <View style={[styles.vietnameseCard, styles.vietnameseCardMiddle]} />
+                  {/* Front Card with Content */}
+                  <View style={[styles.vietnameseCard, styles.vietnameseCardFront]}>
+                    <Image source={{ uri: item.poster }} style={styles.vietnamesePoster} resizeMode="cover" />
+                    <LinearGradient
+                      colors={['transparent', 'rgba(0,0,0,0.9)']}
+                      style={styles.vietnameseGradient}
+                    >
+                      <Text style={styles.vietnameseTitle} numberOfLines={2}>{item.title}</Text>
+                    </LinearGradient>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            )}
+          />
+        </View>
+      );
+    }
+
+    // Original layout for other sections
     return (
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
@@ -425,6 +635,24 @@ export default function HomeScreen() {
 
     return (
       <View style={styles.container}>
+        <TabHeader
+          onSearchPress={() => setSearchModalVisible(true)}
+          onNotificationPress={() => {}}
+          opacity={headerOpacity}
+        >
+          {/* Nút chọn thể loại nằm trong header, dưới logo */}
+          <TouchableOpacity
+            style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 8 }}
+            onPress={() => setGenreModalVisible(true)}
+            activeOpacity={0.8}
+          >
+            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16, marginRight: 6 }}>
+              Chọn thể loại
+            </Text>
+            <Ionicons name="chevron-down" size={18} color="#fff" />
+          </TouchableOpacity>
+        </TabHeader>
+        {/* ScrollView cho phần còn lại */}
         <Animated.ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollViewContent}
@@ -442,11 +670,36 @@ export default function HomeScreen() {
             </View>
           ))}
         </Animated.ScrollView>
-        <TabHeader 
-          onSearchPress={() => setSearchModalVisible(true)}
-          onNotificationPress={() => {}}
-          opacity={headerOpacity}
-        />
+        {/* Modal hiển thị genres dạng lưới */}
+        <Modal
+          visible={genreModalVisible}
+          animationType="slide"
+          transparent
+          onRequestClose={() => setGenreModalVisible(false)}
+        >
+          <View style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.96)',
+            justifyContent: 'flex-start',
+            paddingTop: 60,
+          }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 10 }}>
+              <Text style={{ color: '#fff', fontSize: 24, fontWeight: 'bold' }}>Danh mục</Text>
+              <TouchableOpacity onPress={() => setGenreModalVisible(false)}>
+                <Ionicons name="close" size={32} color="#fff" />
+              </TouchableOpacity>
+            </View>
+            <GenreGrid
+              genres={genres}
+              onGenrePress={item => {
+                setSelectedCategory(item._id);
+                setSelectedTitle(item.genre_name);
+                setViewAllModalVisible(true);
+                setGenreModalVisible(false);
+              }}
+            />
+          </View>
+        </Modal>
         <SearchModal
           visible={searchModalVisible}
           onClose={() => setSearchModalVisible(false)}
@@ -677,9 +930,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
  section: {
+  
     marginTop: 32, // Khoảng cách trên các section phim
   },
   sectionHeader: {
+    
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -795,5 +1050,351 @@ const styles = StyleSheet.create({
   },
   loadingMore: {
     padding: 16,
+  },
+  // Large Movie Layout Styles (only for recommended section)
+  largeMovieList: {
+    paddingHorizontal: 10,
+  },
+  largeMovieItem: {
+    width: width * 0.7,
+    height: 260,
+    marginRight: 15,
+    borderRadius: 12,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  largeMoviePoster: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 12,
+  },
+  largeMovieGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '50%',
+    justifyContent: 'flex-end',
+    padding: 15,
+  },
+  largeMovieTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+
+  // Wide Movie Layout Styles
+  wideMovieList: {
+    paddingHorizontal: 10,
+  },
+  wideMovieItem: {
+    width: width * 0.8,
+    height: 140,
+    marginRight: 15,
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  wideMoviePoster: {
+    width: 100,
+    height: '100%',
+  },
+  wideMovieInfo: {
+    flex: 1,
+    padding: 12,
+    justifyContent: 'center',
+  },
+  wideMovieTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  wideMovieMetadata: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  wideMovieYear: {
+    color: '#B0B0B0',
+    fontSize: 14,
+    marginRight: 12,
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  ratingText: {
+    color: '#FFD700',
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+
+  // Grid Movie Layout Styles
+  gridSection: {
+    paddingHorizontal: 10,
+  },
+  gridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    paddingHorizontal: 5,
+  },
+  gridMovieItem: {
+    width: '31%',
+    marginBottom: 15,
+  },
+  gridMovieItemMiddle: {
+    marginHorizontal: '3.5%',
+  },
+  gridMoviePoster: {
+    width: '100%',
+    aspectRatio: 2/3,
+    borderRadius: 8,
+    backgroundColor: '#222',
+  },
+  gridMovieTitle: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 6,
+    textAlign: 'center',
+  },
+
+  // Trending Movie Layout Styles
+  trendingList: {
+  
+    paddingHorizontal: 10,
+    paddingVertical: 20,
+    height:310,
+  },
+  trendingItem: {
+  
+    width: width * 0.35,
+    height: 240,
+    marginRight: 15,
+    borderRadius: 16,
+    overflow: 'hidden',
+    position: 'relative',
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  trendingPoster: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 16,
+  },
+  trendingGradient: {
+   
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '40%',
+    justifyContent: 'flex-end',
+    padding: 12,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+  },
+  trendingTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+    textAlign: 'center',
+  },
+  trendingRank: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(229, 9, 20, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 2,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  trendingRankText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+
+  // Sports Movies Layout
+  sportsList: {
+    paddingHorizontal: 10,
+  },
+  sportsItem: {
+    width: width * 0.6,
+    height: 200,
+    marginRight: 15,
+    borderRadius: 12,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  sportsPoster: {
+    width: '100%',
+    height: '100%',
+  },
+  sportsOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '100%',
+  },
+  sportsGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '70%',
+  },
+  sportsContent: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 15,
+  },
+  sportsTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 8,
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  sportsBadge: {
+    backgroundColor: '#FFD700',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+  },
+  sportsBadgeText: {
+    color: '#000000',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+
+  // Anime Movies Layout
+  animeList: {
+    paddingHorizontal: 10,
+    paddingTop: 10,
+  },
+  animeItem: {
+    width: width * 0.33,
+    marginRight: 15,
+  },
+  animeImageContainer: {
+    position: 'relative',
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: '#D11030',
+    aspectRatio: 3/4,
+  },
+  animePoster: {
+    width: '100%',
+    height: '100%',
+  },
+  animeShine: {
+    position: 'absolute',
+    top: -100,
+    left: -100,
+    width: 50,
+    height: 200,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    transform: [{ rotate: '45deg' }],
+  },
+  animeTitle: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+
+  // Vietnamese Movies Layout - Updated
+  vietnameseList: {
+    paddingHorizontal: 10,
+    paddingVertical: 20,
+  },
+  vietnameseItem: {
+    width: width * 0.4,
+    marginRight: 20,
+  },
+  vietnameseStack: {
+    position: 'relative',
+    height: 280,
+    alignItems: 'center',
+  },
+  vietnameseCard: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  vietnameseCardBack: {
+    backgroundColor: '#E50914',
+    transform: [{ scale: 0.85 }, { translateY: 10 }],
+    opacity: 0.3,
+  },
+  vietnameseCardMiddle: {
+    backgroundColor: '#E50914',
+    transform: [{ scale: 0.92 }, { translateY: 5 }],
+    opacity: 0.5,
+  },
+  vietnameseCardFront: {
+    backgroundColor: '#1A1A1A',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  vietnamesePoster: {
+    width: '100%',
+    height: '100%',
+  },
+  vietnameseGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '50%',
+    padding: 15,
+    justifyContent: 'flex-end',
+  },
+  vietnameseTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
 });

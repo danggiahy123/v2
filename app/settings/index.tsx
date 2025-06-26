@@ -66,7 +66,7 @@ export default function SettingsScreen() {
           >
             <Ionicons name="person-outline" size={24} color="#fff" style={styles.menuIcon} />
             <Text style={styles.menuItemText}>Chỉnh sửa hồ sơ </Text>
-            <Ionicons name="chevron-forward" size={20} color="#ccc" />
+      
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -75,7 +75,7 @@ export default function SettingsScreen() {
           >
             <Ionicons name="notifications-outline" size={24} color="#fff" style={styles.menuIcon} />
             <Text style={styles.menuItemText}>Thông báo</Text>
-            <Ionicons name="chevron-forward" size={20} color="#ccc" />
+       
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -84,7 +84,7 @@ export default function SettingsScreen() {
           >
             <Ionicons name="heart-outline" size={24} color="#fff" style={styles.menuIcon} />
             <Text style={styles.menuItemText}>Phim yêu thích</Text>
-            <Ionicons name="chevron-forward" size={20} color="#ccc" />
+       
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -93,7 +93,7 @@ export default function SettingsScreen() {
           >
             <Ionicons name="bookmark-outline" size={24} color="#fff" style={styles.menuIcon} />
             <Text style={styles.menuItemText}>Phim đăng ký</Text>
-            <Ionicons name="chevron-forward" size={20} color="#ccc" />
+           
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -102,7 +102,7 @@ export default function SettingsScreen() {
           >
             <Ionicons name="card-outline" size={24} color="#fff" style={styles.menuIcon} />
             <Text style={styles.menuItemText}>Lịch sử giao dịch</Text>
-            <Ionicons name="chevron-forward" size={20} color="#ccc" />
+           
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -111,7 +111,7 @@ export default function SettingsScreen() {
           >
             <Ionicons name="phone-portrait-outline" size={24} color="#fff" style={styles.menuIcon} />
             <Text style={styles.menuItemText}>Quản lý thiết bị</Text>
-            <Ionicons name="chevron-forward" size={20} color="#ccc" />
+          
           </TouchableOpacity>
 
         </View>

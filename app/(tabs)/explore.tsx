@@ -134,14 +134,13 @@ export default function ExploreScreen() {
               )}
             </View>
             <Text style={styles.userText}>Người dùng</Text>
-            <Ionicons name="chevron-forward" size={20} color="#ccc" />
           </TouchableOpacity>
 
 
           <TouchableOpacity style={styles.menuItem} onPress={handleDownloads}>
             <Ionicons name="download-outline" size={24} color="#fff" style={styles.menuIcon} />
             <Text style={styles.menuItemText}>Nội dung tải xuống</Text>
-            <Ionicons name="chevron-forward" size={20} color="#ccc" />
+           
           </TouchableOpacity>
         </View>
 
@@ -152,13 +151,13 @@ export default function ExploreScreen() {
           <TouchableOpacity style={styles.menuItem} onPress={handleHelp}>
             <Ionicons name="help-circle-outline" size={24} color="#fff" style={styles.menuIcon} />
             <Text style={styles.menuItemText}>Trung tâm hỗ trợ</Text>
-            <Ionicons name="chevron-forward" size={20} color="#ccc" />
+            
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={handleContact}>
             <Ionicons name="mail-outline" size={24} color="#fff" style={styles.menuIcon} />
             <Text style={styles.menuItemText}>Thông tin liên hệ</Text>
-            <Ionicons name="chevron-forward" size={20} color="#ccc" />
+          
           </TouchableOpacity>
         </View>
 
@@ -169,25 +168,25 @@ export default function ExploreScreen() {
           <TouchableOpacity style={styles.menuItem} onPress={handleAbout}>
             <Ionicons name="information-circle-outline" size={24} color="#fff" style={styles.menuIcon} />
             <Text style={styles.menuItemText}>Thông tin về Tech5 Play </Text>
-            <Ionicons name="chevron-forward" size={20} color="#ccc" />
+           
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={handleTerms}>
             <Ionicons name="document-text-outline" size={24} color="#fff" style={styles.menuIcon} />
             <Text style={styles.menuItemText}>Điều khoản sử dụng</Text>
-            <Ionicons name="chevron-forward" size={20} color="#ccc" />
+          
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={handlePrivacyPolicy}>
             <Ionicons name="shield-checkmark-outline" size={24} color="#fff" style={styles.menuIcon} />
             <Text style={styles.menuItemText}>Chính sách bảo mật</Text>
-            <Ionicons name="chevron-forward" size={20} color="#ccc" />
+         
           </TouchableOpacity>
 
           <TouchableOpacity style={[styles.menuItem, styles.logoutButton]} onPress={handleLogout}>
             <Ionicons name="log-out-outline" size={24} color="#fff" style={styles.menuIcon} />
             <Text style={styles.menuItemText}>Đăng xuất</Text>
-            <Ionicons name="chevron-forward" size={20} color="#ccc" />
+         
           </TouchableOpacity>
         </View>
 
@@ -210,7 +209,7 @@ export default function ExploreScreen() {
             <Text style={styles.modalMessage}>{notificationMessage}</Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity style={styles.cancelButton} onPress={cancelLogout}>
-                <Text style={styles.buttonText}>Hủy</Text>
+                <Text style={styles.buttonTextCancel }>Hủy</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.confirmButton} onPress={confirmLogout}>
                 <Text style={styles.buttonText}>Đăng xuất</Text>
@@ -354,17 +353,23 @@ const styles = StyleSheet.create({
   cancelButton: {
     paddingVertical: 10,
     paddingHorizontal: 20,
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#444444',
     borderRadius: 8,
+   
   },
   confirmButton: {
     paddingVertical: 10,
     paddingHorizontal: 20,
-    backgroundColor: '#F44336',
+    backgroundColor: '#D11030',
     borderRadius: 8,
   },
   buttonText: {
     color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  buttonTextCancel: {
+    color: '#888',
     fontSize: 16,
     fontWeight: 'bold',
   },
