@@ -53,6 +53,7 @@ import { LinearGradient } from 'expo-linear-gradient';
  * @param actionButtons - Custom action buttons thay thế default (optional)
  * @param leftComponent - Custom left content thay thế title/logo (optional)
  * @param style - Additional custom styles (optional)
+ * @param children - Additional content to render below logo/title (optional)
  */
 interface TabHeaderProps {
   title?: string;
@@ -67,6 +68,7 @@ interface TabHeaderProps {
   actionButtons?: React.ReactNode;
   leftComponent?: React.ReactNode;
   style?: any;
+  children?: React.ReactNode; // Thêm children
 }
 
 export default function TabHeader({ 
@@ -82,6 +84,7 @@ export default function TabHeader({
   actionButtons,
   leftComponent,
   style,
+  children, // nhận children
 }: TabHeaderProps) {
   const insets = useSafeAreaInsets();
 
@@ -144,32 +147,31 @@ export default function TabHeader({
           pointerEvents="none"
         />
       )}
-      
-      {/* LEFT COMPONENT OR TITLE/LOGO */}
-      <View style={styles.leftSection}>
-        {leftComponent ? (
-          leftComponent
-        ) : title ? (
-          <Text style={styles.title}>{title}</Text>
-        ) : showLogo ? (
-          <Image 
-            source={require('../../assets/anh/logo.png')} 
-            style={styles.logoImage} 
-          />
-        ) : null}
+      {/* Hàng ngang: logo/title + icon */}
+      <View style={styles.headerRow}>
+        <View style={styles.leftSection}>
+          {leftComponent ? (
+            leftComponent
+          ) : title ? (
+            <Text style={styles.title}>{title}</Text>
+          ) : showLogo ? (
+            <Image 
+              source={require('../../assets/anh/logo.png')} 
+              style={styles.logoImage} 
+            />
+          ) : null}
+        </View>
+        {actionButtons || defaultActionButtons}
       </View>
-
-      {/* RIGHT ACTION BUTTONS */}
-      {actionButtons || defaultActionButtons}
+      {/* Children nằm dưới logo + icon */}
+      {children}
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: 'column',
     paddingBottom: 10,
     paddingHorizontal: 20,
     position: 'absolute',
@@ -187,9 +189,15 @@ const styles = StyleSheet.create({
     height: 150,
     zIndex: -1,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
   leftSection: {
-    flex: 1,
     alignItems: 'flex-start',
+    flexShrink: 1,
   },
   title: {
     fontSize: 24,

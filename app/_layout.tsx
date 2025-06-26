@@ -16,7 +16,7 @@ function RootLayoutContent() {
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="(auth)" />
       {/* Movie Detail */}
-      <Stack.Screen name="movie/[id]" options={{ title: 'Movie Detail' }} />
+
     </Stack>
   );
 }

@@ -1,4 +1,4 @@
-    import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
     import React, { useEffect, useRef, useState, useCallback } from 'react';
     import {
   StatusBar,
@@ -82,7 +82,7 @@
             movieId: series.movieId || series._id,
             title: series.title || series.movie_title,
             poster: series.poster || series.poster_path,
-            producer: series.producer || '',
+producer: series.producer || '',
             movieType: series.movieType || series.movie_type || '',
           });
 
@@ -166,8 +166,7 @@
           </View>
         );
       }
-
-      return (
+return (
         <View style={styles.container}>
           <StatusBar barStyle="light-content" backgroundColor="#000" />
           <TabHeader
@@ -255,7 +254,7 @@
         paddingLeft: 15,
       },
       movieItem: {
-        marginRight: 20,
+marginRight: 20,
       },
       poster: {
         width: 120,
