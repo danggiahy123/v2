@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
   Animated,
+  Modal,
 } from 'react-native';
 // SafeAreaView imported but not used - will be used in future updates
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,6 +22,7 @@ import { useAppSelector } from '../../store/hooks';
 import { BannerMovie, ContinueWatchingItem, GridMovie } from '../../types/movie';
 import { useRouter } from 'expo-router';
 import { TabHeader, SearchModal, ViewAllModal } from '../../components/ui';
+import GenreGrid from '../../components/genre/GenreGrid';
 
 const { width } = Dimensions.get('window');
 
@@ -55,6 +57,8 @@ export default function HomeScreen() {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedTitle, setSelectedTitle] = useState('');
   const [viewAllModalVisible, setViewAllModalVisible] = useState(false);
+  const [genres, setGenres] = useState<any[]>([]);
+  const [genreModalVisible, setGenreModalVisible] = useState(false);
 
   const bannerFlatListRef = useRef<FlatList>(null);
 
@@ -67,6 +71,13 @@ export default function HomeScreen() {
 
   useEffect(() => {
     loadHomeData();
+    // Fetch genres from API
+    fetch('https://backend-app-lou3.onrender.com/api/genres?type=parent')
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') setGenres(data.data.genres);
+      })
+      .catch(err => console.error('Error fetching genres:', err));
   }, [userId]); // loadHomeData is defined below, will be memoized in future optimization
 
   useEffect(() => {
@@ -223,6 +234,13 @@ export default function HomeScreen() {
     }
   );
 
+  const handleGenrePress = (item: any) => {
+    setSelectedCategory(item._id);
+    setSelectedTitle(item.genre_name);
+    setViewAllModalVisible(true);
+    setGenreModalVisible(false);
+  };
+
   const renderBanner = () => {
     if (!bannerMovies.length) return null;
 
@@ -265,18 +283,6 @@ export default function HomeScreen() {
             </View>
           )}
         />
-
-        <View style={styles.bannerIndicators}>
-          {bannerMovies.map((_, index) => (
-            <View
-              key={index}
-              style={[
-                styles.indicator,
-                index === currentBannerIndex && styles.activeIndicator,
-              ]}
-            />
-          ))}
-        </View>
         <View style={styles.bannerContent}>
           <Text style={styles.bannerTitle} numberOfLines={2}>
             {currentBannerMovie.title || 'Untitled'}
@@ -410,6 +416,24 @@ export default function HomeScreen() {
 
     return (
       <View style={styles.container}>
+        <TabHeader
+          onSearchPress={() => setSearchModalVisible(true)}
+          onNotificationPress={() => {}}
+          opacity={headerOpacity}
+        >
+          {/* Nút chọn thể loại nằm trong header, dưới logo */}
+          <TouchableOpacity
+            style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 8 }}
+            onPress={() => setGenreModalVisible(true)}
+            activeOpacity={0.8}
+          >
+            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16, marginRight: 6 }}>
+              Chọn thể loại
+            </Text>
+            <Ionicons name="chevron-down" size={18} color="#fff" />
+          </TouchableOpacity>
+        </TabHeader>
+        {/* ScrollView cho phần còn lại */}
         <Animated.ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollViewContent}
@@ -427,11 +451,36 @@ export default function HomeScreen() {
             </View>
           ))}
         </Animated.ScrollView>
-        <TabHeader 
-          onSearchPress={() => setSearchModalVisible(true)}
-          onNotificationPress={() => {}}
-          opacity={headerOpacity}
-        />
+        {/* Modal hiển thị genres dạng lưới */}
+        <Modal
+          visible={genreModalVisible}
+          animationType="slide"
+          transparent
+          onRequestClose={() => setGenreModalVisible(false)}
+        >
+          <View style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.96)',
+            justifyContent: 'flex-start',
+            paddingTop: 60,
+          }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 10 }}>
+              <Text style={{ color: '#fff', fontSize: 24, fontWeight: 'bold' }}>Danh mục</Text>
+              <TouchableOpacity onPress={() => setGenreModalVisible(false)}>
+                <Ionicons name="close" size={32} color="#fff" />
+              </TouchableOpacity>
+            </View>
+            <GenreGrid
+              genres={genres}
+              onGenrePress={item => {
+                setSelectedCategory(item._id);
+                setSelectedTitle(item.genre_name);
+                setViewAllModalVisible(true);
+                setGenreModalVisible(false);
+              }}
+            />
+          </View>
+        </Modal>
         <SearchModal
           visible={searchModalVisible}
           onClose={() => setSearchModalVisible(false)}
