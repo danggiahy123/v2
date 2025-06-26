@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
   bannerContainer: {
     height: BANNER_HEIGHT + 40, // Extra space for pagination dots
     width: '100%',
-    marginTop: 8,
+    marginTop: 20,
     marginBottom: 16,
   },
   listContainer: {

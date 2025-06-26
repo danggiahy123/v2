@@ -636,20 +636,7 @@ export default function HomeScreen() {
           onSearchPress={() => setSearchModalVisible(true)}
           onNotificationPress={() => {}}
           opacity={headerOpacity}
-        >
-          {/* Nút chọn thể loại nằm trong header, dưới logo */}
-          <TouchableOpacity
-            style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 8 }}
-            onPress={() => setGenreModalVisible(true)}
-            activeOpacity={0.8}
-          >
-            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16, marginRight: 6 }}>
-              Chọn thể loại
-            </Text>
-            <Ionicons name="chevron-down" size={18} color="#fff" />
-          </TouchableOpacity>
-        </TabHeader>
-        {/* ScrollView cho phần còn lại */}
+        />
         <Animated.ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollViewContent}
@@ -659,6 +646,18 @@ export default function HomeScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FFFFFF" />
           }>
           {renderBanner()}
+          {/* Genre selector button below banner */}
+          <View style={styles.genreSelectorContainer}>
+            <TouchableOpacity
+              style={styles.genreSelectorButton}
+              onPress={() => setGenreModalVisible(true)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="grid-outline" size={18} color="#FFF" style={styles.genreSelectorIcon} />
+              <Text style={styles.genreSelectorText}>Thể loại</Text>
+              <Ionicons name="chevron-up" size={16} color="#FFF" style={styles.genreSelectorArrow} />
+            </TouchableOpacity>
+          </View>
           {renderContinueWatching()}
           {renderMovieGrid(recommendedMovies, 'Đề xuất cho bạn', 'recommended')}
           {sections.map((section, index) => (
@@ -681,7 +680,7 @@ export default function HomeScreen() {
             paddingTop: 60,
           }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 10 }}>
-              <Text style={{ color: '#fff', fontSize: 24, fontWeight: 'bold' }}>Danh mục</Text>
+              <Text style={{ color: '#fff', fontSize: 24, fontWeight: 'bold' }}>Thể loại</Text>
               <TouchableOpacity onPress={() => setGenreModalVisible(false)}>
                 <Ionicons name="close" size={32} color="#fff" />
               </TouchableOpacity>
@@ -1393,5 +1392,28 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.75)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
+  },
+  genreSelectorContainer: {
+    marginBottom: 10,
+  },
+  genreSelectorButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    elevation: 4,
+    alignSelf: 'flex-start',
+  },
+  genreSelectorIcon: {
+    marginRight: 6,
+  },
+  genreSelectorText: {
+    color: '#FFF',
+    fontSize: 17,
+    fontWeight: '600',
+    marginRight: 4,
+  },
+  genreSelectorArrow: {
+    marginLeft: 2,
   },
 });
