@@ -20,9 +20,19 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { movieService } from '../../services/movieService';
 import { useAppSelector } from '../../store/hooks';
 import { BannerMovie, ContinueWatchingItem, GridMovie } from '../../types/movie';
+<<<<<<< Updated upstream
 import { useRouter } from 'expo-router';
 import TabHeader from '../../components/ui/TabHeader';
 import SearchModal from '../../components/ui/SearchModal';
+=======
+import { useRouter, useFocusEffect } from 'expo-router';
+import { TabHeader, SearchModal, ViewAllModal } from '../../components/ui';
+
+import { ContinueWatchingSection } from '../../components/home';
+
+import GenreGrid from '../../components/genre/GenreGrid';
+
+>>>>>>> Stashed changes
 
 const { width } = Dimensions.get('window');
 const POSTER_WIDTH = (width - 60) / 3;
