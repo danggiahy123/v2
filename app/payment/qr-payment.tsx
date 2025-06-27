@@ -198,7 +198,8 @@ export default function QRPaymentScreen() {
 
   const handleWatchNow = () => {
     setShowSuccessModal(false);
-    router.replace(`/movie/${movieId}?autoPlay=true`);
+    // Pass rental success flag to ensure movie screen knows about the successful payment
+    router.replace(`/movie/${movieId}?autoPlay=true&rentalSuccess=true&fromPayment=true`);
   };
 
   const handleGoHome = () => {

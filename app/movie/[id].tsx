@@ -51,19 +51,23 @@ import { useFocusEffect } from '@react-navigation/native';
  * 🎬 MOVIE DETAIL SCREEN COMPONENT
  */
 export default function MovieDetailScreen() {
-  const { id, autoPlay, fromContinueWatching, hasRentalAccess: initialRentalAccess } = useLocalSearchParams<{ 
+  const { id, autoPlay, fromContinueWatching, hasRentalAccess: initialRentalAccess, rentalSuccess, fromPayment } = useLocalSearchParams<{ 
     id: string; 
     autoPlay?: string; 
     fromContinueWatching?: string;
     hasRentalAccess?: string;
+    rentalSuccess?: string;
+    fromPayment?: string;
   }>();
-  
+    
   // Debug log for params
   console.log('🔍 [MovieDetail] Route params:', { 
     id, 
     autoPlay, 
     fromContinueWatching,
     initialRentalAccess,
+    rentalSuccess,
+    fromPayment,
     idType: typeof id 
   });
   
@@ -161,6 +165,37 @@ export default function MovieDetailScreen() {
   
   const [activeTab, setActiveTab] = useState<'related' | 'comments'>('related');
 
+  // 🎫 FORCE REFRESH RENTAL STATUS AFTER SUCCESSFUL PAYMENT
+  useEffect(() => {
+    if (rentalSuccess === 'true' && fromPayment === 'true' && userId) {
+      console.log('🎫 [MovieDetail] Payment successful, force refreshing rental status');
+      // Force refresh rental status to reflect the new payment
+      forceRefreshRental();
+      
+      // Show success notification
+      showNotificationMessage('Thanh toán thành công! Bạn có thể xem phim ngay.', 'success');
+    }
+  }, [rentalSuccess, fromPayment, userId, forceRefreshRental]);
+
+  // 🔍 DEBUG: Track rental access changes
+  useEffect(() => {
+    console.log('🎫 [DEBUG] Rental access changed:', {
+      hasRentalAccess,
+      currentRental: !!currentRental,
+      isLoadingRentalStatus,
+      movieIsFree: movieDetail?.is_free,
+      rentalSuccess,
+      fromPayment,
+      hasEverHadRentalAccess,
+      initialRentalAccess
+    });
+    
+    // Update rental access history
+    if (hasRentalAccess === true) {
+      setHasEverHadRentalAccess(true);
+    }
+  }, [hasRentalAccess, currentRental, isLoadingRentalStatus, movieDetail?.is_free, rentalSuccess, fromPayment]);
+
   // ⭐ DERIVED STATE FOR UI
   const hasLiked = Boolean(movieDetail?.userInteractions?.hasLiked);
   const isFavorite = Boolean(movieDetail?.userInteractions?.isFavorite);
@@ -176,6 +211,11 @@ export default function MovieDetailScreen() {
   const [hasShownRentalNotification, setHasShownRentalNotification] = useState(false);
   const [hasShownEpisodeError, setHasShownEpisodeError] = useState(false);
   
+  // 🎫 TRACK RENTAL ACCESS HISTORY (to handle back navigation from video player)
+  const [hasEverHadRentalAccess, setHasEverHadRentalAccess] = useState(
+    initialRentalAccess === 'true' || rentalSuccess === 'true'
+  );
+  
   // 🎬 GET DEFAULT EPISODE FOR VIDEO PLAYER WITH SMART RESUME
   const getDefaultEpisode = (): { 
     episode: Episode | null; 
@@ -190,7 +230,15 @@ export default function MovieDetailScreen() {
       return { episode: null }; // No error when loading
     }
 
-    // 🔧 ENHANCED: Handle series without episodes
+    // 🔧 PAYMENT CHECK FIRST: If movie is not free and user doesn't have rental access
+    // But allow if user has ever had rental access (for back navigation from video player)
+    const hasAccessToMovie = movieDetail.is_free || hasRentalAccess || hasEverHadRentalAccess;
+    if (!hasAccessToMovie) {
+      console.log('💰 [DEBUG] Movie requires payment - no error, just return null');
+      return { episode: null }; // No error for unpaid movies
+    }
+
+    // 🔧 ENHANCED: Handle series without episodes (only for paid movies)
     if (movieDetail.movie_type === 'Phim bộ') {
       if (!movieDetail.episodes || movieDetail.episodes.length === 0) {
         console.log('❌ [DEBUG] Series movie has no episodes');
@@ -200,7 +248,7 @@ export default function MovieDetailScreen() {
         };
       }
 
-      // Check if any episode has valid URI
+      // Check if any episode has valid URI (only for paid/accessible movies)
       const episodesWithUri = movieDetail.episodes.filter(ep => ep.uri && ep.uri.trim() !== '');
       if (episodesWithUri.length === 0) {
         console.log('❌ [DEBUG] Series has episodes but no valid URIs');
@@ -211,7 +259,7 @@ export default function MovieDetailScreen() {
       }
     }
 
-    // For single movies, check if we have episode data
+    // For single movies, check if we have episode data (only for paid/accessible movies)
     if (movieDetail.movie_type === 'Phim lẻ') {
       // Single movies should have URI directly or in episodes
       const hasDirectUri = movieDetail.uri && movieDetail.uri.trim() !== '';
@@ -242,17 +290,25 @@ export default function MovieDetailScreen() {
       };
     }
 
-    // 🔧 ENHANCED: Validate episode URI
-    if (!resumeInfo.episode.uri || resumeInfo.episode.uri.trim() === '') {
-      console.log('❌ [DEBUG] Selected episode has no valid URI:', {
-        episodeId: resumeInfo.episode._id,
-        episodeTitle: resumeInfo.episode.episode_title
-      });
-      return { 
-        episode: null, 
-        error: 'Tập phim này đang được cập nhật. Vui lòng chọn tập khác.' 
-      };
+      // 🔧 ENHANCED: Validate episode URI (only for accessible movies)
+  if (!resumeInfo.episode.uri || resumeInfo.episode.uri.trim() === '') {
+    console.log('❌ [DEBUG] Selected episode has no valid URI:', {
+      episodeId: resumeInfo.episode._id,
+      episodeTitle: resumeInfo.episode.episode_title,
+      movieIsFree: movieDetail.is_free,
+      hasRentalAccess
+    });
+    
+    // Don't show error if movie is not accessible (not paid)
+    if (!hasAccessToMovie) {
+      return { episode: null }; // No error for unpaid movies
     }
+    
+    return { 
+      episode: null, 
+      error: 'Tập phim này đang được cập nhật. Vui lòng chọn tập khác.' 
+    };
+  }
 
     console.log('🎬 [DEBUG] Resume info:', {
       hasEpisode: !!resumeInfo.episode,
@@ -273,20 +329,29 @@ export default function MovieDetailScreen() {
 
   const { episode: defaultEpisode, error: defaultEpisodeError } = getDefaultEpisode();
 
-  // Handle notifications in useEffect
+  // Handle notifications in useEffect (only for accessible movies)
   useEffect(() => {
     // Only show error notification if movieDetail is loaded and there's actually an error
     if (defaultEpisodeError && movieDetail && !loading && !hasShownEpisodeError) {
+      // Don't show error notification if movie is not accessible (not paid)
+      const hasAccessToMovie = movieDetail.is_free || hasRentalAccess || hasEverHadRentalAccess;
+      if (!hasAccessToMovie) {
+        console.log('💰 [DEBUG] Skipping error notification for unpaid movie');
+        return;
+      }
+      
       console.log('🚨 [DEBUG] Showing episode error:', {
         error: defaultEpisodeError,
         movieTitle: movieDetail.movie_title,
         movieType: movieDetail.movie_type,
-        hasEpisodes: !!movieDetail.episodes?.length
+        hasEpisodes: !!movieDetail.episodes?.length,
+        movieIsFree: movieDetail.is_free,
+        hasRentalAccess
       });
       showNotificationMessage(defaultEpisodeError, 'error');
       setHasShownEpisodeError(true);
     }
-  }, [defaultEpisodeError, movieDetail, loading, hasShownEpisodeError]);
+  }, [defaultEpisodeError, movieDetail, loading, hasShownEpisodeError, hasRentalAccess, hasEverHadRentalAccess]);
 
   // 🔄 RESET NOTIFICATION STATE WHEN MOVIE CHANGES
   useEffect(() => {
@@ -305,7 +370,12 @@ export default function MovieDetailScreen() {
     defaultEpisodeError,
     loading,
     hasMovieDetail: !!movieDetail,
-    hasShownEpisodeError
+    hasShownEpisodeError,
+    hasRentalAccess,
+    hasEverHadRentalAccess,
+    isLoadingRentalStatus,
+    rentalSuccess,
+    fromPayment
   });
 
   // 🔍 DEBUG: Duration formatting for all movies
@@ -344,8 +414,8 @@ export default function MovieDetailScreen() {
       
       // Auto play video if autoPlay parameter is set
       if (autoPlay === 'true') {
-        // For free movies or if user has rental access
-        if (movieDetail.is_free || hasRentalAccess || initialRentalAccess === 'true') {
+        // For free movies or if user has rental access or just completed payment
+        if (movieDetail.is_free || hasRentalAccess || hasEverHadRentalAccess || initialRentalAccess === 'true' || rentalSuccess === 'true') {
           // 🔧 FIX: Get the correct episode to resume based on movie type
           const { episode: resumeEpisode, resumeFromTime, resumeMessage } = getResumeWatchingInfo({
             movieDetail,
@@ -394,11 +464,16 @@ export default function MovieDetailScreen() {
         }
       }
     }
-  }, [movieDetail, loading, autoPlay, hasRentalAccess, initialRentalAccess, fromContinueWatching]);
+  }, [movieDetail, loading, autoPlay, hasRentalAccess, hasEverHadRentalAccess, initialRentalAccess, fromContinueWatching, rentalSuccess]);
 
   // 🎫 SEPARATE EFFECT FOR RENTAL ACCESS CHECK
   useEffect(() => {
     if (movieDetail && !loading && !movieDetail.is_free && !isLoadingRentalStatus) {
+      // Skip if user just completed payment
+      if (rentalSuccess === 'true' && fromPayment === 'true') {
+        return;
+      }
+      
       // Only show rental notification after rental status is loaded and user doesn't have access
       // Skip if we're still loading rental status or have initial access
       if (initialRentalAccess !== 'true' && hasRentalAccess === false && !hasShownRentalNotification) {
@@ -433,7 +508,7 @@ export default function MovieDetailScreen() {
         setHasShownRentalNotification(false); // Reset for future navigation
       }
     }
-  }, [movieDetail, loading, hasRentalAccess, initialRentalAccess, userId, isLoadingRentalStatus, hasShownRentalNotification]);
+  }, [movieDetail, loading, hasRentalAccess, initialRentalAccess, userId, isLoadingRentalStatus, hasShownRentalNotification, rentalSuccess, fromPayment]);
 
   // 🔄 REFRESH RENTAL STATUS WHEN SCREEN FOCUS
   useFocusEffect(
@@ -524,7 +599,7 @@ export default function MovieDetailScreen() {
     }
 
     // Check rental access for paid content  
-    if (!movieDetail?.is_free && userId && !hasRentalAccess) {
+    if (!movieDetail?.is_free && userId && !hasRentalAccess && !hasEverHadRentalAccess) {
       console.log('🎫 [DEBUG] User needs to rent movie');
       showNotificationMessage('Bạn cần thuê phim để xem tập này', 'error');
       setShowRentalModal(true);
@@ -673,6 +748,13 @@ export default function MovieDetailScreen() {
 
     if (!userId) {
       showNotificationMessage('Vui lòng đăng nhập để thuê phim', 'error');
+      return;
+    }
+
+    // 🔧 FIX: Check if user just completed payment
+    if (rentalSuccess === 'true' && fromPayment === 'true') {
+      console.log('🎫 [DEBUG] User just completed payment, showing video player');
+      setShowVideoPlayer(true);
       return;
     }
 
@@ -948,28 +1030,33 @@ export default function MovieDetailScreen() {
         <Text style={styles.sectionTitle}>Episodes ({movieDetail.episodes.length})</Text>
         {movieDetail.episodes.map((episode, index) => {
           const hasValidUri = episode.uri && episode.uri.trim() !== '';
+          const canAccess = movieDetail.is_free || hasRentalAccess || hasEverHadRentalAccess;
+          const shouldShowUpdateStatus = !hasValidUri && canAccess; // Only show "Đang cập nhật" if user has access
           
           return (
             <TouchableOpacity
               key={episode._id || index}
               style={[
                 styles.episodeItem,
-                !hasValidUri && styles.episodeItemDisabled
+                (!hasValidUri || !canAccess) && styles.episodeItemDisabled
               ]}
               onPress={() => handleEpisodePress(episode)}
-              disabled={!hasValidUri}
+              disabled={!hasValidUri || !canAccess}
             >
               <Text style={styles.episodeNumber}>Ep {episode.episode_number}</Text>
               <Text style={[
                 styles.episodeTitle,
-                !hasValidUri && styles.episodeTitleDisabled
+                (!hasValidUri || !canAccess) && styles.episodeTitleDisabled
               ]}>
                 {episode.episode_title}
               </Text>
               <Text style={styles.episodeDuration}>
                 {formatDuration(episode.duration)}
               </Text>
-              {!hasValidUri && (
+              {!canAccess && (
+                <Text style={styles.episodeStatusLocked}>🔒 Cần thuê</Text>
+              )}
+              {shouldShowUpdateStatus && (
                 <Text style={styles.episodeStatus}>Đang cập nhật</Text>
               )}
             </TouchableOpacity>
@@ -1243,11 +1330,27 @@ export default function MovieDetailScreen() {
                 );
               }
 
-              // Validate video URL
+              // Validate video URL (only for accessible movies)
               const videoUrl = episodeToPlay?.uri;
               if (!videoUrl) {
-                console.log('❌ [VideoPlayer] No video URL available:', { episodeToPlay });
-                return null;
+                console.log('❌ [VideoPlayer] No video URL available:', { 
+                  episodeToPlay,
+                  movieIsFree: movieDetail?.is_free,
+                  hasRentalAccess
+                });
+                
+                // Don't show error placeholder if movie is not accessible
+                if (!movieDetail?.is_free && !hasRentalAccess) {
+                  return null;
+                }
+                
+                return (
+                  <View style={styles.placeholderContainer}>
+                    <Text style={styles.placeholderText}>
+                      Video đang được cập nhật
+                    </Text>
+                  </View>
+                );
               }
 
               return canShowVideo && showVideoPlayer && episodeToPlay ? (
@@ -2226,6 +2329,13 @@ const styles = StyleSheet.create({
   },
   episodeStatus: {
     color: '#FFA500',
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  episodeStatusLocked: {
+    color: '#FF6B6B',
     fontSize: 12,
     fontWeight: '500',
     marginTop: 4,
