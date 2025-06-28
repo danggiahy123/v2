@@ -30,6 +30,10 @@ import {
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { clearError, clearMessage, sendOTP } from '../../store/slices/authSlice';
 import { Notification } from '../../components/ui';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
+import Svg, { Path } from 'react-native-svg';
 
 export default function BannerLogin() {
   const router = useRouter();
@@ -179,69 +183,88 @@ export default function BannerLogin() {
   return (
    <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
-      <ImageBackground
-        source={{
-          uri: 'https://simg.zalopay.com.vn/zlp-website/assets/nhung_bo_phim_hoat_hinh_gan_lien_voi_tuoi_tho_thumb_9d51c1a8ca.jpg',
-        }}
-        style={styles.imageBackground}
-        imageStyle={{ resizeMode: 'cover' }}
-      >
-        <View style={styles.overlay} />
-        <View style={styles.topContent}>
-          <Text style={styles.title}>Đăng nhập / Đăng ký</Text>
-        </View>
-      </ImageBackground>
-
-      <View style={styles.bottomContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Nhập số điện thoại"
-          placeholderTextColor="#888"
-          keyboardType="phone-pad"
-          value={phone}
-          onChangeText={setPhone}
-          editable={!loading}
-          maxLength={15}
-        />
-        <View style={styles.agreeContainer}>
-          <TouchableOpacity onPress={() => setIsAgreed(!isAgreed)} style={styles.checkboxContainer} disabled={loading}>
-            <View style={[styles.checkbox, isAgreed && styles.checkboxChecked]} />
-            <Text style={styles.agreeText}> Tôi đã đọc và đồng ý với{' '}
-              <Text style={styles.linkText}>Điều kiện và điều khoản sử dụng của Tech5 Play</Text>
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <TouchableOpacity
-          style={[styles.button, (!isAgreed || loading) && styles.buttonDisabled]}
-          onPress={onContinue}
-          disabled={!isAgreed || loading}
+      <View style={styles.bannerContainer}>
+        <ImageBackground
+          source={{
+            uri: 'https://cloude.orderhanghanquoc.com/2025/05/23/image-109.jpg',
+          }}
+          style={styles.imageBackground}
         >
-          {loading ? (
-            <ActivityIndicator color="#fff" size="small" />
-          ) : (
-            <Text style={styles.buttonText}>Tiếp tục</Text>
-          )}
-        </TouchableOpacity>
+          <BlurView intensity={20} tint="dark" style={styles.blurOverlay} />
+          <LinearGradient
+            colors={['rgba(0,0,0,0.92)', 'rgba(0,0,0,0.2)', 'rgba(0,0,0,0.92)']}
+            style={styles.gradientOverlay}
+          />
+          <View style={styles.bannerContent}>
+            <Text style={styles.title}></Text>
+          </View>
+        </ImageBackground>
+        {/* Hiệu ứng sóng (wave) */}
+        <Svg height={36} width="100%" viewBox="0 0 360 36" style={styles.waveSvg}>
+          <Path d="M0 0 Q90 36 180 18 T360 18 V36 H0 Z" fill="#18181c" />
+        </Svg>
+      </View>
 
-        <View style={styles.socialButtonsContainer}>
-          <TouchableOpacity style={styles.socialButton} onPress={onLoginGoogle} disabled={loading}>
-            <Image
-              source={{
-                uri: 'https://img.icons8.com/?size=512&id=17949&format=png',
-              }}
-              style={styles.socialIcon}
+      <View style={styles.formWrapper}>
+        <View style={styles.formCard}>
+          <View style={styles.inputWrapper}>
+            <Ionicons name="call-outline" size={22} color="#D32F2F" style={{ marginLeft: 10 }} />
+            <TextInput
+              style={styles.input}
+              placeholder="Nhập số điện thoại"
+              placeholderTextColor="#888"
+              keyboardType="phone-pad"
+              value={phone}
+              onChangeText={setPhone}
+              editable={!loading}
+              maxLength={15}
+              selectionColor="#D32F2F"
             />
+          </View>
+          <TouchableOpacity onPress={() => setIsAgreed(!isAgreed)} style={styles.checkboxContainer} disabled={loading} activeOpacity={0.7}>
+            <View style={[styles.checkbox, isAgreed && styles.checkboxChecked]}>
+              {isAgreed && <MaterialCommunityIcons name="check-bold" size={16} color="#fff" />}
+            </View>
+            <Text style={styles.agreeText}>Tôi đồng ý <Text style={styles.linkText}>Điều khoản sử dụng</Text></Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.socialButton, styles.facebookButton]} onPress={onLoginFacebook} disabled={loading}>
-            <Image
-              source={{
-                uri: 'https://upload.wikimedia.org/wikipedia/commons/0/05/Facebook_Logo_(2019).png',
-              }}
-              style={styles.socialIcon}
-            />
+          <TouchableOpacity
+            style={[styles.button, (!isAgreed || loading) && styles.buttonDisabled]}
+            onPress={onContinue}
+            disabled={!isAgreed || loading}
+            activeOpacity={0.85}
+          >
+            <LinearGradient
+              colors={['#D32F2F', '#B71C1C']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.buttonGradient}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.buttonText}>Tiếp tục</Text>
+              )}
+            </LinearGradient>
           </TouchableOpacity>
+
+          <View style={styles.socialSection}>
+            <Text style={styles.socialLabel}>Hoặc đăng nhập bằng</Text>
+            <View style={styles.socialButtonsContainer}>
+              <TouchableOpacity style={styles.socialButton} onPress={onLoginGoogle} disabled={loading} activeOpacity={0.8}>
+                <Image
+                  source={{ uri: 'https://img.icons8.com/?size=512&id=17949&format=png' }}
+                  style={styles.socialIcon}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.socialButton, styles.facebookButton]} onPress={onLoginFacebook} disabled={loading} activeOpacity={0.8}>
+                <Image
+                  source={{ uri: 'https://upload.wikimedia.org/wikipedia/commons/0/05/Facebook_Logo_(2019).png' }}
+                  style={styles.socialIcon}
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </View>
 
@@ -263,98 +286,195 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000',
   },
-  imageBackground: {
+  bannerContainer: {
     height: '50%',
-    justifyContent: 'center',
+    borderBottomLeftRadius: 44,
+    borderBottomRightRadius: 44,
+    overflow: 'hidden',
+    marginBottom: 0,
+    position: 'relative',
+  },
+  imageBackground: {
+    flex: 1,
+    justifyContent: 'flex-end',
     alignItems: 'center',
   },
-  overlay: {
+  blurOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    zIndex: 1,
   },
-  topContent: {
+  gradientOverlay: {
+    ...StyleSheet.absoluteFillObject,
     zIndex: 2,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#fff',
+  bannerContent: {
+    zIndex: 3,
+    alignItems: 'center',
+    marginBottom: 32,
+    paddingHorizontal: 24,
   },
-  bottomContainer: {
+  title: {
+    fontSize: 30,
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: 1.2,
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 3 },
+    textShadowRadius: 12,
+    marginTop: 12,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  waveSvg: {
+    position: 'absolute',
+    bottom: -1,
+    left: 0,
+    right: 0,
+    zIndex: 4,
+  },
+  formWrapper: {
     flex: 1,
-    paddingHorizontal: 30,
-    backgroundColor: '#000',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    marginTop: -36,
+    paddingHorizontal: 0,
+  },
+  formCard: {
+    width: '92%',
+    backgroundColor: 'rgba(24,24,28,0.92)',
+    borderRadius: 32,
+    padding: 32,
+    marginTop: 60,
+    marginBottom: 18,
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(35,35,42,0.96)',
+    borderRadius: 18,
+    marginBottom: 22,
+    borderWidth: 2,
+    borderColor: '#23232a',
+    height: 56,
+    width: '100%',
+    shadowColor: '#D32F2F',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.10,
+    shadowRadius: 6,
   },
   input: {
-    height: 50,
-    backgroundColor: '#222',
-    borderRadius: 8,
-    paddingHorizontal: 15,
+    flex: 1,
+    height: 56,
+    backgroundColor: 'transparent',
+    borderRadius: 18,
+    paddingHorizontal: 16,
     fontSize: 18,
     color: '#fff',
-    marginBottom: 20,
-  },
-  agreeContainer: {
-    marginBottom: 20,
+    fontWeight: '500',
+    letterSpacing: 0.2,
   },
   checkboxContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexWrap: 'wrap',
+    marginBottom: 18,
+    alignSelf: 'flex-start',
   },
   checkbox: {
     width: 20,
     height: 20,
     borderWidth: 2,
-    borderColor: '#fff',
+    borderColor: '#D32F2F',
+    borderRadius: 6,
     marginRight: 10,
-    borderRadius: 4,
+    backgroundColor: '#23232a',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#D32F2F',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.10,
+    shadowRadius: 2,
   },
   checkboxChecked: {
     backgroundColor: '#D32F2F',
+    borderColor: '#D32F2F',
   },
   agreeText: {
-    color: '#fff',
-    fontSize: 14,
-    flex: 1,
+    color: '#bbb',
+    fontSize: 13,
+    fontWeight: '400',
     flexWrap: 'wrap',
   },
   linkText: {
     textDecorationLine: 'underline',
     color: '#D32F2F',
+    fontWeight: '700',
   },
   button: {
-    height: 50,
-    backgroundColor: '#D32F2F',
-    borderRadius: 8,
+    height: 56,
+    width: '100%',
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 30,
-    shadowColor: '#D32F2F',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.7,
-    shadowRadius: 5,
-    elevation: 5,
+    marginBottom: 12,
+    overflow: 'hidden',
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+  },
+  buttonGradient: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexDirection: 'row',
   },
   buttonText: {
     color: '#fff',
-    fontWeight: '700',
-    fontSize: 20,
+    fontWeight: '900',
+    fontSize: 21,
+    letterSpacing: 1,
+    textShadowColor: 'rgba(0,0,0,0.18)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  socialSection: {
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  socialLabel: {
+    color: '#bbb',
+    fontSize: 14,
+    marginBottom: 8,
+    fontWeight: '500',
   },
   socialButtonsContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
+    marginTop: 2,
   },
   socialButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: '#fff',
-    marginHorizontal: 15,
+    marginHorizontal: 14,
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
   },
   facebookButton: {
     backgroundColor: '#1877F2',
@@ -362,9 +482,6 @@ const styles = StyleSheet.create({
   socialIcon: {
     width: 28,
     height: 28,
-  },
-  buttonDisabled: {
-    backgroundColor: '#888',
-    shadowOpacity: 0,
+    borderRadius: 14,
   },
 });
