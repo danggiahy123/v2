@@ -27,8 +27,12 @@ const AnimeBanner = () => {
 
   useEffect(() => {
     animeService.getBannerAnime({ bannerLimit: 5, showAll: false }).then(res => {
+      console.log('Banner API response:', res);
       if (res.status === 'success' && res.data?.banner?.movies) {
-        setBanner(res.data.banner.movies);
+        // Filter out items without movieId
+        const validMovies = res.data.banner.movies.filter(movie => movie.movieId);
+        console.log('Valid movies:', validMovies);
+        setBanner(validMovies);
       }
       setLoading(false);
     }).catch(error => {
@@ -98,7 +102,7 @@ const AnimeBanner = () => {
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
-        keyExtractor={(item) => item.movieId}
+        keyExtractor={(item, index) => item.movieId || index.toString()}
         renderItem={renderItem}
         onScroll={e => {
           const idx = Math.round(e.nativeEvent.contentOffset.x / width);
@@ -111,8 +115,8 @@ const AnimeBanner = () => {
         getItemLayout={(_, index) => ({ length: width, offset: width * index, index })}
       />
       <View style={styles.bannerIndicators}>
-        {banner.map((_, idx) => (
-          <View key={idx} style={[styles.indicator, idx === currentIndex && styles.activeIndicator]} />
+        {banner.map((item, idx) => (
+          <View key={item.movieId || `indicator-${idx}`} style={[styles.indicator, idx === currentIndex && styles.activeIndicator]} />
         ))}
       </View>
     </View>
