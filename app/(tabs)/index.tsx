@@ -1337,10 +1337,9 @@ const styles = StyleSheet.create({
 
   // Trending Movie Layout Styles
   trendingList: {
-  
-    paddingHorizontal: 10,
-    paddingVertical: 20,
-    height:310,
+    paddingHorizontal: 15,
+    paddingVertical: 25,
+    height: 310,
   },
   trendingItem: {
   
@@ -1384,11 +1383,11 @@ const styles = StyleSheet.create({
   },
   trendingRank: {
     position: 'absolute',
-    top: 10,
-    left: 10,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    top: 15,
+    left: 15,
+    width: 35,
+    height: 35,
+    borderRadius: 17.5,
     backgroundColor: 'rgba(229, 9, 20, 0.9)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -1401,7 +1400,7 @@ const styles = StyleSheet.create({
   },
   trendingRankText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '800',
   },
 

@@ -371,8 +371,8 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
   trendingList: {
-    paddingLeft: 15,
-    paddingTop: 8,
+    paddingLeft: 20,
+    paddingTop: 15,
   },
   trendingItem: {
     width: 160,
@@ -382,13 +382,13 @@ const styles = StyleSheet.create({
   },
   rankContainer: {
     position: 'absolute',
-    top: -10,
-    left: -10,
+    top: -5,
+    left: -5,
     zIndex: 2,
-    width: 40,
-    height: 40,
+    width: 45,
+    height: 45,
     backgroundColor: '#D32F2F',
-    borderRadius: 20,
+    borderRadius: 22.5,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -402,7 +402,7 @@ const styles = StyleSheet.create({
   },
   rankNumber: {
     color: '#fff',
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
   },
   trendingPoster: {
