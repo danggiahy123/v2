@@ -919,7 +919,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1.5,
     borderColor: 'rgba(255, 255, 255, 0.4)',
-    backdropFilter: 'blur(10px)',
+    // backdropFilter: 'blur(10px)',
   },
   moreButtonText: {
     color: '#FFFFFF',
