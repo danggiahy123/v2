@@ -40,6 +40,9 @@ const GenreGrid: React.FC<GenreGridProps> = ({ genres, onGenrePress, limit }) =>
           </View>
         </TouchableOpacity>
       )}
+      scrollEnabled={true}
+      showsVerticalScrollIndicator={true}
+      style={{ flexGrow: 0 }}
     />
   );
 };
@@ -47,8 +50,9 @@ const GenreGrid: React.FC<GenreGridProps> = ({ genres, onGenrePress, limit }) =>
 const styles = StyleSheet.create({
   genreItem: {
     flex: 1,
-    marginRight: 10,
-    borderRadius: 16,
+    marginHorizontal: 8,
+    marginBottom: 18,
+    borderRadius: 20,
     overflow: 'hidden',
     minHeight: 110,
     maxHeight: 130,
@@ -57,8 +61,8 @@ const styles = StyleSheet.create({
   },
   genreImage: {
     width: '100%',
-    height: 110,
-    borderRadius: 16,
+    height: 130,
+    borderRadius: 20,
     position: 'absolute',
     top: 0,
     left: 0,
@@ -67,18 +71,19 @@ const styles = StyleSheet.create({
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    backgroundColor: 'rgba(0,0,0,0.55)',
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 8,
   },
   genreName: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 18,
+    fontSize: 20,
     textAlign: 'center',
-    textShadowColor: 'rgba(0,0,0,0.7)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 6,
   },
 });
 

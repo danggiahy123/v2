@@ -392,7 +392,7 @@ export default function HomeScreen() {
   const handleGenrePress = (item: any) => {
     setSelectedCategory(item._id);
     setSelectedTitle(item.genre_name);
-    setViewAllModalVisible(true);
+    setViewAllModalVisible(false);
     setGenreModalVisible(false);
   };
 
@@ -790,7 +790,7 @@ export default function HomeScreen() {
           onSearchPress={() => setSearchModalVisible(true)}
           onNotificationPress={() => {}}
           showGenreSelector
-          genres={HOME_GENRES}
+          genres={genres}
           onGenreSelect={handleHomeGenreSelect}
           opacity={headerOpacity}
         />
@@ -801,11 +801,12 @@ export default function HomeScreen() {
           scrollEventThrottle={16}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FFFFFF" />
-          }>
+          }
+        >
           {renderBanner()}
+
           {renderContinueWatching()}
           {renderMovieGrid(recommendedMovies, 'Đề xuất cho bạn', 'recommended')}
-          
           {/* Action Genre Section */}
           {actionGenre && actionGenreMovies.length > 0 && (
             <View style={styles.actionGenreSection}>
@@ -846,7 +847,7 @@ export default function HomeScreen() {
               />
             </View>
           )}
-          
+
           {sections.map((section, index) => (
             <View key={index}>
               {renderMovieGrid(section.movies, section.title, getCategoryFromTitle(section.title))}

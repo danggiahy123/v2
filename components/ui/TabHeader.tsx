@@ -37,10 +37,12 @@ import {
   Platform,
   Modal,
   FlatList,
+  Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import GenreGrid from '../genre/GenreGrid';
 
 /**
  * TABHEADER PROPS INTERFACE
@@ -165,6 +167,8 @@ export default function TabHeader({
     style
   ];
 
+  const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+
   return (
     <>
       <Animated.View style={containerStyle}>
@@ -221,35 +225,32 @@ export default function TabHeader({
           animationType="fade"
           onRequestClose={() => setGenreModalVisible(false)}
         >
-          <View style={styles.modalOverlay}>
-            <View style={styles.genreModal}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Chọn thể loại</Text>
+          <View style={{
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: 'rgba(0,0,0,0.7)'
+          }}>
+            <View style={{
+              width: '92%',
+              maxWidth: 420,
+              borderRadius: 24,
+              overflow: 'hidden',
+              backgroundColor: '#181818',
+              padding: 0
+            }}>
+              <View style={[styles.modalHeader, { borderBottomWidth: 0, padding: 18, paddingBottom: 0 }]}> 
+                <Text style={[styles.modalTitle, { fontSize: 26, fontWeight: 'bold', color: '#fff', textAlign: 'center', flex: 1 }]}>Danh mục</Text>
                 <TouchableOpacity
                   onPress={() => setGenreModalVisible(false)}
                   style={styles.closeButton}
                 >
-                  <Ionicons name="close" size={24} color="#fff" />
+                  <Ionicons name="close" size={28} color="#fff" />
                 </TouchableOpacity>
               </View>
-              
-              <FlatList
-                data={genres}
-                keyExtractor={(item) => item._id}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={styles.genreItem}
-                    onPress={() => handleGenreSelect(item)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.genreItemText}>{item.genre_name}</Text>
-                    {item.movie_count !== undefined && (
-                      <Text style={styles.movieCount}>({item.movie_count})</Text>
-                    )}
-                  </TouchableOpacity>
-                )}
-                contentContainerStyle={styles.genreList}
-              />
+              <View style={{ padding: 12, paddingTop: 0, maxHeight: SCREEN_HEIGHT * 0.92, minHeight: 100, width: '100%' }}>
+                <GenreGrid genres={genres} onGenrePress={handleGenreSelect} />
+              </View>
             </View>
           </View>
         </Modal>
