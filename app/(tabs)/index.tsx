@@ -18,6 +18,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { movieService } from '../../services/movieService';
 import { animeService } from '../../services/animeService';
 import { seriesService } from '../../services/seriesService';
+import { genreService } from '../../services/genreService';
 import { useAppSelector } from '../../store/hooks';
 import { BannerMovie, ContinueWatchingItem, GridMovie } from '../../types/movie';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -61,6 +62,8 @@ export default function HomeScreen() {
   const [viewAllModalVisible, setViewAllModalVisible] = useState(false);
   const [genres, setGenres] = useState<any[]>([]);
   const [genreModalVisible, setGenreModalVisible] = useState(false);
+  const [actionGenreMovies, setActionGenreMovies] = useState<GridMovie[]>([]);
+  const [actionGenre, setActionGenre] = useState<any>(null);
 
   const bannerFlatListRef = useRef<FlatList>(null);
 
@@ -80,6 +83,9 @@ export default function HomeScreen() {
         if (data.status === 'success') setGenres(data.data.genres);
       })
       .catch(err => console.error('Error fetching genres:', err));
+    
+    // Load action genre movies
+    loadActionGenreMovies();
   }, [userId]); // loadHomeData is defined below, will be memoized in future optimization
 
   // Refresh continue watching data when screen is focused (user comes back from movie detail)
@@ -201,6 +207,29 @@ export default function HomeScreen() {
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  };
+
+  const loadActionGenreMovies = async () => {
+    try {
+      // Tìm thể loại "Hành động" trong danh sách genres
+      const genresResponse = await genreService.getGenres('parent');
+      if (genresResponse.status === 'success') {
+        const actionGenre = genresResponse.data.genres.find(
+          (genre: any) => genre.genre_name.toLowerCase().includes('hành động')
+        );
+        
+        if (actionGenre) {
+          setActionGenre(actionGenre);
+          // Load phim của thể loại hành động
+          const moviesResponse = await genreService.getGenreMovies(actionGenre._id);
+          if (moviesResponse.status === 'success') {
+            setActionGenreMovies(moviesResponse.data.movies.slice(0, 8)); // Lấy 8 phim đầu
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error loading action genre movies:', error);
     }
   };
 
@@ -661,6 +690,48 @@ export default function HomeScreen() {
           </View>
           {renderContinueWatching()}
           {renderMovieGrid(recommendedMovies, 'Đề xuất cho bạn', 'recommended')}
+          
+          {/* Action Genre Section */}
+          {actionGenre && actionGenreMovies.length > 0 && (
+            <View style={styles.actionGenreSection}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>🔥 {actionGenre.genre_name}</Text>
+                <TouchableOpacity 
+                  onPress={() => router.push(`/genre/${actionGenre._id}`)}
+                  style={styles.seeAllButton}
+                >
+                  <Text style={styles.seeAllText}>Xem tất cả</Text>
+                  <Ionicons name="chevron-forward" size={16} color="#B0B0B0" />
+                </TouchableOpacity>
+              </View>
+              <FlatList
+                data={actionGenreMovies}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(item) => item._id}
+                renderItem={({ item }) => (
+                  <TouchableOpacity 
+                    style={styles.actionMovieItem}
+                    onPress={() => router.push(`/movie/${item._id}`)}
+                    activeOpacity={0.8}
+                  >
+                    <Image source={{ uri: item.poster }} style={styles.actionMoviePoster} resizeMode="cover" />
+                    <View style={styles.actionMovieInfo}>
+                      <Text style={styles.actionMovieTitle} numberOfLines={2}>{item.title}</Text>
+                      {item.rating && (
+                        <View style={styles.actionMovieRating}>
+                          <Ionicons name="star" size={12} color="#FFD700" />
+                          <Text style={styles.actionMovieRatingText}>{item.rating.toFixed(1)}</Text>
+                        </View>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                )}
+                contentContainerStyle={styles.actionMovieList}
+              />
+            </View>
+          )}
+          
           {sections.map((section, index) => (
             <View key={index}>
               {renderMovieGrid(section.movies, section.title, getCategoryFromTitle(section.title))}
@@ -1416,5 +1487,54 @@ const styles = StyleSheet.create({
   },
   genreSelectorArrow: {
     marginLeft: 2,
+  },
+  actionGenreSection: {
+    marginTop: 32,
+  },
+  seeAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  actionMovieItem: {
+    width: width * 0.33,
+    height: 260,
+    marginRight: 15,
+    borderRadius: 12,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  actionMoviePoster: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 12,
+  },
+  actionMovieInfo: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 10,
+  },
+  actionMovieTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  actionMovieRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  actionMovieRatingText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  actionMovieList: {
+    paddingHorizontal: 10,
   },
 });

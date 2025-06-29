@@ -25,6 +25,7 @@ type Genre = {
 type GenreSelectorProps = {
   visible: boolean;
   onClose: () => void;
+  onSelectGenre?: (genre: Genre) => void;
 };
 
 // Mảng gradient màu đẹp cho từng thể loại
@@ -32,7 +33,7 @@ const GRADIENTS: [string, string][] = [
     ['#262626', '#262626'], 
 ];
 
-export const GenreSelector = ({ visible, onClose }: GenreSelectorProps) => {
+export const GenreSelector = ({ visible, onClose, onSelectGenre }: GenreSelectorProps) => {
   const [genres, setGenres] = useState<Genre[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -56,11 +57,16 @@ export const GenreSelector = ({ visible, onClose }: GenreSelectorProps) => {
   };
 
   const handleGenreSelect = (genre: Genre) => {
-    router.push({
-      pathname: "/anime/genre/[id]",
-      params: { id: genre._id }
-    });
-    onClose();
+    if (onSelectGenre) {
+      onSelectGenre(genre);
+      onClose();
+    } else {
+      router.push({
+        pathname: "/anime/genre/[id]",
+        params: { id: genre._id }
+      });
+      onClose();
+    }
   };
 
   const renderGenreItem = ({ item, index }: { item: Genre; index: number }) => (

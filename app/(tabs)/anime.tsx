@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { TabHeader, SearchModal } from '../../components/ui';
+import { TabHeader, SearchModal, ViewAllModal } from '../../components/ui';
 import { animeService } from '../../services/animeService';
 import { Banner, GenreSelector } from '../../components/anime';
 import { useRouter } from 'expo-router';
@@ -24,6 +24,96 @@ type Anime = {
   producer?: string;
   movieType?: string;
 };
+
+// Dữ liệu phim mẫu cho Hoạt hình - Hành động
+const ACTION_ANIME_MOVIES = [
+  {
+    _id: "683e7342602b36157f1c7bab",
+    title: "The Million Dollar Conan",
+    description: "Thám tử Conan bước vào một vụ án liên quan đến một triệu đô la bị đánh cắp, nơi mạng sống và sự thật bị đe dọa. #phim hoạt hình #trinh thám #anime",
+    poster: "https://imagedelivery.net/qr1FX-TzU11V5mCFgmBaYg/26c05a29-e04c-41a1-45c0-9f44e3454900/public",
+    producer: "TMS Entertainment",
+    price: 120000,
+  },
+  {
+    _id: "683e7290602b36157f1c7b94",
+    title: "Kung Fu Panda 4",
+    description: "Po trở lại trong hành trình mới, đối đầu với mối đe dọa bí ẩn và truyền lại tinh thần chiến binh rồng cho thế hệ kế tiếp. #phim hoạt hình #hành động",
+    poster: "https://imagedelivery.net/qr1FX-TzU11V5mCFgmBaYg/36c75476-f15b-48f3-8490-40b4e104a300/public",
+    producer: "DreamWorks Animation",
+    price: 120000,
+  },
+  {
+    _id: "683e6f83602b36157f1c7b5f",
+    title: "Doraemon: Nobita và Trận Chiến Ở Hành Tinh Mini",
+    description: "Phim hoạt hình Nhật Bản nổi tiếng - Doraemon và nhóm bạn tham gia hành trình giải cứu một hành tinh nhỏ bé đang bị đe dọa. Phim hoạt hình dành cho mọi lứa tuổi.",
+    poster: "https://imagedelivery.net/qr1FX-TzU11V5mCFgmBaYg/082f3cf9-5d56-48b8-b4db-f1f768b85200/public",
+    producer: "Toho Animation",
+    price: 0,
+  },
+  {
+    _id: "683d94d3602b36157f1c7af3",
+    title: "Spider-Man: Across the Spider-Verse",
+    description: "Miles Morales du hành qua đa vũ trụ và đối mặt với đội quân Spider-People, nơi cậu phải định nghĩa lại điều gì tạo nên một người hùng.",
+    poster: "https://imagedelivery.net/qr1FX-TzU11V5mCFgmBaYg/43c32d74-da85-45ad-4eb2-26763d7c5500/public",
+    producer: "Sony Pictures Animation, Marvel Entertainment",
+    price: 100000,
+  },
+];
+
+const FUNNY_ANIME_MOVIES = [
+  {
+    _id: "683e737c602b36157f1c7bb9",
+    title: "Wallace & Gromit: Vengeance Most Fowl",
+    description: "Wallace và chú chó Gromit đối mặt với một kẻ thù cũ trong cuộc phiêu lưu hoạt hình hấp dẫn và hài hước. #phim hoạt hình #phiêu lưu #hài hước",
+    poster: "https://imagedelivery.net/qr1FX-TzU11V5mCFgmBaYg/ab1d5203-6d4b-471f-0556-490cb4ddfb00/public",
+    producer: "Aardman Animations & Netflix",
+    price: 0,
+  },
+  {
+    _id: "683e7317602b36157f1c7ba4",
+    title: "The Casagrandes Movie",
+    description: "Gia đình Casagrandes bắt đầu một cuộc phiêu lưu đầy bất ngờ khi kỳ nghỉ hè trở thành một nhiệm vụ giải cứu! #phim hoạt hình #gia đình",
+    poster: "https://imagedelivery.net/qr1FX-TzU11V5mCFgmBaYg/f69bb589-2ac3-4844-89e1-1364fbb9ca00/public",
+    producer: "Nickelodeon Animation Studio",
+    price: 0,
+  },
+  {
+    _id: "683e7274602b36157f1c7b8d",
+    title: "The Garfield Movie",
+    description: "Chú mèo lười Garfield quay trở lại màn ảnh rộng trong cuộc phiêu lưu hài hước cùng người cha thất lạc và người bạn trung thành Odie. #phim hoạt hình #hài",
+    poster: "https://imagedelivery.net/qr1FX-TzU11V5mCFgmBaYg/dd967b15-16a4-4f63-9987-c09a560bd100/public",
+    producer: "Sony Pictures Animation",
+    price: 0,
+  },
+  {
+    _id: "683e6fdc602b36157f1c7b66",
+    title: "Despicable Me",
+    description: "Phim hoạt hình hài hước nổi tiếng kể về Gru - một tên ác nhân cùng đội quân Minions dễ thương thực hiện những âm mưu kỳ quặc. Phim hoạt hình vui nhộn dành cho mọi lứa tuổi.",
+    poster: "https://imagedelivery.net/qr1FX-TzU11V5mCFgmBaYg/73423c86-adbe-434f-4555-3d027cbee800/public",
+    producer: "Illumination Entertainment",
+    price: 0,
+  },
+];
+
+const HORROR_ANIME_MOVIES = [
+  {
+    _id: "683e735f602b36157f1c7bb2",
+    title: "The Wild Robot",
+    description: "Sau một vụ đắm tàu, một robot mang tên Roz sống sót trên đảo hoang và học cách sinh tồn giữa thiên nhiên hoang dã. #phim hoạt hình #phiêu lưu #gia đình",
+    poster: "https://imagedelivery.net/qr1FX-TzU11V5mCFgmBaYg/33ebf60d-70a5-4a33-a6ee-2de4f19d6700/public",
+    producer: "DreamWorks Animation",
+    price: 0,
+  },
+  {
+    _id: "683d94d3602b36157f1c7af3",
+    title: "Spider-Man: Across the Spider-Verse",
+    description: "Miles Morales du hành qua đa vũ trụ và đối mặt với đội quân Spider-People, nơi cậu phải định nghĩa lại điều gì tạo nên một người hùng.",
+    poster: "https://imagedelivery.net/qr1FX-TzU11V5mCFgmBaYg/43c32d74-da85-45ad-4eb2-26763d7c5500/public",
+    producer: "Sony Pictures Animation, Marvel Entertainment",
+    price: 100000,
+  },
+];
 
 export default function AnimeScreen() {
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -37,6 +127,10 @@ export default function AnimeScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const [viewAllModalVisible, setViewAllModalVisible] = useState(false);
+  const [viewAllCustomMovies, setViewAllCustomMovies] = useState<any[] | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedTitle, setSelectedTitle] = useState('');
 
   const handleScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -223,6 +317,42 @@ export default function AnimeScreen() {
       <GenreSelector
         visible={genreSelectorVisible}
         onClose={() => setGenreSelectorVisible(false)}
+        onSelectGenre={(genre) => {
+          if (genre._id === '6847d080101e640d01a0c387') {
+            setSelectedCategory(genre._id);
+            setSelectedTitle(genre.genre_name);
+            setViewAllCustomMovies(ACTION_ANIME_MOVIES);
+            setViewAllModalVisible(true);
+          } else if (genre._id === '6847d080101e640d01a0c38a') {
+            setSelectedCategory(genre._id);
+            setSelectedTitle(genre.genre_name);
+            setViewAllCustomMovies([]);
+            setViewAllModalVisible(true);
+          } else if (genre._id === '6847d080101e640d01a0c38d') {
+            setSelectedCategory(genre._id);
+            setSelectedTitle(genre.genre_name);
+            setViewAllCustomMovies(FUNNY_ANIME_MOVIES);
+            setViewAllModalVisible(true);
+          } else if (genre._id === '6847d080101e640d01a0c390') {
+            setSelectedCategory(genre._id);
+            setSelectedTitle(genre.genre_name);
+            setViewAllCustomMovies(HORROR_ANIME_MOVIES);
+            setViewAllModalVisible(true);
+          } else {
+            setSelectedCategory(genre._id);
+            setSelectedTitle(genre.genre_name);
+            setViewAllCustomMovies([]);
+            setViewAllModalVisible(true);
+          }
+        }}
+      />
+
+      <ViewAllModal
+        visible={viewAllModalVisible}
+        onClose={() => setViewAllModalVisible(false)}
+        category={selectedCategory}
+        title={selectedTitle}
+        customMovies={viewAllCustomMovies || undefined}
       />
     </View>
   );
