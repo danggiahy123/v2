@@ -12,6 +12,7 @@ import {
   View,
   Animated,
   Modal,
+  StatusBar,
 } from 'react-native';
 // SafeAreaView imported but not used - will be used in future updates
 import { LinearGradient } from 'expo-linear-gradient';
@@ -414,12 +415,10 @@ export default function HomeScreen() {
       
       setHomeGenreCustomMovies(movies);
       setHomeGenreViewAllVisible(true);
-      setHomeGenreModalVisible(false);
     } catch (error) {
       console.error('Error fetching genre movies:', error);
       setHomeGenreCustomMovies([]);
       setHomeGenreViewAllVisible(true);
-      setHomeGenreModalVisible(false);
     } finally {
       setHomeGenreLoading(false);
     }
@@ -783,9 +782,16 @@ export default function HomeScreen() {
 
     return (
       <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#000" />
+        
         <TabHeader
+          title=""
+          showLogo
           onSearchPress={() => setSearchModalVisible(true)}
           onNotificationPress={() => {}}
+          showGenreSelector
+          genres={HOME_GENRES}
+          onGenreSelect={handleHomeGenreSelect}
           opacity={headerOpacity}
         />
         <Animated.ScrollView
@@ -797,18 +803,6 @@ export default function HomeScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FFFFFF" />
           }>
           {renderBanner()}
-          {/* Genre selector button below banner */}
-          <View style={{ marginBottom: 18, marginTop: 10, alignItems: 'flex-start', paddingHorizontal: 16 }}>
-            <TouchableOpacity
-              style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#23272f', borderRadius: 20, paddingVertical: 10, paddingHorizontal: 18, elevation: 4 }}
-              onPress={() => setHomeGenreModalVisible(true)}
-              activeOpacity={0.85}
-            >
-              <Ionicons name="grid-outline" size={18} color="#FFF" style={{ marginRight: 8 }} />
-              <Text style={{ color: '#fff', fontSize: 17, fontWeight: '600', marginRight: 4 }}>Thể loại</Text>
-              <Ionicons name="chevron-up" size={16} color="#FFF" />
-            </TouchableOpacity>
-          </View>
           {renderContinueWatching()}
           {renderMovieGrid(recommendedMovies, 'Đề xuất cho bạn', 'recommended')}
           
@@ -859,81 +853,6 @@ export default function HomeScreen() {
             </View>
           ))}
         </Animated.ScrollView>
-        {/* Modal hiển thị genres dạng lưới */}
-        {homeGenreModalVisible && (
-          <View style={{
-            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100,
-            backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center'
-          }}>
-            <View style={{
-              width: 360, backgroundColor: 'rgba(30,30,30,0.98)', borderRadius: 28, padding: 28,
-              shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.35, shadowRadius: 24,
-              elevation: 16,
-            }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }}>
-                <Text style={{
-                  color: '#fff', fontSize: 30, fontWeight: 'bold', letterSpacing: 0.5,
-                  textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 6
-                }}>
-                  Thể loại
-                </Text>
-                <TouchableOpacity
-                  onPress={() => setHomeGenreModalVisible(false)}
-                  style={{
-                    backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 20, width: 40, height: 40,
-                    alignItems: 'center', justifyContent: 'center', shadowColor: '#fff', shadowOpacity: 0.1
-                  }}
-                >
-                  <Ionicons name="close" size={28} color="#fff" />
-                </TouchableOpacity>
-              </View>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
-                {HOME_GENRES.map((genre) => (
-                  <TouchableOpacity
-                    key={genre._id}
-                    style={{
-                      width: '48%',
-                      backgroundColor: '#23272f',
-                      borderRadius: 18,
-                      paddingVertical: 26,
-                      marginBottom: 18,
-                      alignItems: 'center',
-                      borderWidth: 1.5,
-                      borderColor: '#444',
-                      shadowColor: '#000',
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.18,
-                      shadowRadius: 6,
-                      elevation: 4,
-                    }}
-                    activeOpacity={0.85}
-                    onPress={() => handleHomeGenreSelect(genre)}
-                  >
-                    <Text style={{
-                      color: '#fff',
-                      fontWeight: 'bold',
-                      fontSize: 17,
-                      textTransform: 'uppercase',
-                      letterSpacing: 0.5,
-                      textAlign: 'center',
-                      textShadowColor: 'rgba(0,0,0,0.4)',
-                      textShadowOffset: { width: 0, height: 1 },
-                      textShadowRadius: 3,
-                    }}>
-                      {genre.genre_name}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          </View>
-        )}
-        {homeGenreLoading && (
-          <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="large" color="#fff" />
-            <Text style={styles.loadingText}>Đang tải phim...</Text>
-          </View>
-        )}
         <SearchModal
           visible={searchModalVisible}
           onClose={() => setSearchModalVisible(false)}
@@ -951,6 +870,12 @@ export default function HomeScreen() {
           title={homeGenreTitle}
           customMovies={homeGenreCustomMovies || []}
         />
+        {homeGenreLoading && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="large" color="#fff" />
+            <Text style={styles.loadingText}>Đang tải phim...</Text>
+          </View>
+        )}
       </View>
     );
   };

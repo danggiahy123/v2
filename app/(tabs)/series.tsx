@@ -183,8 +183,9 @@ export default function SeriesScreen() {
           title="Phim bộ"
           onSearchPress={() => setSearchVisible(true)}
           onNotificationPress={() => {}}
-          showGenreButton
-          onGenrePress={() => setGenreModalVisible(true)}
+          showGenreSelector
+          genres={SERIES_GENRES}
+          onGenreSelect={handleGenreSelect}
           opacity={headerOpacity}
         />
         <View style={styles.loading}>
@@ -203,8 +204,9 @@ export default function SeriesScreen() {
           title="Phim bộ"
           onSearchPress={() => setSearchVisible(true)}
           onNotificationPress={() => {}}
-          showGenreButton
-          onGenrePress={() => setGenreModalVisible(true)}
+          showGenreSelector
+          genres={SERIES_GENRES}
+          onGenreSelect={handleGenreSelect}
           opacity={headerOpacity}
         />
         <View style={styles.error}>
@@ -225,8 +227,9 @@ export default function SeriesScreen() {
         title="Phim bộ"
         onSearchPress={() => setSearchVisible(true)}
         onNotificationPress={() => {}}
-        showGenreButton
-        onGenrePress={() => setGenreModalVisible(true)}
+        showGenreSelector
+        genres={SERIES_GENRES}
+        onGenreSelect={handleGenreSelect}
         opacity={headerOpacity}
       />
 
@@ -278,76 +281,6 @@ export default function SeriesScreen() {
         onClose={() => setSearchVisible(false)}
         category="series"
       />
-
-      {/* Genre Selector Modal */}
-      {genreModalVisible && (
-        <View style={{
-          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100,
-          backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center'
-        }}>
-          <View style={{
-            width: 360, backgroundColor: 'rgba(30,30,30,0.98)', borderRadius: 28, padding: 28,
-            shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.35, shadowRadius: 24,
-            elevation: 16,
-          }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }}>
-              <Text style={{
-                color: '#fff', fontSize: 30, fontWeight: 'bold', letterSpacing: 0.5,
-                textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 6
-              }}>
-                Thể loại
-              </Text>
-              <TouchableOpacity
-                onPress={() => setGenreModalVisible(false)}
-                style={{
-                  backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 20, width: 40, height: 40,
-                  alignItems: 'center', justifyContent: 'center', shadowColor: '#fff', shadowOpacity: 0.1
-                }}
-              >
-                <Ionicons name="close" size={28} color="#fff" />
-              </TouchableOpacity>
-            </View>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
-              {SERIES_GENRES.map((genre) => (
-                <TouchableOpacity
-                  key={genre._id}
-                  style={{
-                    width: '48%',
-                    backgroundColor: '#23272f',
-                    borderRadius: 18,
-                    paddingVertical: 26,
-                    marginBottom: 18,
-                    alignItems: 'center',
-                    borderWidth: 1.5,
-                    borderColor: '#444',
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.18,
-                    shadowRadius: 6,
-                    elevation: 4,
-                  }}
-                  activeOpacity={0.85}
-                  onPress={() => handleGenreSelect(genre)}
-                >
-                  <Text style={{
-                    color: '#fff',
-                    fontWeight: 'bold',
-                    fontSize: 17,
-                    textTransform: 'uppercase',
-                    letterSpacing: 0.5,
-                    textAlign: 'center',
-                    textShadowColor: 'rgba(0,0,0,0.4)',
-                    textShadowOffset: { width: 0, height: 1 },
-                    textShadowRadius: 3,
-                  }}>
-                    {genre.genre_name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        </View>
-      )}
 
       {/* ViewAllModal hiển thị list phim từ API */}
       <ViewAllModal

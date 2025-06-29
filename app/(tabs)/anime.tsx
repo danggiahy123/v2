@@ -134,6 +134,14 @@ export default function AnimeScreen() {
   const [selectedTitle, setSelectedTitle] = useState('');
   const [genreLoading, setGenreLoading] = useState(false);
 
+  // Anime genres data
+  const ANIME_GENRES = [
+    { genre_name: 'Hành động', _id: '6847d080101e640d01a0c387', movie_count: 4 },
+    { genre_name: 'Tình cảm', _id: '6847d080101e640d01a0c38a', movie_count: 0 },
+    { genre_name: 'Hài hước', _id: '6847d080101e640d01a0c38d', movie_count: 4 },
+    { genre_name: 'Kinh dị', _id: '6847d080101e640d01a0c390', movie_count: 2 },
+  ];
+
   const handleScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
     { 
@@ -276,8 +284,9 @@ export default function AnimeScreen() {
           title="Hoạt hình"
           onSearchPress={() => setSearchVisible(true)}
           onNotificationPress={() => {}}
-          onGenrePress={() => setGenreSelectorVisible(true)}
-          showGenreButton
+          showGenreSelector
+          genres={ANIME_GENRES}
+          onGenreSelect={handleGenreSelect}
           opacity={headerOpacity}
         />
         <View style={styles.loading}>
@@ -296,8 +305,9 @@ export default function AnimeScreen() {
           title="Hoạt hình"
           onSearchPress={() => setSearchVisible(true)}
           onNotificationPress={() => {}}
-          onGenrePress={() => setGenreSelectorVisible(true)}
-          showGenreButton
+          showGenreSelector
+          genres={ANIME_GENRES}
+          onGenreSelect={handleGenreSelect}
           opacity={headerOpacity}
         />
         <View style={styles.error}>
@@ -333,8 +343,9 @@ export default function AnimeScreen() {
         title="Hoạt hình"
         onSearchPress={() => setSearchVisible(true)}
         onNotificationPress={() => {}}
-        onGenrePress={() => setGenreSelectorVisible(true)}
-        showGenreButton
+        showGenreSelector
+        genres={ANIME_GENRES}
+        onGenreSelect={handleGenreSelect}
         opacity={headerOpacity}
       />
 
@@ -342,12 +353,6 @@ export default function AnimeScreen() {
         visible={searchVisible}
         onClose={() => setSearchVisible(false)}
         category="anime"
-      />
-
-      <GenreSelector
-        visible={genreSelectorVisible}
-        onClose={() => setGenreSelectorVisible(false)}
-        onSelectGenre={handleGenreSelect}
       />
 
       <ViewAllModal

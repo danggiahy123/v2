@@ -26,7 +26,7 @@
  * - useCallback handlers recommended
  */
 // import { useRouter } from 'expo-router'; // Not used in this component
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Image,
   StyleSheet,
@@ -35,6 +35,8 @@ import {
   View,
   Animated,
   Platform,
+  Modal,
+  FlatList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -58,6 +60,9 @@ import { LinearGradient } from 'expo-linear-gradient';
  * @param leftComponent - Custom left content thay thế title/logo (optional)
  * @param style - Additional custom styles (optional)
  * @param children - Additional content to render below logo/title (optional)
+ * @param genres - Array of genre objects
+ * @param onGenreSelect - Callback function to handle genre selection
+ * @param showGenreSelector - Toggle genre selector visibility
  */
 interface TabHeaderProps {
   title?: string;
@@ -75,6 +80,9 @@ interface TabHeaderProps {
   leftComponent?: React.ReactNode;
   style?: any;
   children?: React.ReactNode;
+  genres?: Array<{ _id: string; genre_name: string; movie_count?: number }>;
+  onGenreSelect?: (genre: any) => void;
+  showGenreSelector?: boolean;
 }
 
 export default function TabHeader({ 
@@ -93,8 +101,12 @@ export default function TabHeader({
   leftComponent,
   style,
   children,
+  genres = [],
+  onGenreSelect,
+  showGenreSelector = false,
 }: TabHeaderProps) {
   const insets = useSafeAreaInsets();
+  const [genreModalVisible, setGenreModalVisible] = useState(false);
   
   const defaultOpacity = useMemo(() => new Animated.Value(1), []);
   const defaultTranslateY = useMemo(() => new Animated.Value(0), []);
@@ -102,6 +114,21 @@ export default function TabHeader({
   const animatedTranslateY = translateY || defaultTranslateY;
   
   const memoizedGradientColors = useMemo(() => gradientColors, [gradientColors]);
+
+  const handleGenrePress = () => {
+    if (showGenreSelector && genres.length > 0) {
+      setGenreModalVisible(true);
+    } else if (onGenrePress) {
+      onGenrePress();
+    }
+  };
+
+  const handleGenreSelect = (genre: any) => {
+    setGenreModalVisible(false);
+    if (onGenreSelect) {
+      onGenreSelect(genre);
+    }
+  };
 
   const defaultActionButtons = (
     <View style={styles.actions}>
@@ -139,51 +166,95 @@ export default function TabHeader({
   ];
 
   return (
-    <Animated.View style={containerStyle}>
-      {showGradient && (
-        <LinearGradient
-          colors={memoizedGradientColors}
-          style={styles.gradient}
-          pointerEvents="none"
-        />
-      )}
-
-      <View style={styles.headerContent}>
-        <View style={styles.topRow}>
-          <View style={styles.leftSection}>
-            {leftComponent ? (
-              leftComponent
-            ) : (
-              <>
-                {title ? (
-                  <Text style={styles.title}>{title}</Text>
-                ) : showLogo ? (
-                  <Image 
-                    source={require('../../assets/anh/logo.png')} 
-                    style={styles.logoImage} 
-                  />
-                ) : null}
-              </>
-            )}
-          </View>
-          
-          {actionButtons || defaultActionButtons}
-        </View>
-
-        {showGenreButton && (
-          <TouchableOpacity 
-            style={styles.genreButton} 
-            onPress={onGenrePress}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.genreText}>Thể loại</Text>
-            <Ionicons name="chevron-up" size={16} color="#999" />
-          </TouchableOpacity>
+    <>
+      <Animated.View style={containerStyle}>
+        {showGradient && (
+          <LinearGradient
+            colors={memoizedGradientColors}
+            style={styles.gradient}
+            pointerEvents="none"
+          />
         )}
 
-        {children}
-      </View>
-    </Animated.View>
+        <View style={styles.headerContent}>
+          <View style={styles.topRow}>
+            <View style={styles.leftSection}>
+              {leftComponent ? (
+                leftComponent
+              ) : (
+                <>
+                  {title ? (
+                    <Text style={styles.title}>{title}</Text>
+                  ) : showLogo ? (
+                    <Image 
+                      source={require('../../assets/anh/logo.png')} 
+                      style={styles.logoImage} 
+                    />
+                  ) : null}
+                </>
+              )}
+            </View>
+            
+            {actionButtons || defaultActionButtons}
+          </View>
+
+          {(showGenreButton || showGenreSelector) && (
+            <TouchableOpacity 
+              style={styles.genreButton} 
+              onPress={handleGenrePress}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.genreText}>Thể loại</Text>
+              <Ionicons name="chevron-down" size={16} color="#999" />
+            </TouchableOpacity>
+          )}
+
+          {children}
+        </View>
+      </Animated.View>
+
+      {/* Genre Selector Modal */}
+      {showGenreSelector && (
+        <Modal
+          visible={genreModalVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setGenreModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.genreModal}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Chọn thể loại</Text>
+                <TouchableOpacity
+                  onPress={() => setGenreModalVisible(false)}
+                  style={styles.closeButton}
+                >
+                  <Ionicons name="close" size={24} color="#fff" />
+                </TouchableOpacity>
+              </View>
+              
+              <FlatList
+                data={genres}
+                keyExtractor={(item) => item._id}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.genreItem}
+                    onPress={() => handleGenreSelect(item)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.genreItemText}>{item.genre_name}</Text>
+                    {item.movie_count !== undefined && (
+                      <Text style={styles.movieCount}>({item.movie_count})</Text>
+                    )}
+                  </TouchableOpacity>
+                )}
+                contentContainerStyle={styles.genreList}
+              />
+            </View>
+          </View>
+        </Modal>
+      )}
+    </>
   );
 }
 
@@ -254,5 +325,60 @@ const styles = StyleSheet.create({
     color: '#999',
     fontSize: 14,
     marginRight: 4,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    paddingTop: 200, // Để modal xuất hiện dưới header
+  },
+  genreModal: {
+    width: 320,
+    maxHeight: 400,
+    backgroundColor: 'rgba(30,30,30,0.98)',
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 24,
+    elevation: 16,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  genreList: {
+    paddingVertical: 8,
+  },
+  genreItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginBottom: 8,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  genreItemText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  movieCount: {
+    color: '#999',
+    fontSize: 14,
   },
 }); 
