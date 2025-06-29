@@ -103,12 +103,12 @@ export const ContinueWatchingSection: React.FC<ContinueWatchingSectionProps> = (
           <Text style={styles.sectionTitle}>Tiếp tục xem</Text>
         </View>
 
-        {data.length > 0 && (
-          <TouchableOpacity onPress={onViewAll} style={styles.viewAllButton}>
-            <Text style={styles.seeAllText}>Xem tất cả</Text>
-            <Ionicons name="chevron-forward" size={16} color="#E50914" />
-          </TouchableOpacity>
-        )}
+        {/* {data.length > 0 && (
+          // <TouchableOpacity onPress={onViewAll} style={styles.viewAllButton}>
+          //   <Text style={styles.seeAllText}>Xem tất cả</Text>
+          //   <Ionicons name="chevron-forward" size={16} color="#E50914" />
+          // </TouchableOpacity>
+        )} */}
       </View>
 
       {/* Continue Watching List */}
