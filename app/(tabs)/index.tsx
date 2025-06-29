@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -41,6 +41,91 @@ interface MovieSection {
   movies: GridMovie[];
 }
 
+const HOME_GENRES = [
+  { genre_name: 'Hoạt hình', _id: '6847d080101e640d01a0c37f', children_count: 4, movie_count: 9 },
+  { genre_name: 'Phim Chiếu Rạp', _id: '683d7cfdd0ee4aeb15a1138a', children_count: 0, movie_count: 7 },
+  { genre_name: 'Phim bộ', _id: '68418dc73556ab3de6e4c434', children_count: 6, movie_count: 0 },
+  { genre_name: 'Phim lẻ', _id: '6847d080101e640d01a0c384', children_count: 4, movie_count: 56 },
+  { genre_name: 'Hoạt Hình', _id: '683d7c44d0ee4aeb15a11382', children_count: 6, movie_count: 4 },
+  { genre_name: 'Thể Thao', _id: '683d7c3cd0ee4aeb15a1137e', children_count: 3, movie_count: 10 },
+  { genre_name: 'Phim Tài Liệu', _id: '68418dca3556ab3de6e4c479', children_count: 2, movie_count: 0 },
+];
+
+const HOME_ANIMATION_MOVIES = [
+  {
+    _id: "683e737c602b36157f1c7bb9",
+    title: "Wallace & Gromit: Vengeance Most Fowl",
+    description: "Wallace và chú chó Gromit đối mặt với một kẻ thù cũ trong cuộc phiêu lưu hoạt hình hấp dẫn và hài hước. #phim hoạt hình #phiêu lưu #hài hước",
+    poster: "https://imagedelivery.net/qr1FX-TzU11V5mCFgmBaYg/ab1d5203-6d4b-471f-0556-490cb4ddfb00/public",
+    producer: "Aardman Animations & Netflix",
+    price: 0,
+  },
+  {
+    _id: "683e735f602b36157f1c7bb2",
+    title: "The Wild Robot",
+    description: "Sau một vụ đắm tàu, một robot mang tên Roz sống sót trên đảo hoang và học cách sinh tồn giữa thiên nhiên hoang dã. #phim hoạt hình #phiêu lưu #gia đình",
+    poster: "https://imagedelivery.net/qr1FX-TzU11V5mCFgmBaYg/33ebf60d-70a5-4a33-a6ee-2de4f19d6700/public",
+    producer: "DreamWorks Animation",
+    price: 0,
+  },
+  {
+    _id: "683e7342602b36157f1c7bab",
+    title: "The Million Dollar Conan",
+    description: "Thám tử Conan bước vào một vụ án liên quan đến một triệu đô la bị đánh cắp, nơi mạng sống và sự thật bị đe dọa. #phim hoạt hình #trinh thám #anime",
+    poster: "https://imagedelivery.net/qr1FX-TzU11V5mCFgmBaYg/26c05a29-e04c-41a1-45c0-9f44e3454900/public",
+    producer: "TMS Entertainment",
+    price: 120000,
+  },
+  {
+    _id: "683e7317602b36157f1c7ba4",
+    title: "The Casagrandes Movie",
+    description: "Gia đình Casagrandes bắt đầu một cuộc phiêu lưu đầy bất ngờ khi kỳ nghỉ hè trở thành một nhiệm vụ giải cứu! #phim hoạt hình #gia đình",
+    poster: "https://imagedelivery.net/qr1FX-TzU11V5mCFgmBaYg/f69bb589-2ac3-4844-89e1-1364fbb9ca00/public",
+    producer: "Nickelodeon Animation Studio",
+    price: 0,
+  },
+  {
+    _id: "683e7290602b36157f1c7b94",
+    title: "Kung Fu Panda 4",
+    description: "Po trở lại trong hành trình mới, đối đầu với mối đe dọa bí ẩn và truyền lại tinh thần chiến binh rồng cho thế hệ kế tiếp. #phim hoạt hình #hành động",
+    poster: "https://imagedelivery.net/qr1FX-TzU11V5mCFgmBaYg/36c75476-f15b-48f3-8490-40b4e104a300/public",
+    producer: "DreamWorks Animation",
+    price: 120000,
+  },
+  {
+    _id: "683e7274602b36157f1c7b8d",
+    title: "The Garfield Movie",
+    description: "Chú mèo lười Garfield quay trở lại màn ảnh rộng trong cuộc phiêu lưu hài hước cùng người cha thất lạc và người bạn trung thành Odie. #phim hoạt hình #hài",
+    poster: "https://imagedelivery.net/qr1FX-TzU11V5mCFgmBaYg/dd967b15-16a4-4f63-9987-c09a560bd100/public",
+    producer: "Sony Pictures Animation",
+    price: 0,
+  },
+  {
+    _id: "683e6fdc602b36157f1c7b66",
+    title: "Despicable Me",
+    description: "Phim hoạt hình hài hước nổi tiếng kể về Gru - một tên ác nhân cùng đội quân Minions dễ thương thực hiện những âm mưu kỳ quặc. Phim hoạt hình vui nhộn dành cho mọi lứa tuổi.",
+    poster: "https://imagedelivery.net/qr1FX-TzU11V5mCFgmBaYg/73423c86-adbe-434f-4555-3d027cbee800/public",
+    producer: "Illumination Entertainment",
+    price: 0,
+  },
+  {
+    _id: "683e6f83602b36157f1c7b5f",
+    title: "Doraemon: Nobita và Trận Chiến Ở Hành Tinh Mini",
+    description: "Phim hoạt hình Nhật Bản nổi tiếng - Doraemon và nhóm bạn tham gia hành trình giải cứu một hành tinh nhỏ bé đang bị đe dọa. Phim hoạt hình dành cho mọi lứa tuổi.",
+    poster: "https://imagedelivery.net/qr1FX-TzU11V5mCFgmBaYg/082f3cf9-5d56-48b8-b4db-f1f768b85200/public",
+    producer: "Toho Animation",
+    price: 0,
+  },
+  {
+    _id: "683d94d3602b36157f1c7af3",
+    title: "Spider-Man: Across the Spider-Verse",
+    description: "Miles Morales du hành qua đa vũ trụ và đối mặt với đội quân Spider-People, nơi cậu phải định nghĩa lại điều gì tạo nên một người hùng.",
+    poster: "https://imagedelivery.net/qr1FX-TzU11V5mCFgmBaYg/43c32d74-da85-45ad-4eb2-26763d7c5500/public",
+    producer: "Sony Pictures Animation, Marvel Entertainment",
+    price: 100000,
+  },
+];
+
 export default function HomeScreen() {
   const authState = useAppSelector((state) => state.auth);
   const { userId } = authState || { userId: null };
@@ -64,6 +149,12 @@ export default function HomeScreen() {
   const [genreModalVisible, setGenreModalVisible] = useState(false);
   const [actionGenreMovies, setActionGenreMovies] = useState<GridMovie[]>([]);
   const [actionGenre, setActionGenre] = useState<any>(null);
+  const [homeGenreModalVisible, setHomeGenreModalVisible] = useState(false);
+  const [homeGenreSelected, setHomeGenreSelected] = useState('');
+  const [homeGenreTitle, setHomeGenreTitle] = useState('');
+  const [homeGenreViewAllVisible, setHomeGenreViewAllVisible] = useState(false);
+  const [homeGenreCustomMovies, setHomeGenreCustomMovies] = useState<GridMovie[]>([]);
+  const [homeGenreLoading, setHomeGenreLoading] = useState(false);
 
   const bannerFlatListRef = useRef<FlatList>(null);
 
@@ -302,6 +393,36 @@ export default function HomeScreen() {
     setSelectedTitle(item.genre_name);
     setViewAllModalVisible(true);
     setGenreModalVisible(false);
+  };
+
+  const handleHomeGenreSelect = async (genre: any) => {
+    try {
+      setHomeGenreLoading(true);
+      setHomeGenreSelected(genre._id);
+      setHomeGenreTitle(genre.genre_name);
+      
+      // Gọi API để lấy phim theo thể loại
+      const response = await genreService.getMoviesByGenre(genre._id, 1, 50, true);
+      const movies = response.data.movies.map((movie: any) => ({
+        _id: movie._id,
+        title: movie.movie_title,
+        poster: movie.poster_path,
+        producer: movie.producer,
+        price: movie.price,
+        description: movie.description
+      }));
+      
+      setHomeGenreCustomMovies(movies);
+      setHomeGenreViewAllVisible(true);
+      setHomeGenreModalVisible(false);
+    } catch (error) {
+      console.error('Error fetching genre movies:', error);
+      setHomeGenreCustomMovies([]);
+      setHomeGenreViewAllVisible(true);
+      setHomeGenreModalVisible(false);
+    } finally {
+      setHomeGenreLoading(false);
+    }
   };
 
   const renderBanner = () => {
@@ -677,15 +798,15 @@ export default function HomeScreen() {
           }>
           {renderBanner()}
           {/* Genre selector button below banner */}
-          <View style={styles.genreSelectorContainer}>
+          <View style={{ marginBottom: 18, marginTop: 10, alignItems: 'flex-start', paddingHorizontal: 16 }}>
             <TouchableOpacity
-              style={styles.genreSelectorButton}
-              onPress={() => setGenreModalVisible(true)}
-              activeOpacity={0.7}
+              style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#23272f', borderRadius: 20, paddingVertical: 10, paddingHorizontal: 18, elevation: 4 }}
+              onPress={() => setHomeGenreModalVisible(true)}
+              activeOpacity={0.85}
             >
-              <Ionicons name="grid-outline" size={18} color="#FFF" style={styles.genreSelectorIcon} />
-              <Text style={styles.genreSelectorText}>Thể loại</Text>
-              <Ionicons name="chevron-up" size={16} color="#FFF" style={styles.genreSelectorArrow} />
+              <Ionicons name="grid-outline" size={18} color="#FFF" style={{ marginRight: 8 }} />
+              <Text style={{ color: '#fff', fontSize: 17, fontWeight: '600', marginRight: 4 }}>Thể loại</Text>
+              <Ionicons name="chevron-up" size={16} color="#FFF" />
             </TouchableOpacity>
           </View>
           {renderContinueWatching()}
@@ -739,35 +860,80 @@ export default function HomeScreen() {
           ))}
         </Animated.ScrollView>
         {/* Modal hiển thị genres dạng lưới */}
-        <Modal
-          visible={genreModalVisible}
-          animationType="slide"
-          transparent
-          onRequestClose={() => setGenreModalVisible(false)}
-        >
+        {homeGenreModalVisible && (
           <View style={{
-            flex: 1,
-            backgroundColor: 'rgba(0,0,0,0.96)',
-            justifyContent: 'flex-start',
-            paddingTop: 60,
+            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100,
+            backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center'
           }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 10 }}>
-              <Text style={{ color: '#fff', fontSize: 24, fontWeight: 'bold' }}>Thể loại</Text>
-              <TouchableOpacity onPress={() => setGenreModalVisible(false)}>
-                <Ionicons name="close" size={32} color="#fff" />
-              </TouchableOpacity>
+            <View style={{
+              width: 360, backgroundColor: 'rgba(30,30,30,0.98)', borderRadius: 28, padding: 28,
+              shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.35, shadowRadius: 24,
+              elevation: 16,
+            }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }}>
+                <Text style={{
+                  color: '#fff', fontSize: 30, fontWeight: 'bold', letterSpacing: 0.5,
+                  textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 6
+                }}>
+                  Thể loại
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setHomeGenreModalVisible(false)}
+                  style={{
+                    backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 20, width: 40, height: 40,
+                    alignItems: 'center', justifyContent: 'center', shadowColor: '#fff', shadowOpacity: 0.1
+                  }}
+                >
+                  <Ionicons name="close" size={28} color="#fff" />
+                </TouchableOpacity>
+              </View>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+                {HOME_GENRES.map((genre) => (
+                  <TouchableOpacity
+                    key={genre._id}
+                    style={{
+                      width: '48%',
+                      backgroundColor: '#23272f',
+                      borderRadius: 18,
+                      paddingVertical: 26,
+                      marginBottom: 18,
+                      alignItems: 'center',
+                      borderWidth: 1.5,
+                      borderColor: '#444',
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.18,
+                      shadowRadius: 6,
+                      elevation: 4,
+                    }}
+                    activeOpacity={0.85}
+                    onPress={() => handleHomeGenreSelect(genre)}
+                  >
+                    <Text style={{
+                      color: '#fff',
+                      fontWeight: 'bold',
+                      fontSize: 17,
+                      textTransform: 'uppercase',
+                      letterSpacing: 0.5,
+                      textAlign: 'center',
+                      textShadowColor: 'rgba(0,0,0,0.4)',
+                      textShadowOffset: { width: 0, height: 1 },
+                      textShadowRadius: 3,
+                    }}>
+                      {genre.genre_name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
-            <GenreGrid
-              genres={genres}
-              onGenrePress={item => {
-                setSelectedCategory(item._id);
-                setSelectedTitle(item.genre_name);
-                setViewAllModalVisible(true);
-                setGenreModalVisible(false);
-              }}
-            />
           </View>
-        </Modal>
+        )}
+        {homeGenreLoading && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="large" color="#fff" />
+            <Text style={styles.loadingText}>Đang tải phim...</Text>
+          </View>
+        )}
         <SearchModal
           visible={searchModalVisible}
           onClose={() => setSearchModalVisible(false)}
@@ -777,6 +943,13 @@ export default function HomeScreen() {
           onClose={() => setViewAllModalVisible(false)}
           category={selectedCategory}
           title={selectedTitle}
+        />
+        <ViewAllModal
+          visible={homeGenreViewAllVisible}
+          onClose={() => setHomeGenreViewAllVisible(false)}
+          category={homeGenreSelected}
+          title={homeGenreTitle}
+          customMovies={homeGenreCustomMovies || []}
         />
       </View>
     );
@@ -1536,5 +1709,16 @@ const styles = StyleSheet.create({
   },
   actionMovieList: {
     paddingHorizontal: 10,
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
   },
 });

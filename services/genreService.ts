@@ -28,9 +28,13 @@ export interface GenreResponse {
 export interface GenreMoviesResponse {
   status: string;
   data: {
-    genre: Genre;
     movies: any[];
-    total: number;
+    pagination: {
+      total: number;
+      page: number;
+      limit: number;
+      totalPages: number;
+    };
   };
 }
 
@@ -61,6 +65,24 @@ class GenreService {
       return response.data;
     } catch (error) {
       console.error('Error fetching genre movies:', error);
+      throw error;
+    }
+  }
+
+  // Lấy danh sách phim của thể loại với pagination và include_children
+  async getMoviesByGenre(genreId: string, page: number = 1, limit: number = 10, includeChildren: boolean = true): Promise<GenreMoviesResponse> {
+    try {
+      const params = new URLSearchParams({
+        include_children: includeChildren.toString(),
+        page: page.toString(),
+        limit: limit.toString(),
+        sort: '-createdAt'
+      });
+
+      const response = await axios.get(`${API_BASE_URL}/api/genres/${genreId}/movies?${params.toString()}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching movies by genre:', error);
       throw error;
     }
   }

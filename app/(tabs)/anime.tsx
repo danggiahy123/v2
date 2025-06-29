@@ -14,6 +14,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { TabHeader, SearchModal, ViewAllModal } from '../../components/ui';
 import { animeService } from '../../services/animeService';
+import { genreService } from '../../services/genreService';
 import { Banner, GenreSelector } from '../../components/anime';
 import { useRouter } from 'expo-router';
 
@@ -131,6 +132,7 @@ export default function AnimeScreen() {
   const [viewAllCustomMovies, setViewAllCustomMovies] = useState<any[] | null>(null);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedTitle, setSelectedTitle] = useState('');
+  const [genreLoading, setGenreLoading] = useState(false);
 
   const handleScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -238,6 +240,34 @@ export default function AnimeScreen() {
     );
   };
 
+  const handleGenreSelect = async (genre: any) => {
+    try {
+      setGenreLoading(true);
+      setSelectedCategory(genre._id);
+      setSelectedTitle(genre.genre_name);
+      
+      // Gọi API để lấy phim theo thể loại
+      const response = await genreService.getMoviesByGenre(genre._id, 1, 50, true);
+      const movies = response.data.movies.map((movie: any) => ({
+        _id: movie._id,
+        title: movie.movie_title,
+        poster: movie.poster_path,
+        producer: movie.producer,
+        price: movie.price,
+        description: movie.description
+      }));
+      
+      setViewAllCustomMovies(movies);
+      setViewAllModalVisible(true);
+    } catch (error) {
+      console.error('Error fetching genre movies:', error);
+      setViewAllCustomMovies([]);
+      setViewAllModalVisible(true);
+    } finally {
+      setGenreLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.container}>
@@ -317,34 +347,7 @@ export default function AnimeScreen() {
       <GenreSelector
         visible={genreSelectorVisible}
         onClose={() => setGenreSelectorVisible(false)}
-        onSelectGenre={(genre) => {
-          if (genre._id === '6847d080101e640d01a0c387') {
-            setSelectedCategory(genre._id);
-            setSelectedTitle(genre.genre_name);
-            setViewAllCustomMovies(ACTION_ANIME_MOVIES);
-            setViewAllModalVisible(true);
-          } else if (genre._id === '6847d080101e640d01a0c38a') {
-            setSelectedCategory(genre._id);
-            setSelectedTitle(genre.genre_name);
-            setViewAllCustomMovies([]);
-            setViewAllModalVisible(true);
-          } else if (genre._id === '6847d080101e640d01a0c38d') {
-            setSelectedCategory(genre._id);
-            setSelectedTitle(genre.genre_name);
-            setViewAllCustomMovies(FUNNY_ANIME_MOVIES);
-            setViewAllModalVisible(true);
-          } else if (genre._id === '6847d080101e640d01a0c390') {
-            setSelectedCategory(genre._id);
-            setSelectedTitle(genre.genre_name);
-            setViewAllCustomMovies(HORROR_ANIME_MOVIES);
-            setViewAllModalVisible(true);
-          } else {
-            setSelectedCategory(genre._id);
-            setSelectedTitle(genre.genre_name);
-            setViewAllCustomMovies([]);
-            setViewAllModalVisible(true);
-          }
-        }}
+        onSelectGenre={handleGenreSelect}
       />
 
       <ViewAllModal
@@ -354,6 +357,13 @@ export default function AnimeScreen() {
         title={selectedTitle}
         customMovies={viewAllCustomMovies || undefined}
       />
+
+      {genreLoading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#fff" />
+          <Text style={styles.loadingText}>Đang tải phim...</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -500,5 +510,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     textAlign: 'center',
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
   },
 }); 

@@ -17,6 +17,7 @@ import { useRouter } from 'expo-router';
 
 import { TabHeader, SearchModal, ViewAllModal } from '../../components/ui';
 import { seriesService } from '../../services/seriesService';
+import { genreService } from '../../services/genreService';
 import { SeriesBanner } from '../../components/series';
 import { SeriesGenreSelector } from '../../components/series/SeriesGenreSelector';
 
@@ -52,6 +53,8 @@ export default function SeriesScreen() {
   const [viewAllModalVisible, setViewAllModalVisible] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedTitle, setSelectedTitle] = useState('');
+  const [genreLoading, setGenreLoading] = useState(false);
+  const [genreCustomMovies, setGenreCustomMovies] = useState<any[]>([]);
 
   const router = useRouter();
 
@@ -110,6 +113,36 @@ export default function SeriesScreen() {
       setError('Có lỗi xảy ra khi tải dữ liệu');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGenreSelect = async (genre: any) => {
+    try {
+      setGenreLoading(true);
+      setSelectedCategory(genre._id);
+      setSelectedTitle(genre.genre_name);
+      
+      // Gọi API để lấy phim theo thể loại
+      const response = await genreService.getMoviesByGenre(genre._id, 1, 50, true);
+      const movies = response.data.movies.map((movie: any) => ({
+        _id: movie._id,
+        title: movie.movie_title,
+        poster: movie.poster_path,
+        producer: movie.producer,
+        price: movie.price,
+        description: movie.description
+      }));
+      
+      setGenreCustomMovies(movies);
+      setViewAllModalVisible(true);
+      setGenreModalVisible(false);
+    } catch (error) {
+      console.error('Error fetching genre movies:', error);
+      setGenreCustomMovies([]);
+      setViewAllModalVisible(true);
+      setGenreModalVisible(false);
+    } finally {
+      setGenreLoading(false);
     }
   };
 
@@ -294,12 +327,7 @@ export default function SeriesScreen() {
                     elevation: 4,
                   }}
                   activeOpacity={0.85}
-                  onPress={() => {
-                    setSelectedCategory(genre._id);
-                    setSelectedTitle(genre.genre_name);
-                    setViewAllModalVisible(true);
-                    setGenreModalVisible(false);
-                  }}
+                  onPress={() => handleGenreSelect(genre)}
                 >
                   <Text style={{
                     color: '#fff',
@@ -321,14 +349,21 @@ export default function SeriesScreen() {
         </View>
       )}
 
-      {/* ViewAllModal hiển thị list phim (hiện tại là rỗng) */}
+      {/* ViewAllModal hiển thị list phim từ API */}
       <ViewAllModal
         visible={viewAllModalVisible}
         onClose={() => setViewAllModalVisible(false)}
         category={selectedCategory}
         title={selectedTitle}
-        customMovies={[]}
+        customMovies={genreCustomMovies}
       />
+
+      {genreLoading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#fff" />
+          <Text style={styles.loadingText}>Đang tải phim...</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -468,5 +503,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
     paddingHorizontal: 16,
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
   },
 });
