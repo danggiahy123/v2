@@ -42,6 +42,7 @@ import { Notification } from '../../components/ui';
 import { SkeletonLoader } from '../../components/ui/AnimatedElements';
 import { getResumeWatchingInfo, getResumeButtonText, shouldShowContinueBadge } from '../../utils/watchingHelper';
 import { useFocusEffect } from '@react-navigation/native';
+import { Collapsible } from '../../components/layout/Collapsible';
 
 
 // Screen width for responsive design - will be used in future updates
@@ -849,10 +850,13 @@ export default function MovieDetailScreen() {
                   </>
                 )}
               </View>
-              
-              <Text style={styles.movieDescription} numberOfLines={4}>
-            {movieDetail.description}
-          </Text>
+              <View style={{ marginTop: 4 }}>
+                <Collapsible iconColor="#888">
+                  <Text style={styles.movieDescription}>
+                    {movieDetail.description}
+                  </Text>
+                </Collapsible>
+              </View>
             </View>
           </View>
 
@@ -979,29 +983,6 @@ export default function MovieDetailScreen() {
   };
 
 
-
-  const renderDescription = () => {
-    if (!movieDetail) return null;
-
-    return (
-      
-        <View style={styles.descriptionContainer}>
-          <Text style={styles.sectionTitle}>Description</Text>
-          <Text style={styles.descriptionText}>{movieDetail.description}</Text>
-          
-          
-            <View style={styles.genresContainer}>
-              {movieDetail.genres.map((genre, index) => (
-                <View key={genre._id} style={styles.genreTag}>
-                  <Text style={styles.genreText}>{genre.name}</Text>
-                </View>
-              ))}
-            </View>
-          
-        </View>
-      
-    );
-  };
 
   const renderEpisodes = () => {
     // Don't render if it's not a series

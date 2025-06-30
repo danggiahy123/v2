@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Image, ActivityIndicator, ScrollView, StyleSheet } from 'react-native';
 import { animeService } from '../../services/animeService';
+import { Collapsible } from '../layout/Collapsible';
 
 interface AnimeDetailProps {
   animeId: string;
@@ -22,13 +23,15 @@ const AnimeDetail: React.FC<AnimeDetailProps> = ({ animeId }) => {
 
   return (
     <ScrollView style={styles.container}>
-      <Image source={{ uri: anime.poster }} style={styles.poster} resizeMode="cover" />
-      <Text style={styles.title}>{anime.title}</Text>
-      <Text style={styles.genres}>{anime.genres?.map((g: any) => g.name || g).join(', ')}</Text>
-      <Text style={styles.desc}>{anime.description}</Text>
-      <Text style={styles.info}>Số tập: {anime.total_episodes || 1}</Text>
-      <Text style={styles.info}>Giá: {anime.price_display || (anime.price === 0 ? 'Miễn phí' : anime.price + ' VNĐ')}</Text>
-      <Text style={styles.info}>Trạng thái: {anime.release_status}</Text>
+      <Collapsible title="Thông tin phim">
+        <Image source={{ uri: anime.poster }} style={styles.poster} resizeMode="cover" />
+        <Text style={styles.title}>{anime.title}</Text>
+        <Text style={styles.genres}>{anime.genres?.map((g: any) => g.name || g).join(', ')}</Text>
+        <Text style={styles.desc}>{anime.description}</Text>
+        <Text style={styles.info}>Số tập: {anime.total_episodes || 1}</Text>
+        <Text style={styles.info}>Giá: {anime.price_display || (anime.price === 0 ? 'Miễn phí' : anime.price + ' VNĐ')}</Text>
+        <Text style={styles.info}>Trạng thái: {anime.release_status}</Text>
+      </Collapsible>
       {anime.episodes && anime.episodes.length > 0 && (
         <View style={{ marginTop: 18 }}>
           <Text style={styles.sectionTitle}>Danh sách tập</Text>
