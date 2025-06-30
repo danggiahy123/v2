@@ -13,6 +13,10 @@ export interface Genre {
   sort_order: number;
   created_at: string;
   updated_at: string;
+  movie_count?: number;
+  has_children?: boolean;
+  children_count?: number;
+  children?: Genre[];
 }
 
 export interface GenreResponse {

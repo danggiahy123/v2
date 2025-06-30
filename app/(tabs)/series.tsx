@@ -17,7 +17,7 @@ import { useRouter } from 'expo-router';
 
 import { TabHeader, SearchModal, ViewAllModal } from '../../components/ui';
 import { seriesService } from '../../services/seriesService';
-import { genreService } from '../../services/genreService';
+import { genreService, Genre } from '../../services/genreService';
 import { SeriesBanner } from '../../components/series';
 import { SeriesGenreSelector } from '../../components/series/SeriesGenreSelector';
 
@@ -28,15 +28,6 @@ type Movie = {
   producer: string;
   movieType: string;
 };
-
-const SERIES_GENRES = [
-  { genre_name: 'Phim drama', _id: '68418dc73556ab3de6e4c437', movie_count: 0 },
-  { genre_name: 'Phim Bộ Hàn Quốc', _id: '68418dc73556ab3de6e4c43a', movie_count: 0 },
-  { genre_name: 'Phim Bộ Trung Quốc', _id: '68418dc73556ab3de6e4c43d', movie_count: 0 },
-  { genre_name: 'Phim Bộ Thái Lan', _id: '68418dc73556ab3de6e4c440', movie_count: 0 },
-  { genre_name: 'Phim Bộ Mỹ', _id: '68418dc83556ab3de6e4c446', movie_count: 0 },
-  { genre_name: 'Sitcom', _id: '68418dc83556ab3de6e4c449', movie_count: 0 },
-];
 
 export default function SeriesScreen() {
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -55,6 +46,11 @@ export default function SeriesScreen() {
   const [selectedTitle, setSelectedTitle] = useState('');
   const [genreLoading, setGenreLoading] = useState(false);
   const [genreCustomMovies, setGenreCustomMovies] = useState<any[]>([]);
+  
+  // Thêm state cho thể loại từ API
+  const [seriesGenres, setSeriesGenres] = useState<Genre[]>([]);
+  const [genresLoading, setGenresLoading] = useState(true);
+  const [genresError, setGenresError] = useState<string | null>(null);
 
   const router = useRouter();
 
@@ -79,6 +75,7 @@ export default function SeriesScreen() {
 
   useEffect(() => {
     fetchSeriesData();
+    fetchSeriesGenres();
   }, []);
 
   const fetchSeriesData = async () => {
@@ -116,7 +113,39 @@ export default function SeriesScreen() {
     }
   };
 
-  const handleGenreSelect = async (genre: any) => {
+  // Thêm hàm fetch thể loại từ API
+  const fetchSeriesGenres = async () => {
+    try {
+      setGenresLoading(true);
+      setGenresError(null);
+      const response = await genreService.getGenres('all');
+      
+      if (response.status === 'success' && response.data.genres) {
+        // Tìm thể loại "Phim bộ" và lấy các thể loại con
+        const seriesParent = response.data.genres.find(
+          (genre: Genre) => genre.genre_name === 'Phim bộ' && genre.is_parent
+        );
+        
+        if (seriesParent && seriesParent.children) {
+          setSeriesGenres(seriesParent.children);
+        } else {
+          // Fallback: nếu không tìm thấy thể loại cha, lấy tất cả thể loại có movie_count > 0
+          const activeGenres = response.data.genres.filter(
+            (genre: Genre) => genre.movie_count && genre.movie_count > 0 && genre.is_active
+          );
+          setSeriesGenres(activeGenres);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching series genres:', err);
+      setGenresError('Có lỗi xảy ra khi tải thể loại');
+      setSeriesGenres([]); // Để trống nếu API lỗi
+    } finally {
+      setGenresLoading(false);
+    }
+  };
+
+  const handleGenreSelect = async (genre: Genre) => {
     try {
       setGenreLoading(true);
       setSelectedCategory(genre._id);
@@ -175,7 +204,7 @@ export default function SeriesScreen() {
     );
   };
 
-  if (loading) {
+  if (loading || genresLoading) {
     return (
       <View style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor="#000" />
@@ -184,7 +213,7 @@ export default function SeriesScreen() {
           onSearchPress={() => setSearchVisible(true)}
           onNotificationPress={() => {}}
           showGenreSelector
-          genres={SERIES_GENRES}
+          genres={seriesGenres}
           onGenreSelect={handleGenreSelect}
           opacity={headerOpacity}
         />
@@ -196,7 +225,7 @@ export default function SeriesScreen() {
     );
   }
 
-  if (error) {
+  if (error || genresError) {
     return (
       <View style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor="#000" />
@@ -205,14 +234,17 @@ export default function SeriesScreen() {
           onSearchPress={() => setSearchVisible(true)}
           onNotificationPress={() => {}}
           showGenreSelector
-          genres={SERIES_GENRES}
+          genres={seriesGenres}
           onGenreSelect={handleGenreSelect}
           opacity={headerOpacity}
         />
         <View style={styles.error}>
           <Ionicons name="alert-circle" size={48} color="#ff6b6b" />
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={fetchSeriesData}>
+          <Text style={styles.errorText}>{error || genresError}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => {
+            fetchSeriesData();
+            fetchSeriesGenres();
+          }}>
             <Text style={styles.retryButtonText}>Thử lại</Text>
           </TouchableOpacity>
         </View>
@@ -228,7 +260,7 @@ export default function SeriesScreen() {
         onSearchPress={() => setSearchVisible(true)}
         onNotificationPress={() => {}}
         showGenreSelector
-        genres={SERIES_GENRES}
+        genres={seriesGenres}
         onGenreSelect={handleGenreSelect}
         opacity={headerOpacity}
       />
