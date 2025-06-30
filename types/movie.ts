@@ -36,6 +36,9 @@ export interface GridMovie {
   producer: string;               // Nhà sản xuất
   rating?: number;                // Rating score (optional)
   year?: number;                  // Release year (optional)
+  is_free?: boolean;              // Có miễn phí không (optional)
+  price?: number;                 // Giá thuê (optional)
+  price_display?: string;         // Giá hiển thị (optional)
 }
 
 /**

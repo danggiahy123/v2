@@ -20,6 +20,7 @@ import { seriesService } from '../../services/seriesService';
 import { genreService, Genre } from '../../services/genreService';
 import { SeriesBanner } from '../../components/series';
 import { SeriesGenreSelector } from '../../components/series/SeriesGenreSelector';
+import { shouldShowPaidBadge, enrichMoviesWithPriceInfo } from '../../utils/moviePriceHelper';
 
 type Movie = {
   movieId: string;
@@ -27,6 +28,9 @@ type Movie = {
   poster: string;
   producer: string;
   movieType: string;
+  price?: number;
+  is_free?: boolean;
+  price_display?: string;
 };
 
 export default function SeriesScreen() {
@@ -100,10 +104,29 @@ export default function SeriesScreen() {
         movieType: series.movieType || series.movie_type || '',
       });
 
-      setTrending(extractMovies(trendingRes).map(convertToMovie));
-      setVietnamese(extractMovies(vietnameseRes).map(convertToMovie));
-      setAnime(extractMovies(animeRes).map(convertToMovie));
-      setRecommended(extractMovies(trendingRes).map(convertToMovie));
+      const trendingMovies = extractMovies(trendingRes).map(convertToMovie);
+      const vietnameseMovies = extractMovies(vietnameseRes).map(convertToMovie);
+      const animeMovies = extractMovies(animeRes).map(convertToMovie);
+      
+      // 💰 Enhance series data với price info
+      try {
+        const [enhancedTrending, enhancedVietnamese, enhancedAnime] = await Promise.all([
+          enrichMoviesWithPriceInfo(trendingMovies, 2),
+          enrichMoviesWithPriceInfo(vietnameseMovies, 2),
+          enrichMoviesWithPriceInfo(animeMovies, 2)
+        ]);
+        
+        setTrending(enhancedTrending);
+        setVietnamese(enhancedVietnamese);
+        setAnime(enhancedAnime);
+        setRecommended(enhancedTrending); // Recommended uses trending data
+      } catch (enhanceError) {
+        console.warn('⚠️ [SeriesScreen] Failed to enhance with price info, using original data:', enhanceError);
+        setTrending(trendingMovies);
+        setVietnamese(vietnameseMovies);
+        setAnime(animeMovies);
+        setRecommended(trendingMovies);
+      }
 
     } catch (err) {
       console.error('Error fetching series data:', err);
@@ -180,7 +203,17 @@ export default function SeriesScreen() {
       style={styles.movieItem}
       onPress={() => router.push(`/movie/${item.movieId}`)}
     >
-      <Image source={{ uri: item.poster }} style={styles.poster} resizeMode="cover" />
+      <View style={styles.posterContainer}>
+        <Image source={{ uri: item.poster }} style={styles.poster} resizeMode="cover" />
+        
+        {/* Badge "Trả phí" cho series trả phí */}
+        {shouldShowPaidBadge(item) && (
+          <View style={styles.paidBadge}>
+            <Ionicons name="card" size={8} color="#fff" />
+            <Text style={styles.paidBadgeText}>Trả phí</Text>
+          </View>
+        )}
+      </View>
     </TouchableOpacity>
   );
 
@@ -290,13 +323,24 @@ export default function SeriesScreen() {
                   <View style={styles.rankContainer}>
                     <Text style={styles.rankNumber}>{index + 1}</Text>
                   </View>
-                  <Image source={{ uri: item.poster }} style={styles.trendingPoster} />
-                  <LinearGradient
-                    colors={['transparent', 'rgba(0,0,0,0.9)']}
-                    style={styles.trendingGradient}
-                  >
-                    <Text style={styles.trendingTitle} numberOfLines={2}>{item.title}</Text>
-                  </LinearGradient>
+                  <View style={styles.trendingPosterContainer}>
+                    <Image source={{ uri: item.poster }} style={styles.trendingPoster} />
+                    
+                    {/* Badge "Trả phí" cho trending series */}
+                    {shouldShowPaidBadge(item) && (
+                      <View style={styles.trendingPaidBadge}>
+                        <Ionicons name="card" size={8} color="#fff" />
+                        <Text style={styles.trendingPaidText}>Trả phí</Text>
+                      </View>
+                    )}
+                    
+                    <LinearGradient
+                      colors={['transparent', 'rgba(0,0,0,0.9)']}
+                      style={styles.trendingGradient}
+                    >
+                      <Text style={styles.trendingTitle} numberOfLines={2}>{item.title}</Text>
+                    </LinearGradient>
+                  </View>
                 </TouchableOpacity>
               )}
               keyExtractor={(item) => item.movieId}
@@ -479,5 +523,50 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
+  },
+  // Badge "Trả phí" styles
+  posterContainer: {
+    position: 'relative',
+  },
+  paidBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    backgroundColor: 'rgba(229, 9, 20, 0.9)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 3,
+    zIndex: 10,
+  },
+  paidBadgeText: {
+    color: '#fff',
+    fontSize: 8,
+    fontWeight: 'bold',
+    marginLeft: 2,
+  },
+  // Trending section badge styles
+  trendingPosterContainer: {
+    position: 'relative',
+    flex: 1,
+  },
+  trendingPaidBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(229, 9, 20, 0.9)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 5,
+    paddingVertical: 3,
+    borderRadius: 4,
+    zIndex: 10,
+  },
+  trendingPaidText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: 'bold',
+    marginLeft: 2,
   },
 });

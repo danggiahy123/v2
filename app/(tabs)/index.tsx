@@ -26,6 +26,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { TabHeader, SearchModal, ViewAllModal } from '../../components/ui';
 import { ContinueWatchingSection } from '../../components/home';
 import GenreGrid from '../../components/genre/GenreGrid';
+import { shouldShowPaidBadge, enrichMoviesWithPriceInfo } from '../../utils/moviePriceHelper';
 // import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
@@ -150,7 +151,19 @@ export default function HomeScreen() {
 
         if (newReleasesRes?.status === 'success' && newReleasesRes.data) {
           setBannerMovies(newReleasesRes.data.banner?.movies || []);
-          setRecommendedMovies(newReleasesRes.data.recommended?.movies || []);
+          
+          // Enhance recommended movies with price info
+          const originalRecommended = newReleasesRes.data.recommended?.movies || [];
+          if (originalRecommended.length > 0) {
+            try {
+              const enhancedRecommended = await enrichMoviesWithPriceInfo(originalRecommended);
+              setRecommendedMovies(enhancedRecommended);
+              console.log('Recommended movies enhanced with price info');
+            } catch (error) {
+              console.error('Error enhancing recommended movies:', error);
+              setRecommendedMovies(originalRecommended);
+            }
+          }
         }
       } catch (error) {
         console.error('Error loading new releases:', error);
@@ -191,21 +204,69 @@ export default function HomeScreen() {
 
         const builtSections: MovieSection[] = sectionCalls
           .map((res, idx) => {
-            if (
-              res.status === 'fulfilled' &&
-              res.value?.status === 'success' &&
-              res.value.data?.movies?.length > 0
-            ) {
-              return {
-                title: res.value.data.title || titles[idx],
-                movies: res.value.data.movies,
-              };
+            if (res.status === 'fulfilled' && res.value?.status === 'success') {
+              // Special handling for anime section
+              if (idx === 3) { // Anime section
+                // Check different possible data structures
+                let animeMovies = [];
+                if (res.value.data?.movies) {
+                  animeMovies = res.value.data.movies;
+                } else if (res.value.data?.trending) {
+                  animeMovies = res.value.data.trending;
+                } else if (res.value.data?.series) {
+                  animeMovies = res.value.data.series;
+                } else if (Array.isArray(res.value.data)) {
+                  animeMovies = res.value.data;
+                }
+
+                // Map anime data to GridMovie format
+                const mappedAnimeMovies = animeMovies.map((anime: any) => ({
+                  movieId: anime.movieId || anime._id || anime.id,
+                  title: anime.title || anime.movie_title,
+                  poster: anime.poster || anime.poster_path,
+                  movieType: anime.movieType || anime.movie_type || 'Anime',
+                  producer: anime.producer || '',
+                  rating: anime.rating,
+                  year: anime.year || anime.release_year
+                }));
+
+                if (mappedAnimeMovies.length > 0) {
+                  return {
+                    title: res.value.data.title || titles[idx],
+                    movies: mappedAnimeMovies,
+                  };
+                }
+                return null;
+              }
+
+              // Standard handling for other sections
+              if (res.value.data?.movies?.length > 0) {
+                return {
+                  title: res.value.data.title || titles[idx],
+                  movies: res.value.data.movies,
+                };
+              }
             }
             return null;
           })
           .filter((section): section is MovieSection => section !== null);
 
-        setSections(builtSections);
+        // Enhance sections with price info
+        console.log('Enhancing sections with price info...');
+        const enhancedSections = await Promise.all(
+          builtSections.map(async (section) => {
+            try {
+              const enhancedMovies = await enrichMoviesWithPriceInfo(section.movies);
+              return { ...section, movies: enhancedMovies };
+            } catch (error) {
+              console.error(`Error enhancing section ${section.title}:`, error);
+              return section; // Return original if enhancement fails
+            }
+          })
+        );
+        
+        setSections(enhancedSections);
+        console.log('Sections enhanced successfully');
       } catch (error) {
         console.error('Error loading sections:', error);
       }
@@ -231,7 +292,17 @@ export default function HomeScreen() {
           // Load phim của thể loại hành động
           const moviesResponse = await genreService.getGenreMovies(actionGenre._id);
           if (moviesResponse.status === 'success') {
-            setActionGenreMovies(moviesResponse.data.movies.slice(0, 8)); // Lấy 8 phim đầu
+            const originalMovies = moviesResponse.data.movies.slice(0, 8);
+            
+            // Enhance action genre movies with price info
+            try {
+              const enhancedMovies = await enrichMoviesWithPriceInfo(originalMovies);
+              setActionGenreMovies(enhancedMovies);
+              console.log('Action genre movies enhanced with price info');
+            } catch (error) {
+              console.error('Error enhancing action genre movies:', error);
+              setActionGenreMovies(originalMovies);
+            }
           }
         }
       }
@@ -439,13 +510,24 @@ export default function HomeScreen() {
                 style={styles.largeMovieItem}
                 onPress={() => router.push(`/movie/${item.movieId}`)}
               >
-                <Image source={{ uri: item.poster }} style={styles.largeMoviePoster} resizeMode="cover" />
-                <LinearGradient
-                  colors={['transparent', 'rgba(0,0,0,0.8)']}
-                  style={styles.largeMovieGradient}
-                >
-                  <Text style={styles.largeMovieTitle} numberOfLines={2}>{item.title}</Text>
-                </LinearGradient>
+                <View style={styles.largeMovieContainer}>
+                  <Image source={{ uri: item.poster }} style={styles.largeMoviePoster} resizeMode="cover" />
+                  
+                  {/* Paid Badge for Recommended */}
+                  {shouldShowPaidBadge(item) && (
+                    <View style={styles.largePaidBadge}>
+                      <Ionicons name="card" size={9} color="#fff" />
+                      <Text style={styles.largePaidText}>Trả phí</Text>
+                    </View>
+                  )}
+                  
+                  <LinearGradient
+                    colors={['transparent', 'rgba(0,0,0,0.8)']}
+                    style={styles.largeMovieGradient}
+                  >
+                    <Text style={styles.largeMovieTitle} numberOfLines={2}>{item.title}</Text>
+                  </LinearGradient>
+                </View>
               </TouchableOpacity>
             )}
           />
@@ -479,13 +561,24 @@ export default function HomeScreen() {
                 <View style={styles.trendingRank}>
                   <Text style={styles.trendingRankText}>{index + 1}</Text>
                 </View>
-                <Image source={{ uri: item.poster }} style={styles.trendingPoster} resizeMode="cover" />
-                <LinearGradient
-                  colors={['transparent', 'rgba(0,0,0,0.9)']}
-                  style={styles.trendingGradient}
-                >
-                  <Text style={styles.trendingTitle} numberOfLines={2}>{item.title}</Text>
-                </LinearGradient>
+                <View style={styles.trendingPosterContainer}>
+                  <Image source={{ uri: item.poster }} style={styles.trendingPoster} resizeMode="cover" />
+                  
+                  {/* Paid Badge for Trending */}
+                  {shouldShowPaidBadge(item) && (
+                    <View style={styles.trendingPaidBadge}>
+                      <Ionicons name="card" size={8} color="#fff" />
+                      <Text style={styles.trendingPaidText}>Trả phí</Text>
+                    </View>
+                  )}
+                  
+                  <LinearGradient
+                    colors={['transparent', 'rgba(0,0,0,0.9)']}
+                    style={styles.trendingGradient}
+                  >
+                    <Text style={styles.trendingTitle} numberOfLines={2}>{item.title}</Text>
+                  </LinearGradient>
+                </View>
               </TouchableOpacity>
             )}
           />
@@ -513,16 +606,27 @@ export default function HomeScreen() {
                 style={styles.sportsItem}
                 onPress={() => router.push(`/movie/${item.movieId}`)}
               >
-                <Image source={{ uri: item.poster }} style={styles.sportsPoster} resizeMode="cover" />
-                <View style={styles.sportsOverlay}>
-                  <LinearGradient
-                    colors={['transparent', '#000']}
-                    style={styles.sportsGradient}
-                  />
-                  <View style={styles.sportsContent}>
-                    <Text style={styles.sportsTitle} numberOfLines={2}>{item.title}</Text>
-                    <View style={styles.sportsBadge}>
-                      <Text style={styles.sportsBadgeText}>SPORTS</Text>
+                <View style={styles.sportsPosterContainer}>
+                  <Image source={{ uri: item.poster }} style={styles.sportsPoster} resizeMode="cover" />
+                  
+                  {/* Paid Badge for Sports */}
+                  {shouldShowPaidBadge(item) && (
+                    <View style={styles.sportsPaidBadge}>
+                      <Ionicons name="card" size={8} color="#fff" />
+                      <Text style={styles.sportsPaidText}>Trả phí</Text>
+                    </View>
+                  )}
+                  
+                  <View style={styles.sportsOverlay}>
+                    <LinearGradient
+                      colors={['transparent', '#000']}
+                      style={styles.sportsGradient}
+                    />
+                    <View style={styles.sportsContent}>
+                      <Text style={styles.sportsTitle} numberOfLines={2}>{item.title}</Text>
+                      <View style={styles.sportsBadge}>
+                        <Text style={styles.sportsBadgeText}>SPORTS</Text>
+                      </View>
                     </View>
                   </View>
                 </View>
@@ -555,6 +659,15 @@ export default function HomeScreen() {
               >
                 <View style={styles.animeImageContainer}>
                   <Image source={{ uri: item.poster }} style={styles.animePoster} resizeMode="cover" />
+                  
+                  {/* Paid Badge for Anime */}
+                  {shouldShowPaidBadge(item) && (
+                    <View style={styles.animePaidBadge}>
+                      <Ionicons name="card" size={8} color="#fff" />
+                      <Text style={styles.animePaidText}>Trả phí</Text>
+                    </View>
+                  )}
+                  
                   <View style={styles.animeShine} />
                 </View>
                 <Text style={styles.animeTitle} numberOfLines={2}>{item.title}</Text>
@@ -596,6 +709,15 @@ export default function HomeScreen() {
                   {/* Front Card with Content */}
                   <View style={[styles.vietnameseCard, styles.vietnameseCardFront]}>
                     <Image source={{ uri: item.poster }} style={styles.vietnamesePoster} resizeMode="cover" />
+                    
+                    {/* Paid Badge for Vietnamese */}
+                    {shouldShowPaidBadge(item) && (
+                      <View style={styles.vietnamesePaidBadge}>
+                        <Ionicons name="card" size={8} color="#fff" />
+                        <Text style={styles.vietnamesePaidText}>Trả phí</Text>
+                      </View>
+                    )}
+                    
                     <LinearGradient
                       colors={['transparent', 'rgba(0,0,0,0.9)']}
                       style={styles.vietnameseGradient}
@@ -631,7 +753,17 @@ export default function HomeScreen() {
               style={styles.movieItem}
               onPress={() => router.push(`/movie/${item.movieId}`)}
             >
-              <Image source={{ uri: item.poster }} style={styles.moviePoster} resizeMode="cover" />
+              <View style={styles.posterContainer}>
+                <Image source={{ uri: item.poster }} style={styles.moviePoster} resizeMode="cover" />
+                
+                {/* Paid Badge */}
+                {shouldShowPaidBadge(item) && (
+                  <View style={styles.paidBadge}>
+                    <Ionicons name="card" size={8} color="#fff" />
+                    <Text style={styles.paidText}>Trả phí</Text>
+                  </View>
+                )}
+              </View>
             </TouchableOpacity>
           )}
         />
@@ -749,15 +881,26 @@ export default function HomeScreen() {
                     onPress={() => router.push(`/movie/${item.movieId}`)}
                     activeOpacity={0.8}
                   >
-                    <Image source={{ uri: item.poster }} style={styles.actionMoviePoster} resizeMode="cover" />
-                    <View style={styles.actionMovieInfo}>
-                      <Text style={styles.actionMovieTitle} numberOfLines={2}>{item.title}</Text>
-                      {item.rating && (
-                        <View style={styles.actionMovieRating}>
-                          <Ionicons name="star" size={12} color="#FFD700" />
-                          <Text style={styles.actionMovieRatingText}>{item.rating.toFixed(1)}</Text>
+                    <View style={styles.actionMovieContainer}>
+                      <Image source={{ uri: item.poster }} style={styles.actionMoviePoster} resizeMode="cover" />
+                      
+                      {/* Paid Badge for Action Movies */}
+                      {shouldShowPaidBadge(item) && (
+                        <View style={styles.actionPaidBadge}>
+                          <Ionicons name="card" size={8} color="#fff" />
+                          <Text style={styles.actionPaidText}>Trả phí</Text>
                         </View>
                       )}
+                      
+                      <View style={styles.actionMovieInfo}>
+                        <Text style={styles.actionMovieTitle} numberOfLines={2}>{item.title}</Text>
+                        {item.rating && (
+                          <View style={styles.actionMovieRating}>
+                            <Ionicons name="star" size={12} color="#FFD700" />
+                            <Text style={styles.actionMovieRatingText}>{item.rating.toFixed(1)}</Text>
+                          </View>
+                        )}
+                      </View>
                     </View>
                   </TouchableOpacity>
                 )}
@@ -1563,5 +1706,142 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
+  },
+
+  // Badge styles for different sections
+  // Large movie (recommended) section
+  largeMovieContainer: {
+    position: 'relative',
+    flex: 1,
+  },
+  largePaidBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(229, 9, 20, 0.9)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: 4,
+    zIndex: 10,
+  },
+  largePaidText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+    marginLeft: 2,
+  },
+
+  // Trending section
+  trendingPosterContainer: {
+    position: 'relative',
+    flex: 1,
+  },
+  trendingPaidBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(229, 9, 20, 0.9)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 5,
+    paddingVertical: 3,
+    borderRadius: 4,
+    zIndex: 10,
+  },
+  trendingPaidText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: 'bold',
+    marginLeft: 2,
+  },
+
+  // Sports section
+  sportsPosterContainer: {
+    position: 'relative',
+    flex: 1,
+  },
+  sportsPaidBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(229, 9, 20, 0.9)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 5,
+    paddingVertical: 3,
+    borderRadius: 4,
+    zIndex: 10,
+  },
+  sportsPaidText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: 'bold',
+    marginLeft: 2,
+  },
+
+  // Anime section
+  animePaidBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(229, 9, 20, 0.9)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 5,
+    paddingVertical: 3,
+    borderRadius: 4,
+    zIndex: 10,
+  },
+  animePaidText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: 'bold',
+    marginLeft: 2,
+  },
+
+  // Vietnamese section
+  vietnamesePaidBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(229, 9, 20, 0.9)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 5,
+    paddingVertical: 3,
+    borderRadius: 4,
+    zIndex: 10,
+  },
+  vietnamesePaidText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: 'bold',
+    marginLeft: 2,
+  },
+
+  // Action movies section
+  actionMovieContainer: {
+    position: 'relative',
+    flex: 1,
+  },
+  actionPaidBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(229, 9, 20, 0.9)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 5,
+    paddingVertical: 3,
+    borderRadius: 4,
+    zIndex: 10,
+  },
+  actionPaidText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: 'bold',
+    marginLeft: 2,
   },
 });

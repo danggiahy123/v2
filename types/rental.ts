@@ -85,7 +85,10 @@ export interface RentalInfo {
     _id: string;
     title: string;
     poster: string;
+    movie_title: string;
+    poster_path: string;
     duration: number;
+    movie_type?: string;
   };
   paymentId: {
     _id: string;
