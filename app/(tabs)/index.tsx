@@ -13,6 +13,7 @@ import {
   Animated,
   Modal,
 } from 'react-native';
+
 // SafeAreaView imported but not used - will be used in future updates
 import { LinearGradient } from 'expo-linear-gradient';
 import { movieService } from '../../services/movieService';
@@ -22,15 +23,9 @@ import { useAppSelector } from '../../store/hooks';
 import { BannerMovie, ContinueWatchingItem, GridMovie } from '../../types/movie';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { TabHeader, SearchModal, ViewAllModal } from '../../components/ui';
-<<<<<<< fearute/linhtinhlayout
 
 import { ContinueWatchingSection } from '../../components/home';
 import GenreGrid from '../../components/genre/GenreGrid';
-
-=======
-import { ContinueWatchingSection } from '../../components/home';
-import GenreGrid from '../../components/genre/GenreGrid';
->>>>>>> v2
 
 const { width } = Dimensions.get('window');
 
