@@ -22,9 +22,9 @@ import { useAppSelector } from '../../store/hooks';
 import { BannerMovie, ContinueWatchingItem, GridMovie } from '../../types/movie';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { TabHeader, SearchModal, ViewAllModal } from '../../components/ui';
-  
 import { ContinueWatchingSection } from '../../components/home';
 import GenreGrid from '../../components/genre/GenreGrid';
+// import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
