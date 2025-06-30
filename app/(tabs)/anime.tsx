@@ -17,13 +17,18 @@ import { animeService } from '../../services/animeService';
 import { genreService, Genre } from '../../services/genreService';
 import { Banner, GenreSelector } from '../../components/anime';
 import { useRouter } from 'expo-router';
+import { shouldShowPaidBadge, enrichMoviesWithPriceInfo } from '../../utils/moviePriceHelper';
 
 type Anime = {
-  _id: string;
+  _id?: string;
+  movieId: string;
   title: string;
   poster: string;
-  producer?: string;
-  movieType?: string;
+  producer: string;
+  movieType: string;
+  price?: number;
+  is_free?: boolean;
+  price_display?: string;
 };
 
 export default function AnimeScreen() {
@@ -75,9 +80,57 @@ export default function AnimeScreen() {
 
       const response = await animeService.getAllAnime();
       const data = response.data || {};
-      setTrending(data.trending || []);
-      setSeries(data.series || []);
-      setMovies(data.movies || []);
+      
+      // Map raw anime data to GridMovie format
+      const mapAnimeToGridMovie = (animeList: any[]) => {
+        return animeList.map((anime: any) => ({
+          movieId: anime.movieId || anime._id || anime.id || 'unknown',
+          title: anime.title || anime.movie_title || 'Untitled',
+          poster: anime.poster || anime.poster_path || '',
+          movieType: anime.movieType || anime.movie_type || 'Anime',
+          producer: anime.producer || '',
+          rating: anime.rating,
+          year: anime.year || anime.release_year,
+          _id: anime._id || anime.movieId // Keep original _id for API calls
+        }));
+      };
+
+      // Extract and map different anime sections
+      const rawTrending = data.trending || [];
+      const rawSeries = data.series || [];
+      const rawMovies = data.movies || [];
+
+      const mappedTrending = mapAnimeToGridMovie(rawTrending);
+      const mappedSeries = mapAnimeToGridMovie(rawSeries);
+      const mappedMovies = mapAnimeToGridMovie(rawMovies);
+      
+      // 💰 Enhance anime data với price info
+      
+      try {
+        const [enhancedTrending, enhancedSeries, enhancedMovies] = await Promise.all([
+          enrichMoviesWithPriceInfo(mappedTrending, 2),
+          enrichMoviesWithPriceInfo(mappedSeries, 2),
+          enrichMoviesWithPriceInfo(mappedMovies, 2)
+        ]);
+        
+        setTrending(enhancedTrending);
+        setSeries(enhancedSeries);
+        setMovies(enhancedMovies);
+        
+        console.log('✅ [AnimeScreen] Enhanced anime data:', {
+          trending: enhancedTrending.length,
+          series: enhancedSeries.length,
+          movies: enhancedMovies.length,
+          paidTrending: enhancedTrending.filter(m => shouldShowPaidBadge(m)).length,
+          paidSeries: enhancedSeries.filter(m => shouldShowPaidBadge(m)).length,
+          paidMovies: enhancedMovies.filter(m => shouldShowPaidBadge(m)).length
+        });
+      } catch (enhanceError) {
+        console.warn('⚠️ [AnimeScreen] Failed to enhance with price info, using original data:', enhanceError);
+        setTrending(mappedTrending);
+        setSeries(mappedSeries);
+        setMovies(mappedMovies);
+      }
     } catch (err) {
       console.error('Error fetching anime data:', err);
       setError('Có lỗi xảy ra khi tải dữ liệu');
@@ -126,9 +179,19 @@ export default function AnimeScreen() {
   const renderMovieItem = ({ item }: { item: Anime }) => (
     <TouchableOpacity 
       style={styles.movieItem}
-      onPress={() => router.push(`/movie/${item._id}`)}
+      onPress={() => router.push(`/movie/${item.movieId || item._id}`)}
     >
-      <Image source={{ uri: item.poster }} style={styles.poster} resizeMode="cover" />
+      <View style={styles.posterContainer}>
+        <Image source={{ uri: item.poster }} style={styles.poster} resizeMode="cover" />
+        
+        {/* Badge "Trả phí" cho anime trả phí */}
+        {shouldShowPaidBadge(item) && (
+          <View style={styles.paidBadge}>
+            <Ionicons name="card" size={8} color="#fff" />
+            <Text style={styles.paidBadgeText}>Trả phí</Text>
+          </View>
+        )}
+      </View>
     </TouchableOpacity>
   );
 
@@ -144,7 +207,7 @@ export default function AnimeScreen() {
           data={data}
           horizontal
           showsHorizontalScrollIndicator={false}
-          keyExtractor={item => item._id}
+          keyExtractor={item => item.movieId}
           renderItem={renderMovieItem}
           contentContainerStyle={styles.movieList}
         />
@@ -168,21 +231,32 @@ export default function AnimeScreen() {
           renderItem={({ item, index }) => (
             <TouchableOpacity 
               style={styles.trendingItem}
-              onPress={() => router.push(`/movie/${item._id}`)}
+              onPress={() => router.push(`/movie/${item.movieId || item._id}`)}
             >
               <View style={styles.rankContainer}>
                 <Text style={styles.rankNumber}>{index + 1}</Text>
               </View>
-              <Image source={{ uri: item.poster }} style={styles.trendingPoster} />
-              <LinearGradient
-                colors={['transparent', 'rgba(0,0,0,0.9)']}
-                style={styles.trendingGradient}
-              >
-                <Text style={styles.trendingTitle} numberOfLines={2}>{item.title}</Text>
-              </LinearGradient>
+              <View style={styles.trendingPosterContainer}>
+                <Image source={{ uri: item.poster }} style={styles.trendingPoster} />
+                
+                {/* Badge "Trả phí" cho trending anime */}
+                {shouldShowPaidBadge(item) && (
+                  <View style={styles.trendingPaidBadge}>
+                    <Ionicons name="card" size={8} color="#fff" />
+                    <Text style={styles.trendingPaidText}>Trả phí</Text>
+                  </View>
+                )}
+                
+                <LinearGradient
+                  colors={['transparent', 'rgba(0,0,0,0.9)']}
+                  style={styles.trendingGradient}
+                >
+                  <Text style={styles.trendingTitle} numberOfLines={2}>{item.title}</Text>
+                </LinearGradient>
+              </View>
             </TouchableOpacity>
           )}
-          keyExtractor={(item) => item._id}
+                        keyExtractor={(item) => item.movieId}
         />
       </View>
     );
@@ -197,6 +271,7 @@ export default function AnimeScreen() {
       // Gọi API để lấy phim theo thể loại
       const response = await genreService.getMoviesByGenre(genre._id, 1, 50, true);
       const movies = response.data.movies.map((movie: any) => ({
+        movieId: movie._id,
         _id: movie._id,
         title: movie.movie_title,
         poster: movie.poster_path,
@@ -469,5 +544,50 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
+  },
+  // Badge "Trả phí" styles
+  posterContainer: {
+    position: 'relative',
+  },
+  paidBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    backgroundColor: 'rgba(229, 9, 20, 0.9)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 3,
+    zIndex: 10,
+  },
+  paidBadgeText: {
+    color: '#fff',
+    fontSize: 8,
+    fontWeight: 'bold',
+    marginLeft: 2,
+  },
+  // Trending section badge styles
+  trendingPosterContainer: {
+    position: 'relative',
+    flex: 1,
+  },
+  trendingPaidBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(229, 9, 20, 0.9)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 5,
+    paddingVertical: 3,
+    borderRadius: 4,
+    zIndex: 10,
+  },
+  trendingPaidText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: 'bold',
+    marginLeft: 2,
   },
 }); 

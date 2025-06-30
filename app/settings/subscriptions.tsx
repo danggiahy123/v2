@@ -138,7 +138,7 @@ export default function SubscriptionsScreen() {
         <View style={styles.cardContent}>
           {/* Movie Poster */}
           <View style={styles.posterContainer}>
-            <Image source={{ uri: rental.movieId.poster }} style={styles.moviePoster} />
+            <Image source={{ uri: rental.movieId.poster_path }} style={styles.moviePoster} />
             <View style={[styles.statusIndicator, styles[`indicator_${rental.status}`]]} />
           </View>
           
@@ -146,7 +146,7 @@ export default function SubscriptionsScreen() {
           <View style={styles.movieInfo}>
             <View style={styles.titleRow}>
               <Text style={styles.movieTitle} numberOfLines={2}>
-                {rental.movieId.title}
+                {rental.movieId.movie_title}
               </Text>
               {canCancel && (
                 <TouchableOpacity

@@ -32,6 +32,7 @@ import { seriesService } from '../../services/seriesService';
 import type { GridMovie } from '../../types/movie';
 import { ContinueWatchingBadge } from './ContinueWatchingBadge';
 import { useAppSelector } from '../../store/hooks';
+import { shouldShowPaidBadge } from '../../utils/moviePriceHelper';
 
 const { width } = Dimensions.get('window');
 const ITEMS_PER_PAGE = 20;
@@ -101,6 +102,14 @@ const MovieItem = ({ item, onPress, userId }: { item: GridMovie; onPress: () => 
               style={styles.continueBadge}
             />
           )} */}
+
+          {/* Paid Badge */}
+          {shouldShowPaidBadge(item) && (
+            <View style={[styles.paidBadge, item.rating ? styles.paidBadgeWithRating : null]}>
+              <Ionicons name="card" size={10} color="#fff" />
+              <Text style={styles.paidText}>Trả phí</Text>
+            </View>
+          )}
 
           {/* Rating Badge */}
           {item.rating && (
@@ -435,6 +444,28 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+  },
+  paidBadge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(229, 9, 20, 0.9)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  paidBadgeWithRating: {
+    top: 12,
+    right: 12,
+    transform: [{ translateY: -32 }], // Đẩy lên trên rating badge
+  },
+  paidText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '600',
+    marginLeft: 3,
   },
   ratingBadge: {
     position: 'absolute',

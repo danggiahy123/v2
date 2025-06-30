@@ -1,4 +1,5 @@
 import { ContinueWatchingResponse, HomeApiResponse, GridMovie } from '../types/movie';
+import { enrichMoviesWithPriceInfo } from '../utils/moviePriceHelper';
 
 const API_BASE_URL = 'https://backend-app-lou3.onrender.com';
 
@@ -71,7 +72,29 @@ export const movieService = {
     const response = await fetch(url, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
 
     if (!response.ok) throw new Error(`Failed to fetch new releases: ${response.status}`);
-    return response.json();
+    
+    const data = await response.json();
+    
+    // 💰 Enhance với thông tin price cho recommended movies (chỉ 6 phim đầu để tránh chậm)
+    if (data.data?.recommended?.movies && data.data.recommended.movies.length > 0) {
+      console.log('💰 [MovieService] Enhancing recommended movies with price info...');
+      const moviesToEnhance = data.data.recommended.movies.slice(0, 6); // Chỉ lấy 6 phim đầu
+      const enhancedMovies = await enrichMoviesWithPriceInfo(moviesToEnhance, 3); // 3 concurrent để tránh quá tải
+      
+      // Replace enhanced movies vào data
+      data.data.recommended.movies = [
+        ...enhancedMovies,
+        ...data.data.recommended.movies.slice(6) // Giữ lại phim còn lại chưa enhance
+      ];
+      
+      console.log('✅ [MovieService] Enhanced recommended movies:', {
+        total: data.data.recommended.movies.length,
+        enhanced: enhancedMovies.length,
+        paidMovies: enhancedMovies.filter(m => !m.is_free).length
+      });
+    }
+    
+    return data;
   },
 
   /**
@@ -111,7 +134,29 @@ export const movieService = {
     const response = await fetch(url, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
 
     if (!response.ok) throw new Error(`Failed to fetch trending: ${response.status}`);
-    return response.json();
+    
+    const data = await response.json();
+    
+    // 💰 Enhance với thông tin price cho trending movies
+    if (data.data?.movies && data.data.movies.length > 0) {
+      console.log('📈 [MovieService] Enhancing trending movies with price info...');
+      const moviesToEnhance = data.data.movies.slice(0, 8); // Chỉ lấy 8 phim đầu
+      const enhancedMovies = await enrichMoviesWithPriceInfo(moviesToEnhance, 4); // 4 concurrent
+      
+      // Replace enhanced movies vào data
+      data.data.movies = [
+        ...enhancedMovies,
+        ...data.data.movies.slice(8) // Giữ lại phim còn lại chưa enhance
+      ];
+      
+      console.log('✅ [MovieService] Enhanced trending movies:', {
+        total: data.data.movies.length,
+        enhanced: enhancedMovies.length,
+        paidMovies: enhancedMovies.filter(m => !m.is_free).length
+      });
+    }
+    
+    return data;
   },
 
   /**

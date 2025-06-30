@@ -18,6 +18,7 @@ import { movieService } from '../../services/movieService';
 import { GridMovie } from '../../types/movie';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { shouldShowPaidBadge, enrichMoviesWithPriceInfo } from '../../utils/moviePriceHelper';
 
 const { width } = Dimensions.get('window');
 const COLUMN_COUNT = 2; // 2 columns for a cleaner look
@@ -90,11 +91,7 @@ export default function SearchModal({ visible, onClose, category }: SearchModalP
 
       const currentPage = resetPage ? 1 : searchPage;
 
-      console.log('🔍 [SearchModal] Starting search with:', {
-        searchQuery,
-        currentPage,
-        category
-      });
+
 
       const response = await movieService.searchMovies({
         tuKhoa: searchQuery,
@@ -104,12 +101,12 @@ export default function SearchModal({ visible, onClose, category }: SearchModalP
         searchByTitle: true // Chỉ tìm kiếm theo tên phim
       });
 
-      console.log('📦 [SearchModal] API Response:', response);
+
 
       if (response?.status === 'success' && response.data) {
         // Map backend response to frontend expected format
         const backendMovies = response.data.movies || [];
-        const newResults = (backendMovies as unknown as BackendMovie[]).map(movie => ({
+        const mappedResults = (backendMovies as unknown as BackendMovie[]).map(movie => ({
           movieId: movie._id,
           title: movie.movie_title,
           poster: movie.poster_path,
@@ -121,14 +118,23 @@ export default function SearchModal({ visible, onClose, category }: SearchModalP
           rating: undefined, // Backend doesn't include rating in search
           genres: movie.genres
         }));
+
+        // 💰 Enhance search results với price info để hiển thị badge "Trả phí"
+        let enhancedResults = mappedResults;
+        try {
+          enhancedResults = await enrichMoviesWithPriceInfo(mappedResults, 2); // 2 concurrent để tránh quá tải
+        } catch (error) {
+          console.warn('⚠️ [SearchModal] Failed to enhance with price info, using original results:', error);
+          enhancedResults = mappedResults; // Fallback to original if enhancement fails
+        }
         
         if (resetPage) {
-          setSearchResults(newResults);
+          setSearchResults(enhancedResults);
         } else {
-          setSearchResults(prev => [...prev, ...newResults]);
+          setSearchResults(prev => [...prev, ...enhancedResults]);
         }
 
-        setHasMoreResults(newResults.length === 20);
+        setHasMoreResults(mappedResults.length === 20);
         setSearchPage(currentPage + 1);
       }
     } catch (error) {
@@ -236,6 +242,15 @@ export default function SearchModal({ visible, onClose, category }: SearchModalP
                       style={styles.poster}
                       resizeMode="cover"
                     />
+                    
+                    {/* Badge "Trả phí" cho phim trả phí */}
+                    {shouldShowPaidBadge(item) && (
+                      <View style={styles.paidBadge}>
+                        <Ionicons name="card" size={10} color="#fff" />
+                        <Text style={styles.paidBadgeText}>Trả phí</Text>
+                      </View>
+                    )}
+                    
                     <LinearGradient
                       colors={['transparent', 'rgba(0,0,0,0.9)']}
                       style={styles.posterGradient}
@@ -422,5 +437,24 @@ const styles = StyleSheet.create({
   },
   loadingMore: {
     padding: 16,
+  },
+  // Badge "Trả phí" styles
+  paidBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(229, 9, 20, 0.9)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: 4,
+    zIndex: 10,
+  },
+  paidBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+    marginLeft: 3,
   },
 });

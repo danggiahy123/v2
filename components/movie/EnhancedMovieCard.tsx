@@ -19,6 +19,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { GridMovie } from '../../types/movie';
 import { movieDetailService } from '../../services/movieDetailService';
 import { shouldShowContinueBadge, getResumeButtonText } from '../../utils/watchingHelper';
+import { shouldShowPaidBadge } from '../../utils/moviePriceHelper';
 
 interface EnhancedMovieCardProps {
   item: GridMovie;
@@ -141,6 +142,14 @@ export const EnhancedMovieCard: React.FC<EnhancedMovieCardProps> = ({
             </View>
           )}
 
+          {/* Paid Badge */}
+          {shouldShowPaidBadge(item) && (
+            <View style={[styles.paidBadge, item.rating ? styles.paidBadgeWithRating : null]}>
+              <Ionicons name="card" size={10} color="#fff" />
+              <Text style={styles.paidText}>Trả phí</Text>
+            </View>
+          )}
+
           {/* Rating Badge */}
           {item.rating && (
             <View style={styles.ratingBadge}>
@@ -255,6 +264,28 @@ const styles = StyleSheet.create({
   progressFill: {
     height: '100%',
     backgroundColor: '#E50914',
+  },
+  paidBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(229, 9, 20, 0.9)',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  paidBadgeWithRating: {
+    top: 8,
+    right: 8,
+    transform: [{ translateY: -26 }], // Đẩy lên trên rating badge
+  },
+  paidText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: '600',
+    marginLeft: 2,
   },
   ratingBadge: {
     position: 'absolute',

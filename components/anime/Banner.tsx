@@ -116,10 +116,9 @@ const AnimeBanner = () => {
         })}
       />
 
-      <View style={styles.bannerIndicators}>
+      <View style={styles.paginationContainer}>
         {banner.map((item, idx) => (
-          <View key={item.movieId || `indicator-${idx}`} style={[styles.indicator, idx === currentIndex && styles.activeIndicator]} />
-
+          <View key={item.movieId || `indicator-${idx}`} style={[styles.paginationDot, idx === currentIndex && styles.paginationDotActive]} />
         ))}
       </View>
     </View>
