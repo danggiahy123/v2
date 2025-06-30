@@ -12,8 +12,9 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { TabHeader, SearchModal } from '../../components/ui';
+import { TabHeader, SearchModal, ViewAllModal } from '../../components/ui';
 import { animeService } from '../../services/animeService';
+import { genreService, Genre } from '../../services/genreService';
 import { Banner, GenreSelector } from '../../components/anime';
 import { useRouter } from 'expo-router';
 
@@ -37,6 +38,16 @@ export default function AnimeScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const [viewAllModalVisible, setViewAllModalVisible] = useState(false);
+  const [viewAllCustomMovies, setViewAllCustomMovies] = useState<any[] | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedTitle, setSelectedTitle] = useState('');
+  const [genreLoading, setGenreLoading] = useState(false);
+  
+  // Thêm state cho thể loại từ API
+  const [animeGenres, setAnimeGenres] = useState<Genre[]>([]);
+  const [genresLoading, setGenresLoading] = useState(true);
+  const [genresError, setGenresError] = useState<string | null>(null);
 
   const handleScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -75,8 +86,41 @@ export default function AnimeScreen() {
     }
   };
 
+  // Thêm hàm fetch thể loại từ API
+  const fetchAnimeGenres = async () => {
+    try {
+      setGenresLoading(true);
+      setGenresError(null);
+      const response = await genreService.getGenres('all');
+      
+      if (response.status === 'success' && response.data.genres) {
+        // Tìm thể loại "Hoạt hình" và lấy các thể loại con
+        const animeParent = response.data.genres.find(
+          (genre: Genre) => genre.genre_name === 'Hoạt hình' && genre.is_parent
+        );
+        
+        if (animeParent && animeParent.children) {
+          setAnimeGenres(animeParent.children);
+        } else {
+          // Fallback: nếu không tìm thấy thể loại cha, lấy tất cả thể loại có movie_count > 0
+          const activeGenres = response.data.genres.filter(
+            (genre: Genre) => genre.movie_count && genre.movie_count > 0 && genre.is_active
+          );
+          setAnimeGenres(activeGenres);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching anime genres:', err);
+      setGenresError('Có lỗi xảy ra khi tải thể loại');
+      setAnimeGenres([]); // Để trống nếu API lỗi
+    } finally {
+      setGenresLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchAnimeData();
+    fetchAnimeGenres();
   }, []);
 
   const renderMovieItem = ({ item }: { item: Anime }) => (
@@ -144,7 +188,35 @@ export default function AnimeScreen() {
     );
   };
 
-  if (loading) {
+  const handleGenreSelect = async (genre: Genre) => {
+    try {
+      setGenreLoading(true);
+      setSelectedCategory(genre._id);
+      setSelectedTitle(genre.genre_name);
+      
+      // Gọi API để lấy phim theo thể loại
+      const response = await genreService.getMoviesByGenre(genre._id, 1, 50, true);
+      const movies = response.data.movies.map((movie: any) => ({
+        _id: movie._id,
+        title: movie.movie_title,
+        poster: movie.poster_path,
+        producer: movie.producer,
+        price: movie.price,
+        description: movie.description
+      }));
+      
+      setViewAllCustomMovies(movies);
+      setViewAllModalVisible(true);
+    } catch (error) {
+      console.error('Error fetching genre movies:', error);
+      setViewAllCustomMovies([]);
+      setViewAllModalVisible(true);
+    } finally {
+      setGenreLoading(false);
+    }
+  };
+
+  if (loading || genresLoading) {
     return (
       <View style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor="#000" />
@@ -152,8 +224,9 @@ export default function AnimeScreen() {
           title="Hoạt hình"
           onSearchPress={() => setSearchVisible(true)}
           onNotificationPress={() => {}}
-          onGenrePress={() => setGenreSelectorVisible(true)}
-          showGenreButton
+          showGenreSelector
+          genres={animeGenres}
+          onGenreSelect={handleGenreSelect}
           opacity={headerOpacity}
         />
         <View style={styles.loading}>
@@ -164,7 +237,7 @@ export default function AnimeScreen() {
     );
   }
 
-  if (error) {
+  if (error || genresError) {
     return (
       <View style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor="#000" />
@@ -172,14 +245,18 @@ export default function AnimeScreen() {
           title="Hoạt hình"
           onSearchPress={() => setSearchVisible(true)}
           onNotificationPress={() => {}}
-          onGenrePress={() => setGenreSelectorVisible(true)}
-          showGenreButton
+          showGenreSelector
+          genres={animeGenres}
+          onGenreSelect={handleGenreSelect}
           opacity={headerOpacity}
         />
         <View style={styles.error}>
           <Ionicons name="alert-circle" size={48} color="#ff6b6b" />
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={fetchAnimeData}>
+          <Text style={styles.errorText}>{error || genresError}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => {
+            fetchAnimeData();
+            fetchAnimeGenres();
+          }}>
             <Text style={styles.retryButtonText}>Thử lại</Text>
           </TouchableOpacity>
         </View>
@@ -209,8 +286,9 @@ export default function AnimeScreen() {
         title="Hoạt hình"
         onSearchPress={() => setSearchVisible(true)}
         onNotificationPress={() => {}}
-        onGenrePress={() => setGenreSelectorVisible(true)}
-        showGenreButton
+        showGenreSelector
+        genres={animeGenres}
+        onGenreSelect={handleGenreSelect}
         opacity={headerOpacity}
       />
 
@@ -220,10 +298,20 @@ export default function AnimeScreen() {
         category="anime"
       />
 
-      <GenreSelector
-        visible={genreSelectorVisible}
-        onClose={() => setGenreSelectorVisible(false)}
+      <ViewAllModal
+        visible={viewAllModalVisible}
+        onClose={() => setViewAllModalVisible(false)}
+        category={selectedCategory}
+        title={selectedTitle}
+        customMovies={viewAllCustomMovies || undefined}
       />
+
+      {genreLoading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#fff" />
+          <Text style={styles.loadingText}>Đang tải phim...</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -314,8 +402,8 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
   trendingList: {
-    paddingLeft: 15,
-    paddingTop: 8,
+    paddingLeft: 20,
+    paddingTop: 15,
   },
   trendingItem: {
     width: 160,
@@ -325,13 +413,13 @@ const styles = StyleSheet.create({
   },
   rankContainer: {
     position: 'absolute',
-    top: -10,
-    left: -10,
+    top: -5,
+    left: -5,
     zIndex: 2,
-    width: 40,
-    height: 40,
+    width: 45,
+    height: 45,
     backgroundColor: '#D32F2F',
-    borderRadius: 20,
+    borderRadius: 22.5,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -345,7 +433,7 @@ const styles = StyleSheet.create({
   },
   rankNumber: {
     color: '#fff',
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
   },
   trendingPoster: {
@@ -370,5 +458,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     textAlign: 'center',
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
   },
 }); 

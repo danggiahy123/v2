@@ -895,7 +895,7 @@ export default function MovieDetailScreen() {
                   size={24} 
                   color={isFavorite ? "#ffc107" : "#ffffff"} 
                 />
-                    <Text style={styles.actionText}>Yêu thích</Text>
+                    <Text style={styles.actionText}>Lưu</Text>
                   </TouchableOpacity>
 
 

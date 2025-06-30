@@ -7,9 +7,10 @@ interface ViewAllModalProps {
   onClose: () => void;
   category: string;
   title: string;
+  customMovies?: any[];
 }
 
-export default function ViewAllModal({ visible, onClose, category, title }: ViewAllModalProps) {
+export default function ViewAllModal({ visible, onClose, category, title, customMovies }: ViewAllModalProps) {
   return (
     <Modal
       visible={visible}
@@ -24,6 +25,7 @@ export default function ViewAllModal({ visible, onClose, category, title }: View
           title={title}
           onClose={onClose}
           showAll={true}
+          customMovies={customMovies}
         />
       </View>
     </Modal>

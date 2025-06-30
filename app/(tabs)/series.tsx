@@ -15,8 +15,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
-import { TabHeader, SearchModal } from '../../components/ui';
+import { TabHeader, SearchModal, ViewAllModal } from '../../components/ui';
 import { seriesService } from '../../services/seriesService';
+import { genreService, Genre } from '../../services/genreService';
 import { SeriesBanner } from '../../components/series';
 import { SeriesGenreSelector } from '../../components/series/SeriesGenreSelector';
 
@@ -40,6 +41,16 @@ export default function SeriesScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [genreModalVisible, setGenreModalVisible] = useState(false);
+  const [viewAllModalVisible, setViewAllModalVisible] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedTitle, setSelectedTitle] = useState('');
+  const [genreLoading, setGenreLoading] = useState(false);
+  const [genreCustomMovies, setGenreCustomMovies] = useState<any[]>([]);
+  
+  // Thêm state cho thể loại từ API
+  const [seriesGenres, setSeriesGenres] = useState<Genre[]>([]);
+  const [genresLoading, setGenresLoading] = useState(true);
+  const [genresError, setGenresError] = useState<string | null>(null);
 
   const router = useRouter();
 
@@ -64,6 +75,7 @@ export default function SeriesScreen() {
 
   useEffect(() => {
     fetchSeriesData();
+    fetchSeriesGenres();
   }, []);
 
   const fetchSeriesData = async () => {
@@ -101,6 +113,68 @@ export default function SeriesScreen() {
     }
   };
 
+  // Thêm hàm fetch thể loại từ API
+  const fetchSeriesGenres = async () => {
+    try {
+      setGenresLoading(true);
+      setGenresError(null);
+      const response = await genreService.getGenres('all');
+      
+      if (response.status === 'success' && response.data.genres) {
+        // Tìm thể loại "Phim bộ" và lấy các thể loại con
+        const seriesParent = response.data.genres.find(
+          (genre: Genre) => genre.genre_name === 'Phim bộ' && genre.is_parent
+        );
+        
+        if (seriesParent && seriesParent.children) {
+          setSeriesGenres(seriesParent.children);
+        } else {
+          // Fallback: nếu không tìm thấy thể loại cha, lấy tất cả thể loại có movie_count > 0
+          const activeGenres = response.data.genres.filter(
+            (genre: Genre) => genre.movie_count && genre.movie_count > 0 && genre.is_active
+          );
+          setSeriesGenres(activeGenres);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching series genres:', err);
+      setGenresError('Có lỗi xảy ra khi tải thể loại');
+      setSeriesGenres([]); // Để trống nếu API lỗi
+    } finally {
+      setGenresLoading(false);
+    }
+  };
+
+  const handleGenreSelect = async (genre: Genre) => {
+    try {
+      setGenreLoading(true);
+      setSelectedCategory(genre._id);
+      setSelectedTitle(genre.genre_name);
+      
+      // Gọi API để lấy phim theo thể loại
+      const response = await genreService.getMoviesByGenre(genre._id, 1, 50, true);
+      const movies = response.data.movies.map((movie: any) => ({
+        _id: movie._id,
+        title: movie.movie_title,
+        poster: movie.poster_path,
+        producer: movie.producer,
+        price: movie.price,
+        description: movie.description
+      }));
+      
+      setGenreCustomMovies(movies);
+      setViewAllModalVisible(true);
+      setGenreModalVisible(false);
+    } catch (error) {
+      console.error('Error fetching genre movies:', error);
+      setGenreCustomMovies([]);
+      setViewAllModalVisible(true);
+      setGenreModalVisible(false);
+    } finally {
+      setGenreLoading(false);
+    }
+  };
+
   const renderMovieItem = ({ item }: { item: Movie }) => (
     <TouchableOpacity 
       style={styles.movieItem}
@@ -130,7 +204,7 @@ export default function SeriesScreen() {
     );
   };
 
-  if (loading) {
+  if (loading || genresLoading) {
     return (
       <View style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor="#000" />
@@ -138,8 +212,9 @@ export default function SeriesScreen() {
           title="Phim bộ"
           onSearchPress={() => setSearchVisible(true)}
           onNotificationPress={() => {}}
-          showGenreButton
-          onGenrePress={() => setGenreModalVisible(true)}
+          showGenreSelector
+          genres={seriesGenres}
+          onGenreSelect={handleGenreSelect}
           opacity={headerOpacity}
         />
         <View style={styles.loading}>
@@ -150,7 +225,7 @@ export default function SeriesScreen() {
     );
   }
 
-  if (error) {
+  if (error || genresError) {
     return (
       <View style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor="#000" />
@@ -158,14 +233,18 @@ export default function SeriesScreen() {
           title="Phim bộ"
           onSearchPress={() => setSearchVisible(true)}
           onNotificationPress={() => {}}
-          showGenreButton
-          onGenrePress={() => setGenreModalVisible(true)}
+          showGenreSelector
+          genres={seriesGenres}
+          onGenreSelect={handleGenreSelect}
           opacity={headerOpacity}
         />
         <View style={styles.error}>
           <Ionicons name="alert-circle" size={48} color="#ff6b6b" />
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={fetchSeriesData}>
+          <Text style={styles.errorText}>{error || genresError}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => {
+            fetchSeriesData();
+            fetchSeriesGenres();
+          }}>
             <Text style={styles.retryButtonText}>Thử lại</Text>
           </TouchableOpacity>
         </View>
@@ -180,8 +259,9 @@ export default function SeriesScreen() {
         title="Phim bộ"
         onSearchPress={() => setSearchVisible(true)}
         onNotificationPress={() => {}}
-        showGenreButton
-        onGenrePress={() => setGenreModalVisible(true)}
+        showGenreSelector
+        genres={seriesGenres}
+        onGenreSelect={handleGenreSelect}
         opacity={headerOpacity}
       />
 
@@ -234,10 +314,21 @@ export default function SeriesScreen() {
         category="series"
       />
 
-      <SeriesGenreSelector
-        visible={genreModalVisible}
-        onClose={() => setGenreModalVisible(false)}
+      {/* ViewAllModal hiển thị list phim từ API */}
+      <ViewAllModal
+        visible={viewAllModalVisible}
+        onClose={() => setViewAllModalVisible(false)}
+        category={selectedCategory}
+        title={selectedTitle}
+        customMovies={genreCustomMovies}
       />
+
+      {genreLoading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#fff" />
+          <Text style={styles.loadingText}>Đang tải phim...</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -312,8 +403,8 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
   trendingList: {
-    paddingLeft: 15,
-    paddingTop: 8,
+    paddingLeft: 20,
+    paddingTop: 15,
   },
   trendingItem: {
     width: 160,
@@ -323,13 +414,13 @@ const styles = StyleSheet.create({
   },
   rankContainer: {
     position: 'absolute',
-    top: -10,
-    left: -10,
+    top: -5,
+    left: -5,
     zIndex: 2,
-    width: 40,
-    height: 40,
+    width: 45,
+    height: 45,
     backgroundColor: '#D32F2F',
-    borderRadius: 20,
+    borderRadius: 22.5,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -343,7 +434,7 @@ const styles = StyleSheet.create({
   },
   rankNumber: {
     color: '#fff',
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
   },
   trendingPoster: {
@@ -377,5 +468,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
     paddingHorizontal: 16,
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
   },
 });
