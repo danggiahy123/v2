@@ -25,6 +25,7 @@ type Genre = {
 type GenreSelectorProps = {
   visible: boolean;
   onClose: () => void;
+  onSelectGenre?: (genre: Genre) => void;
 };
 
 // Mảng gradient màu đẹp cho từng thể loại
@@ -32,7 +33,7 @@ const GRADIENTS: [string, string][] = [
     ['#262626', '#262626'], 
 ];
 
-export const GenreSelector = ({ visible, onClose }: GenreSelectorProps) => {
+export const GenreSelector = ({ visible, onClose, onSelectGenre }: GenreSelectorProps) => {
   const [genres, setGenres] = useState<Genre[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
@@ -56,11 +57,16 @@ export const GenreSelector = ({ visible, onClose }: GenreSelectorProps) => {
   };
 
   const handleGenreSelect = (genre: Genre) => {
-    router.push({
-      pathname: "/anime/genre/[id]",
-      params: { id: genre._id }
-    });
-    onClose();
+    if (onSelectGenre) {
+      onSelectGenre(genre);
+      onClose();
+    } else {
+      router.push({
+        pathname: "/anime/genre/[id]",
+        params: { id: genre._id }
+      });
+      onClose();
+    }
   };
 
   const renderGenreItem = ({ item, index }: { item: Genre; index: number }) => (
@@ -83,40 +89,78 @@ export const GenreSelector = ({ visible, onClose }: GenreSelectorProps) => {
     </TouchableOpacity>
   );
 
+  if (!visible) return null;
+
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      statusBarTranslucent
-      onRequestClose={onClose}
-    >
-      <View style={styles.modalContainer}>
-        <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
-        <SafeAreaView style={styles.safeArea}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Thể loại</Text>
-            <TouchableOpacity 
-              onPress={onClose} 
-              style={styles.closeButton}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+    <View style={{
+      position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100,
+      backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center'
+    }}>
+      <View style={{
+        width: 360, backgroundColor: 'rgba(30,30,30,0.98)', borderRadius: 28, padding: 28,
+        shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.35, shadowRadius: 24,
+        elevation: 16,
+      }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22 }}>
+          <Text style={{
+            color: '#fff', fontSize: 30, fontWeight: 'bold', letterSpacing: 0.5,
+            textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 6
+          }}>
+            Thể loại
+          </Text>
+          <TouchableOpacity
+            onPress={onClose}
+            style={{
+              backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 20, width: 40, height: 40,
+              alignItems: 'center', justifyContent: 'center', shadowColor: '#fff', shadowOpacity: 0.1
+            }}
+          >
+            <Ionicons name="close" size={28} color="#fff" />
+          </TouchableOpacity>
+        </View>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+          {genres.map((genre) => (
+            <TouchableOpacity
+              key={genre._id}
+              style={{
+                width: '48%',
+                backgroundColor: '#23272f',
+                borderRadius: 18,
+                paddingVertical: 26,
+                marginBottom: 18,
+                alignItems: 'center',
+                borderWidth: 1.5,
+                borderColor: '#444',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.18,
+                shadowRadius: 6,
+                elevation: 4,
+              }}
+              activeOpacity={0.85}
+              onPress={() => {
+                if (onSelectGenre) onSelectGenre(genre);
+                onClose();
+              }}
             >
-              <Ionicons name="close" size={28} color="#fff" />
+              <Text style={{
+                color: '#fff',
+                fontWeight: 'bold',
+                fontSize: 17,
+                textTransform: 'uppercase',
+                letterSpacing: 0.5,
+                textAlign: 'center',
+                textShadowColor: 'rgba(0,0,0,0.4)',
+                textShadowOffset: { width: 0, height: 1 },
+                textShadowRadius: 3,
+              }}>
+                {genre.genre_name}
+              </Text>
             </TouchableOpacity>
-          </View>
-          <FlatList
-            data={genres}
-            renderItem={renderGenreItem}
-            keyExtractor={(item) => item._id}
-            numColumns={2}
-            contentContainerStyle={styles.genreList}
-            columnWrapperStyle={styles.row}
-            showsVerticalScrollIndicator={false}
-            bounces={false}
-          />
-        </SafeAreaView>
+          ))}
+        </View>
       </View>
-    </Modal>
+    </View>
   );
 };
 

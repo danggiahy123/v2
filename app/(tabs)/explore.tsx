@@ -45,11 +45,6 @@ export default function ExploreScreen() {
     router.push('/settings' as any);
   };
 
-  // Placeholder cho tính năng download (chưa implement)
-  const handleDownloads = () => {
-    Alert.alert('Thông báo', 'Tính năng đang phát triển');
-  };
-
   // Điều hướng đến help center
   const handleHelp = () => {
     router.push('/settings/help');
@@ -75,7 +70,16 @@ export default function ExploreScreen() {
     router.push('/settings/terms');
   };
 
-
+  // --- HANDLERS FOR MOVIE FEATURES ---
+  const handleFavoriteMovies = () => {
+    Alert.alert('Phim yêu thích', 'Tính năng đang phát triển');
+  };
+  const handleSubscribedMovies = () => {
+    router.push('/settings/subscriptions' as any);
+  };
+  const handleTransactionHistory = () => {
+    Alert.alert('Lịch sử giao dịch', 'Tính năng đang phát triển');
+  };
 
   /**
    * LOGOUT HANDLERS - Xử lý đăng xuất với confirmation
@@ -133,34 +137,43 @@ export default function ExploreScreen() {
                 </View>
               )}
             </View>
-            <Text style={styles.userText}>Người dùng</Text>
+            <View>
+              <Text style={styles.userText}>{user?.full_name || 'Người dùng'}</Text>
+              <Text style={styles.userEmail}>{user?.email}</Text>
+            </View>
           </TouchableOpacity>
 
+          <View style={styles.divider} />
 
-          <TouchableOpacity style={styles.menuItem} onPress={handleDownloads}>
-            <Ionicons name="download-outline" size={24} color="#fff" style={styles.menuIcon} />
-            <Text style={styles.menuItemText}>Nội dung tải xuống</Text>
-           
+          <Text style={styles.sectionTitle}>Lịch sử</Text>
+
+          <TouchableOpacity style={styles.menuItem} onPress={handleFavoriteMovies}>
+            <Ionicons name="heart-outline" size={24} color="#fff" style={styles.menuIcon} />
+            <Text style={styles.menuItemText}>Phim yêu thích</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.menuItem} onPress={handleSubscribedMovies}>
+            <Ionicons name="bookmark-outline" size={24} color="#fff" style={styles.menuIcon} />
+            <Text style={styles.menuItemText}>Phim đăng ký</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.menuItem} onPress={handleTransactionHistory}>
+            <Ionicons name="card-outline" size={24} color="#fff" style={styles.menuIcon} />
+            <Text style={styles.menuItemText}>Lịch sử giao dịch</Text>
           </TouchableOpacity>
         </View>
 
-   
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Trợ giúp</Text>
 
           <TouchableOpacity style={styles.menuItem} onPress={handleHelp}>
             <Ionicons name="help-circle-outline" size={24} color="#fff" style={styles.menuIcon} />
             <Text style={styles.menuItemText}>Trung tâm hỗ trợ</Text>
-            
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={handleContact}>
             <Ionicons name="mail-outline" size={24} color="#fff" style={styles.menuIcon} />
             <Text style={styles.menuItemText}>Thông tin liên hệ</Text>
-          
           </TouchableOpacity>
         </View>
-
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Giới thiệu</Text>
@@ -168,25 +181,21 @@ export default function ExploreScreen() {
           <TouchableOpacity style={styles.menuItem} onPress={handleAbout}>
             <Ionicons name="information-circle-outline" size={24} color="#fff" style={styles.menuIcon} />
             <Text style={styles.menuItemText}>Thông tin về Tech5 Play </Text>
-           
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={handleTerms}>
             <Ionicons name="document-text-outline" size={24} color="#fff" style={styles.menuIcon} />
             <Text style={styles.menuItemText}>Điều khoản sử dụng</Text>
-          
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.menuItem} onPress={handlePrivacyPolicy}>
             <Ionicons name="shield-checkmark-outline" size={24} color="#fff" style={styles.menuIcon} />
             <Text style={styles.menuItemText}>Chính sách bảo mật</Text>
-         
           </TouchableOpacity>
 
           <TouchableOpacity style={[styles.menuItem, styles.logoutButton]} onPress={handleLogout}>
             <Ionicons name="log-out-outline" size={24} color="#fff" style={styles.menuIcon} />
             <Text style={styles.menuItemText}>Đăng xuất</Text>
-         
           </TouchableOpacity>
         </View>
 
@@ -247,22 +256,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
   },
   section: {
-    marginBottom: 20,
+    marginBottom: 32,
+    backgroundColor: 'transparent',
+    borderRadius: 14,
+    paddingBottom: 2,
   },
   sectionTitle: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    marginLeft: 10,
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 14,
+    marginLeft: 2,
+    letterSpacing: 0.2,
   },
   userHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#1c1c1e',
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 10,
+    padding: 18,
+    borderRadius: 12,
+    marginBottom: 18,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
   },
   userAvatarContainer: {
     marginRight: 15,
@@ -284,16 +302,32 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 20,
     fontWeight: 'bold',
-    flex: 1,
+    marginBottom: 2,
+  },
+  userEmail: {
+    color: '#aaa',
+    fontSize: 14,
+    marginTop: 2,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#222',
+    marginVertical: 12,
+    borderRadius: 1,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1c1c1e',
+    backgroundColor: '#18181b',
     paddingVertical: 15,
-    paddingHorizontal: 15,
-    borderRadius: 8,
-    marginBottom: 8,
+    paddingHorizontal: 18,
+    borderRadius: 10,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 1,
   },
   menuIcon: {
     marginRight: 15,
@@ -302,27 +336,30 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     flex: 1,
+    fontWeight: '500',
   },
   logoutButton: {
     marginTop: 20,
     justifyContent: 'center',
   },
   footer: {
-    padding: 20,
+    padding: 16,
     borderTopWidth: 1,
-    borderTopColor: '#333',
-    marginTop: 20,
+    borderTopColor: '#222',
+    marginTop: 24,
+    marginBottom: 8,
+    backgroundColor: 'transparent',
   },
   footerText: {
-    fontSize: 14,
-    color: '#999',
+    fontSize: 13,
+    color: '#888',
     textAlign: 'center',
   },
   footerSubText: {
     fontSize: 12,
     color: '#666',
     textAlign: 'center',
-    marginTop: 4,
+    marginTop: 2,
   },
 
   // Custom Modal styles

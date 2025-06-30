@@ -45,6 +45,7 @@ interface MovieListProps {
   title: string;
   onClose?: () => void;
   showAll?: boolean;
+  customMovies?: any[];
 }
 
 // Movie Item Component với animation và continue watching badge
@@ -129,9 +130,9 @@ const MovieItem = ({ item, onPress, userId }: { item: GridMovie; onPress: () => 
   );
 };
 
-export default function MovieList({ category, title, onClose, showAll = false }: MovieListProps) {
-  const [movies, setMovies] = useState<GridMovie[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function MovieList({ category, title, onClose, showAll = false, customMovies }: MovieListProps) {
+  const [movies, setMovies] = useState<GridMovie[]>(customMovies || []);
+  const [loading, setLoading] = useState(!customMovies);
   // Page state for pagination - will be implemented when pagination is added
   // const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
@@ -143,8 +144,13 @@ export default function MovieList({ category, title, onClose, showAll = false }:
   const userId = authState?.isLoggedIn && authState?.userId ? authState.userId : undefined;
 
   useEffect(() => {
+    if (customMovies && customMovies.length > 0) {
+      setMovies(customMovies);
+      setLoading(false);
+      return;
+    }
     loadMovies();
-  }, [category, showAll]); // loadMovies will be memoized in future optimization
+  }, [category, showAll, customMovies]);
 
   const loadMovies = async (isLoadingMore = false) => {
     if (!isLoadingMore) {

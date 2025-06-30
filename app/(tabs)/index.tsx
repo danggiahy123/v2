@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -12,12 +12,14 @@ import {
   View,
   Animated,
   Modal,
+  StatusBar,
 } from 'react-native';
 // SafeAreaView imported but not used - will be used in future updates
 import { LinearGradient } from 'expo-linear-gradient';
 import { movieService } from '../../services/movieService';
 import { animeService } from '../../services/animeService';
 import { seriesService } from '../../services/seriesService';
+import { genreService } from '../../services/genreService';
 import { useAppSelector } from '../../store/hooks';
 import { BannerMovie, ContinueWatchingItem, GridMovie } from '../../types/movie';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -61,6 +63,14 @@ export default function HomeScreen() {
   const [viewAllModalVisible, setViewAllModalVisible] = useState(false);
   const [genres, setGenres] = useState<any[]>([]);
   const [genreModalVisible, setGenreModalVisible] = useState(false);
+  const [actionGenreMovies, setActionGenreMovies] = useState<GridMovie[]>([]);
+  const [actionGenre, setActionGenre] = useState<any>(null);
+  const [homeGenreModalVisible, setHomeGenreModalVisible] = useState(false);
+  const [homeGenreSelected, setHomeGenreSelected] = useState('');
+  const [homeGenreTitle, setHomeGenreTitle] = useState('');
+  const [homeGenreViewAllVisible, setHomeGenreViewAllVisible] = useState(false);
+  const [homeGenreCustomMovies, setHomeGenreCustomMovies] = useState<GridMovie[]>([]);
+  const [homeGenreLoading, setHomeGenreLoading] = useState(false);
 
   const bannerFlatListRef = useRef<FlatList>(null);
 
@@ -80,6 +90,9 @@ export default function HomeScreen() {
         if (data.status === 'success') setGenres(data.data.genres);
       })
       .catch(err => console.error('Error fetching genres:', err));
+    
+    // Load action genre movies
+    loadActionGenreMovies();
   }, [userId]); // loadHomeData is defined below, will be memoized in future optimization
 
   // Refresh continue watching data when screen is focused (user comes back from movie detail)
@@ -204,6 +217,29 @@ export default function HomeScreen() {
     }
   };
 
+  const loadActionGenreMovies = async () => {
+    try {
+      // Tìm thể loại "Hành động" trong danh sách genres
+      const genresResponse = await genreService.getGenres('parent');
+      if (genresResponse.status === 'success') {
+        const actionGenre = genresResponse.data.genres.find(
+          (genre: any) => genre.genre_name.toLowerCase().includes('hành động')
+        );
+        
+        if (actionGenre) {
+          setActionGenre(actionGenre);
+          // Load phim của thể loại hành động
+          const moviesResponse = await genreService.getGenreMovies(actionGenre._id);
+          if (moviesResponse.status === 'success') {
+            setActionGenreMovies(moviesResponse.data.movies.slice(0, 8)); // Lấy 8 phim đầu
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error loading action genre movies:', error);
+    }
+  };
+
   const onRefresh = () => {
     setRefreshing(true);
     loadHomeData();
@@ -271,8 +307,39 @@ export default function HomeScreen() {
   const handleGenrePress = (item: any) => {
     setSelectedCategory(item._id);
     setSelectedTitle(item.genre_name);
-    setViewAllModalVisible(true);
+    setViewAllModalVisible(false);
     setGenreModalVisible(false);
+  };
+
+  const handleHomeGenreSelect = async (genre: any) => {
+    try {
+      setHomeGenreLoading(true);
+      setHomeGenreSelected(genre._id);
+      setHomeGenreTitle(genre.genre_name);
+      
+      // Gọi API để lấy phim theo thể loại
+      const response = await genreService.getMoviesByGenre(genre._id, 1, 50, true);
+      const movies = response.data.movies.map((movie: any) => ({
+        movieId: movie._id,
+        title: movie.movie_title,
+        poster: movie.poster_path,
+        producer: movie.producer || '',
+        movieType: movie.movie_type || 'Phim lẻ',
+        rating: movie.rating,
+        year: movie.release_year
+      }));
+      
+      setHomeGenreCustomMovies(movies);
+      setHomeGenreViewAllVisible(true);
+      setHomeGenreModalVisible(false);
+    } catch (error) {
+      console.error('Error fetching genre movies:', error);
+      setHomeGenreCustomMovies([]);
+      setHomeGenreViewAllVisible(true);
+      setHomeGenreModalVisible(false);
+    } finally {
+      setHomeGenreLoading(false);
+    }
   };
 
   const renderBanner = () => {
@@ -633,9 +700,16 @@ export default function HomeScreen() {
 
     return (
       <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#000" />
+        
         <TabHeader
+          title=""
+          showLogo
           onSearchPress={() => setSearchModalVisible(true)}
           onNotificationPress={() => {}}
+          showGenreSelector
+          genres={genres}
+          onGenreSelect={handleHomeGenreSelect}
           opacity={headerOpacity}
         />
         <Animated.ScrollView
@@ -645,58 +719,59 @@ export default function HomeScreen() {
           scrollEventThrottle={16}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FFFFFF" />
-          }>
+          }
+        >
           {renderBanner()}
-          {/* Genre selector button below banner */}
-          <View style={styles.genreSelectorContainer}>
-            <TouchableOpacity
-              style={styles.genreSelectorButton}
-              onPress={() => setGenreModalVisible(true)}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="grid-outline" size={18} color="#FFF" style={styles.genreSelectorIcon} />
-              <Text style={styles.genreSelectorText}>Thể loại</Text>
-              <Ionicons name="chevron-up" size={16} color="#FFF" style={styles.genreSelectorArrow} />
-            </TouchableOpacity>
-          </View>
+
           {renderContinueWatching()}
           {renderMovieGrid(recommendedMovies, 'Đề xuất cho bạn', 'recommended')}
+          {/* Action Genre Section */}
+          {actionGenre && actionGenreMovies.length > 0 && (
+            <View style={styles.actionGenreSection}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>🔥 {actionGenre.genre_name}</Text>
+                <TouchableOpacity 
+                  onPress={() => router.push(`/genre/${actionGenre._id}`)}
+                  style={styles.seeAllButton}
+                >
+                  <Text style={styles.seeAllText}>Xem tất cả</Text>
+                  <Ionicons name="chevron-forward" size={16} color="#B0B0B0" />
+                </TouchableOpacity>
+              </View>
+              <FlatList
+                data={actionGenreMovies}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(item) => item.movieId}
+                renderItem={({ item }) => (
+                  <TouchableOpacity 
+                    style={styles.actionMovieItem}
+                    onPress={() => router.push(`/movie/${item.movieId}`)}
+                    activeOpacity={0.8}
+                  >
+                    <Image source={{ uri: item.poster }} style={styles.actionMoviePoster} resizeMode="cover" />
+                    <View style={styles.actionMovieInfo}>
+                      <Text style={styles.actionMovieTitle} numberOfLines={2}>{item.title}</Text>
+                      {item.rating && (
+                        <View style={styles.actionMovieRating}>
+                          <Ionicons name="star" size={12} color="#FFD700" />
+                          <Text style={styles.actionMovieRatingText}>{item.rating.toFixed(1)}</Text>
+                        </View>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                )}
+                contentContainerStyle={styles.actionMovieList}
+              />
+            </View>
+          )}
+
           {sections.map((section, index) => (
             <View key={index}>
               {renderMovieGrid(section.movies, section.title, getCategoryFromTitle(section.title))}
             </View>
           ))}
         </Animated.ScrollView>
-        {/* Modal hiển thị genres dạng lưới */}
-        <Modal
-          visible={genreModalVisible}
-          animationType="slide"
-          transparent
-          onRequestClose={() => setGenreModalVisible(false)}
-        >
-          <View style={{
-            flex: 1,
-            backgroundColor: 'rgba(0,0,0,0.96)',
-            justifyContent: 'flex-start',
-            paddingTop: 60,
-          }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 10 }}>
-              <Text style={{ color: '#fff', fontSize: 24, fontWeight: 'bold' }}>Thể loại</Text>
-              <TouchableOpacity onPress={() => setGenreModalVisible(false)}>
-                <Ionicons name="close" size={32} color="#fff" />
-              </TouchableOpacity>
-            </View>
-            <GenreGrid
-              genres={genres}
-              onGenrePress={item => {
-                setSelectedCategory(item._id);
-                setSelectedTitle(item.genre_name);
-                setViewAllModalVisible(true);
-                setGenreModalVisible(false);
-              }}
-            />
-          </View>
-        </Modal>
         <SearchModal
           visible={searchModalVisible}
           onClose={() => setSearchModalVisible(false)}
@@ -707,6 +782,19 @@ export default function HomeScreen() {
           category={selectedCategory}
           title={selectedTitle}
         />
+        <ViewAllModal
+          visible={homeGenreViewAllVisible}
+          onClose={() => setHomeGenreViewAllVisible(false)}
+          category={homeGenreSelected}
+          title={homeGenreTitle}
+          customMovies={homeGenreCustomMovies || []}
+        />
+        {homeGenreLoading && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="large" color="#fff" />
+            <Text style={styles.loadingText}>Đang tải phim...</Text>
+          </View>
+        )}
       </View>
     );
   };
@@ -1168,10 +1256,9 @@ const styles = StyleSheet.create({
 
   // Trending Movie Layout Styles
   trendingList: {
-  
-    paddingHorizontal: 10,
-    paddingVertical: 20,
-    height:310,
+    paddingHorizontal: 15,
+    paddingVertical: 25,
+    height: 310,
   },
   trendingItem: {
   
@@ -1215,11 +1302,11 @@ const styles = StyleSheet.create({
   },
   trendingRank: {
     position: 'absolute',
-    top: 10,
-    left: 10,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    top: 15,
+    left: 15,
+    width: 35,
+    height: 35,
+    borderRadius: 17.5,
     backgroundColor: 'rgba(229, 9, 20, 0.9)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -1232,7 +1319,7 @@ const styles = StyleSheet.create({
   },
   trendingRankText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '800',
   },
 
@@ -1416,5 +1503,65 @@ const styles = StyleSheet.create({
   },
   genreSelectorArrow: {
     marginLeft: 2,
+  },
+  actionGenreSection: {
+    marginTop: 32,
+  },
+  seeAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  actionMovieItem: {
+    width: width * 0.33,
+    height: 260,
+    marginRight: 15,
+    borderRadius: 12,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  actionMoviePoster: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 12,
+  },
+  actionMovieInfo: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 10,
+  },
+  actionMovieTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  actionMovieRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  actionMovieRatingText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  actionMovieList: {
+    paddingHorizontal: 10,
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
   },
 });

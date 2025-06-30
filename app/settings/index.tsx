@@ -9,10 +9,13 @@ import {
     Text,
     TouchableOpacity,
     View,
+    Image,
 } from 'react-native';
+import { useAppSelector } from '../../store/hooks';
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const { user } = useAppSelector((state) => state.auth);
 
   const handleAccountInfo = () => {
    
@@ -57,6 +60,18 @@ export default function SettingsScreen() {
         <View style={styles.placeholder} />
       </View>
 
+      {/* Avatar và tên user */}
+      <View style={styles.userCard}>
+        {user?.avatar ? (
+          <Image source={{ uri: user.avatar }} style={styles.avatar} />
+        ) : (
+          <View style={styles.avatarPlaceholder}>
+            <Text style={styles.avatarText}>{user?.full_name?.charAt(0).toUpperCase() || '?'}</Text>
+          </View>
+        )}
+        <Text style={styles.userName}>{user?.full_name || 'Người dùng'}</Text>
+      </View>
+
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.section}>
           
@@ -76,33 +91,6 @@ export default function SettingsScreen() {
             <Ionicons name="notifications-outline" size={24} color="#fff" style={styles.menuIcon} />
             <Text style={styles.menuItemText}>Thông báo</Text>
        
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={handleFavoriteMovies}
-          >
-            <Ionicons name="heart-outline" size={24} color="#fff" style={styles.menuIcon} />
-            <Text style={styles.menuItemText}>Phim yêu thích</Text>
-       
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={handleSubscribedMovies}
-          >
-            <Ionicons name="bookmark-outline" size={24} color="#fff" style={styles.menuIcon} />
-            <Text style={styles.menuItemText}>Phim đăng ký</Text>
-           
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={handleTransactionHistory}
-          >
-            <Ionicons name="card-outline" size={24} color="#fff" style={styles.menuIcon} />
-            <Text style={styles.menuItemText}>Lịch sử giao dịch</Text>
-           
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -166,5 +154,40 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     flex: 1,
+  },
+  userCard: {
+    alignItems: 'center',
+    marginTop: 8,
+    marginBottom: 18,
+  },
+  avatar: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 2,
+    borderColor: '#fff',
+    marginBottom: 8,
+  },
+  avatarPlaceholder: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#2c2c2e',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+    marginBottom: 8,
+  },
+  avatarText: {
+    color: '#fff',
+    fontSize: 32,
+    fontWeight: 'bold',
+  },
+  userName: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
+    marginTop: 2,
   },
 }); 

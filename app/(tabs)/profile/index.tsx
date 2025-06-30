@@ -97,10 +97,15 @@ export default function ProfileScreen() {
         </View>
 
         <Text style={styles.userName}>{user.full_name}</Text>
-        <Text style={styles.userPhone}>{user.phone}</Text>
+        <View style={styles.phoneRow}>
+          <Ionicons name="call-outline" size={16} color="#4CAF50" style={{marginRight: 6}} />
+          <Text style={styles.userPhone}>{user.phone}</Text>
+          {user.is_phone_verified && <Text style={styles.verifiedBadge}>Đã xác thực</Text>}
+        </View>
 
         <TouchableOpacity style={styles.editButton} onPress={handleEditProfile}>
-          <Text style={styles.editButtonText}>Chỉnh sửa profile</Text>
+          <Ionicons name="create-outline" size={16} color="#fff" style={{marginRight: 6}} />
+          <Text style={styles.editButtonText}>Chỉnh sửa hồ sơ</Text>
         </TouchableOpacity>
       </View>
 
@@ -108,24 +113,25 @@ export default function ProfileScreen() {
         <Text style={styles.sectionTitle}>Thông tin cá nhân</Text>
 
         <View style={styles.infoItem}>
+          <Ionicons name="mail-outline" size={16} color="#aaa" style={styles.infoIcon} />
           <Text style={styles.infoLabel}>Email:</Text>
           <Text style={styles.infoValue}>{user.email}</Text>
         </View>
 
         <View style={styles.infoItem}>
+          <Ionicons name="call-outline" size={16} color="#aaa" style={styles.infoIcon} />
           <Text style={styles.infoLabel}>Số điện thoại:</Text>
           <Text style={styles.infoValue}>{user.phone}</Text>
-          {user.is_phone_verified && <Text style={styles.verifiedBadge}>Đã xác thực</Text>}
         </View>
 
         <View style={styles.infoItem}>
+          <Ionicons name="person-outline" size={16} color="#aaa" style={styles.infoIcon} />
           <Text style={styles.infoLabel}>Giới tính:</Text>
-          <Text style={styles.infoValue}>
-            {user.gender === 'male' ? 'Nam' : user.gender === 'female' ? 'Nữ' : 'Khác'}
-          </Text>
+          <Text style={styles.infoValue}>{user.gender === 'male' ? 'Nam' : user.gender === 'female' ? 'Nữ' : 'Khác'}</Text>
         </View>
 
         <View style={styles.infoItem}>
+          <Ionicons name="key-outline" size={16} color="#aaa" style={styles.infoIcon} />
           <Text style={styles.infoLabel}>ID:</Text>
           <Text style={styles.infoValue}>{user._id}</Text>
         </View>
@@ -181,85 +187,129 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: '#1c1c1e',
     alignItems: 'center',
-    paddingVertical: 30,
+    paddingVertical: 32,
     paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
-    margin: 16,
-    borderRadius: 12,
+    borderBottomWidth: 0,
+    margin: 18,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 2,
   },
   avatarContainer: {
-    marginBottom: 16,
+    marginBottom: 18,
   },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 2,
+    borderColor: '#fff',
   },
   avatarPlaceholder: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
     backgroundColor: '#2c2c2e',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
   },
   avatarText: {
     color: '#ffffff',
-    fontSize: 32,
+    fontSize: 36,
     fontWeight: 'bold',
   },
   userName: {
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: 22,
+    fontWeight: '700',
     color: '#ffffff',
     marginBottom: 4,
+    marginTop: 2,
+  },
+  phoneRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
   },
   userPhone: {
-    fontSize: 14,
-    color: '#999999',
-    marginBottom: 16,
+    fontSize: 15,
+    color: '#b0ffb0',
+    marginRight: 8,
+  },
+  verifiedBadge: {
+    fontSize: 12,
+    color: '#4CAF50',
+    fontWeight: '600',
+    backgroundColor: '#1e2e1e',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginLeft: 4,
   },
   editButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#D11030',
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginTop: 8,
+    shadowColor: '#D11030',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
+    elevation: 2,
   },
   editButtonText: {
-    color: '#D11030',
-    fontSize: 14,
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
   },
   infoSection: {
-    backgroundColor: '#1c1c1e',
-    marginHorizontal: 16,
-    padding: 20,
-    borderRadius: 12,
+    backgroundColor: '#18181b',
+    marginHorizontal: 18,
+    padding: 22,
+    borderRadius: 14,
+    marginBottom: 24,
+    marginTop: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 1,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#ffffff',
-    marginBottom: 12,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#fff',
+    marginBottom: 16,
+    marginLeft: 2,
+    letterSpacing: 0.2,
   },
   infoItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#2c2c2e',
+    borderBottomColor: '#232323',
+  },
+  infoIcon: {
+    marginRight: 10,
+    width: 20,
+    textAlign: 'center',
   },
   infoLabel: {
     fontSize: 14,
     color: '#cccccc',
-    width: 120,
+    width: 110,
   },
   infoValue: {
     fontSize: 14,
     color: '#ffffff',
     flex: 1,
-  },
-  verifiedBadge: {
-    fontSize: 12,
-    color: '#4CAF50',
-    fontWeight: '500',
   },
 });
