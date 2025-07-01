@@ -56,6 +56,19 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="sports"
+        options={{
+          title: 'Thể thao',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons 
+              name={focused ? 'basketball' : 'basketball-outline'} 
+              size={24} 
+              color={color} 
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="explore"
         options={{
           title: 'Mở rộng',
