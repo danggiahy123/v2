@@ -77,7 +77,7 @@ export default function MovieDetailScreen() {
     console.log('❌ [MovieDetail] No valid movie ID provided');
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#1a1a1a' }}>
-        <Text style={{ color: 'white', fontSize: 18 }}>Invalid movie ID</Text>
+        <Text style={{ color: 'white', fontSize: 18 }}>ID phim không hợp lệ</Text>
       </View>
     );
   }
@@ -1016,7 +1016,7 @@ export default function MovieDetailScreen() {
     if (!movieDetail?.episodes || movieDetail.episodes.length === 0) {
       return (
         <View style={styles.episodesContainer}>
-          <Text style={styles.sectionTitle}>Episodes</Text>
+          <Text style={styles.sectionTitle}>Tập phim</Text>
           <View style={styles.emptyEpisodesContainer}>
             <Text style={styles.emptyEpisodesText}>
               Phim bộ này chưa có tập phim nào.
@@ -1032,7 +1032,7 @@ export default function MovieDetailScreen() {
     // Render episodes list
     return (
       <View style={styles.episodesContainer}>
-        <Text style={styles.sectionTitle}>Episodes ({movieDetail.episodes.length})</Text>
+        <Text style={styles.sectionTitle}>Tập phim ({movieDetail.episodes.length})</Text>
         {movieDetail.episodes.map((episode, index) => {
           const hasValidUri = episode.uri && episode.uri.trim() !== '';
           const canAccess = movieDetail.is_free || hasRentalAccess || hasEverHadRentalAccess;
@@ -1048,7 +1048,7 @@ export default function MovieDetailScreen() {
               onPress={() => handleEpisodePress(episode)}
               disabled={!hasValidUri || !canAccess}
             >
-              <Text style={styles.episodeNumber}>Ep {episode.episode_number}</Text>
+              <Text style={styles.episodeNumber}>Tập {episode.episode_number}</Text>
               <Text style={[
                 styles.episodeTitle,
                 (!hasValidUri || !canAccess) && styles.episodeTitleDisabled
@@ -1113,7 +1113,7 @@ export default function MovieDetailScreen() {
     return (
       
         <View style={styles.relatedContainer}>
-          <Text style={styles.sectionTitle}>Related Movies</Text>
+          <Text style={styles.sectionTitle}>Phim liên quan</Text>
           
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {movieDetail.relatedMovies.map((movie, index) => (
@@ -1413,7 +1413,7 @@ export default function MovieDetailScreen() {
                   }}
                   onEpisodeComplete={() => {
                     console.log('🎬 [VIDEO] Episode completed!');
-                    showNotificationMessage('Episode completed!', 'success');
+                    showNotificationMessage('Tập phim đã hoàn thành!', 'success');
                   }}
                 />
               ) : (
