@@ -1190,11 +1190,32 @@ const styles = StyleSheet.create({
     width: 140,
     marginRight: 12,
   },
+  posterContainer: {
+    position: 'relative',
+  },
   moviePoster: {
     width: '100%',
     height: 200,
     borderRadius: 10,
     backgroundColor: '#222',
+  },
+  paidBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(229, 9, 20, 0.9)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 5,
+    paddingVertical: 3,
+    borderRadius: 4,
+    zIndex: 10,
+  },
+  paidText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: 'bold',
+    marginLeft: 2,
   },
 
   lastSection: {
