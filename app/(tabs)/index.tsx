@@ -19,6 +19,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { movieService } from '../../services/movieService';
 import { animeService } from '../../services/animeService';
 import { seriesService } from '../../services/seriesService';
+import { sportsService } from '../../services/sportsService';
 import { genreService } from '../../services/genreService';
 import { useAppSelector } from '../../store/hooks';
 import { BannerMovie, ContinueWatchingItem, GridMovie } from '../../types/movie';
@@ -66,6 +67,7 @@ export default function HomeScreen() {
   const [genreModalVisible, setGenreModalVisible] = useState(false);
   const [actionGenreMovies, setActionGenreMovies] = useState<GridMovie[]>([]);
   const [actionGenre, setActionGenre] = useState<any>(null);
+  const [sportsMovies, setSportsMovies] = useState<GridMovie[]>([]);
   const [homeGenreModalVisible, setHomeGenreModalVisible] = useState(false);
   const [homeGenreSelected, setHomeGenreSelected] = useState('');
   const [homeGenreTitle, setHomeGenreTitle] = useState('');
@@ -94,6 +96,9 @@ export default function HomeScreen() {
     
     // Load action genre movies
     loadActionGenreMovies();
+    
+    // Load sports movies
+    loadSportsMovies();
   }, [userId]); // loadHomeData is defined below, will be memoized in future optimization
 
   // Refresh continue watching data when screen is focused (user comes back from movie detail)
@@ -308,6 +313,53 @@ export default function HomeScreen() {
       }
     } catch (error) {
       console.error('Error loading action genre movies:', error);
+    }
+  };
+
+  const loadSportsMovies = async () => {
+    try {
+      const sportsRes = await sportsService.getAllSports();
+      if (sportsRes.status === 'success' && sportsRes.data) {
+        // Get a mix from all sports categories for variety
+        const allSports = sportsRes.data.slice(0, 4);
+        
+        // Try to get NBA and Football for mix
+        const [nbaRes, footballRes] = await Promise.allSettled([
+          sportsService.getNBAMovies(),
+          sportsService.getFootballMovies(),
+        ]);
+        
+        let mixedSports = [...allSports];
+        
+        if (nbaRes.status === 'fulfilled' && nbaRes.value.status === 'success') {
+          mixedSports.push(...nbaRes.value.data.slice(0, 2));
+        }
+        
+        if (footballRes.status === 'fulfilled' && footballRes.value.status === 'success') {
+          mixedSports.push(...footballRes.value.data.slice(0, 2));
+        }
+        
+        // Remove duplicates based on _id
+        const uniqueSports = mixedSports.filter((movie, index, arr) => {
+          const movieId = (movie as any)._id || movie.movieId;
+          return arr.findIndex((m) => {
+            const mId = (m as any)._id || m.movieId;
+            return mId === movieId;
+          }) === index;
+        });
+        
+        // Enhance with price info
+        try {
+          const enhancedSports = await enrichMoviesWithPriceInfo(uniqueSports.slice(0, 8));
+          setSportsMovies(enhancedSports);
+          console.log('🏃‍♂️ [Home] Sports movies loaded:', enhancedSports.length);
+        } catch (enhanceError) {
+          console.warn('Failed to enhance sports with price info:', enhanceError);
+          setSportsMovies(uniqueSports.slice(0, 8));
+        }
+      }
+    } catch (error) {
+      console.error('Error loading sports movies:', error);
     }
   };
 
@@ -796,6 +848,119 @@ export default function HomeScreen() {
     );
   };
 
+  const renderSportsSection = () => {
+    if (!sportsMovies || sportsMovies.length === 0) return null;
+
+    return (
+      <View style={styles.sportsSection}>
+        {/* Premium Sports Header */}
+        <LinearGradient
+          colors={['#FF6B35', '#FF8C42', '#FFA54C']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.sportsHeaderGradient}
+        >
+          <View style={styles.sportsHeaderContent}>
+            <View style={styles.sportsHeaderLeft}>
+              <View style={styles.sportsIconContainer}>
+                <Ionicons name="trophy" size={28} color="#FFF" />
+              </View>
+              <View style={styles.sportsTitleContainer}>
+                <Text style={styles.sportsSectionTitle} numberOfLines={1}>Thể Thao Đặc Sắc</Text>
+                <Text style={styles.sportsSubtitle} numberOfLines={1}>Trận đấu kịch tính nhất</Text>
+              </View>
+            </View>
+            
+            <TouchableOpacity 
+              style={styles.sportsViewAllButton}
+              onPress={() => router.push('/sports')}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.sportsViewAllText}>Tất cả</Text>
+              <Ionicons name="chevron-forward" size={12} color="#FFF" />
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+
+        {/* Sports Movies Grid */}
+        <FlatList
+          data={sportsMovies}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(item, index) => {
+            const movieId = (item as any)._id || item.movieId;
+            return `sports-home-${movieId || index}-${index}`;
+          }}
+          contentContainerStyle={styles.sportsMoviesList}
+          renderItem={({ item, index }) => (
+            <TouchableOpacity 
+              style={[styles.sportsMovieItem, index === 0 && styles.firstSportsItem]}
+              onPress={() => {
+                const movieId = (item as any)._id || item.movieId;
+                router.push(`/movie/${movieId}`);
+              }}
+              activeOpacity={0.8}
+            >
+              <View style={styles.sportsMovieContainer}>
+                {/* Sports Category Badge */}
+                <View style={styles.sportsCategoryBadge}>
+                  <Ionicons 
+                    name={index < 4 ? "basketball" : index < 6 ? "american-football" : "football"} 
+                    size={12} 
+                    color="#FF6B35" 
+                  />
+                  <Text style={styles.sportsCategoryText}>
+                    {index < 4 ? "SPORTS" : index < 6 ? "NBA" : "FOOTBALL"}
+                  </Text>
+                </View>
+
+                <Image 
+                  source={{ uri: (item as any).poster_path || item.poster }} 
+                  style={styles.sportsMoviePoster} 
+                  resizeMode="cover" 
+                />
+                
+                {/* Paid Badge */}
+                {shouldShowPaidBadge(item) && (
+                  <View style={styles.sportsPaidBadge}>
+                    <Ionicons name="card" size={8} color="#fff" />
+                    <Text style={styles.sportsPaidText}>Trả phí</Text>
+                  </View>
+                )}
+
+                {/* Premium Gradient Overlay */}
+                <LinearGradient
+                  colors={['transparent', 'rgba(0,0,0,0.7)', 'rgba(0,0,0,0.9)']}
+                  style={styles.sportsMovieOverlay}
+                >
+                  <View style={styles.sportsMovieInfo}>
+                    <Text style={styles.sportsMovieTitle} numberOfLines={2}>
+                      {(item as any).movie_title || item.title}
+                    </Text>
+                    {item.producer && (
+                      <Text style={styles.sportsMovieProducer} numberOfLines={1}>
+                        {item.producer}
+                      </Text>
+                    )}
+                    
+                    {/* Live Indicator */}
+                    <View style={styles.liveIndicator}>
+                      <View style={styles.liveDot} />
+                      <Text style={styles.liveText}>HIGHLIGHTS</Text>
+                    </View>
+                  </View>
+                </LinearGradient>
+
+                {/* Premium Border */}
+                <View style={styles.premiumBorder} />
+              </View>
+            </TouchableOpacity>
+          )}
+        />
+      </View>
+    );
+  };
+
   /**
    * Hàm xử lý tìm kiếm phim
    * @param resetPage - True nếu muốn reset về trang 1
@@ -874,7 +1039,7 @@ export default function HomeScreen() {
                 data={actionGenreMovies}
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                keyExtractor={(item) => item.movieId}
+                keyExtractor={(item, index) => `action-${item.movieId || index}-${index}`}
                 renderItem={({ item }) => (
                   <TouchableOpacity 
                     style={styles.actionMovieItem}
@@ -914,6 +1079,9 @@ export default function HomeScreen() {
               {renderMovieGrid(section.movies, section.title, getCategoryFromTitle(section.title))}
             </View>
           ))}
+
+          {/* Premium Sports Section - Professional & Modern */}
+          {renderSportsSection()}
         </Animated.ScrollView>
         <SearchModal
           visible={searchModalVisible}
@@ -1864,5 +2032,185 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: 'bold',
     marginLeft: 2,
+  },
+
+  // Premium Sports Section Styles
+  sportsSection: {
+    marginTop: 32,
+    marginBottom: 24,
+  },
+  sportsHeaderGradient: {
+    marginHorizontal: 16,
+    borderRadius: 16,
+    overflow: 'hidden',
+    elevation: 8,
+    shadowColor: '#FF6B35',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  sportsHeaderContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+  },
+  sportsHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    minWidth: 0, // Ensures proper text truncation if needed
+  },
+  sportsIconContainer: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  sportsTitleContainer: {
+    flex: 1,
+    minWidth: 0, // Ensures proper text truncation if needed
+  },
+  sportsSectionTitle: {
+    fontSize: 19,
+    fontWeight: '800',
+    color: '#FFF',
+    marginBottom: 4,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  sportsSubtitle: {
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontWeight: '600',
+  },
+  sportsViewAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  sportsViewAllText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '700',
+    marginRight: 3,
+  },
+  sportsMoviesList: {
+    paddingHorizontal: 16,
+    paddingTop: 20,
+  },
+  sportsMovieItem: {
+    marginRight: 16,
+  },
+  firstSportsItem: {
+    marginLeft: 0,
+  },
+  sportsMovieContainer: {
+    position: 'relative',
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: '#1A1A1A',
+    elevation: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+  },
+  sportsCategoryBadge: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    zIndex: 3,
+    elevation: 3,
+  },
+  sportsCategoryText: {
+    color: '#FF6B35',
+    fontSize: 10,
+    fontWeight: '800',
+    marginLeft: 4,
+    letterSpacing: 0.5,
+  },
+  sportsMoviePoster: {
+    width: 160,
+    height: 240,
+  },
+  sportsMovieOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '50%',
+    justifyContent: 'flex-end',
+    padding: 16,
+  },
+  sportsMovieInfo: {
+    alignItems: 'flex-start',
+  },
+  sportsMovieTitle: {
+    color: '#FFF',
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 6,
+    lineHeight: 18,
+    textShadowColor: 'rgba(0, 0, 0, 0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  sportsMovieProducer: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 12,
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  liveIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 107, 53, 0.9)',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#FFF',
+    marginRight: 6,
+  },
+  liveText: {
+    color: '#FFF',
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  premiumBorder: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+    backgroundColor: '#FF6B35',
   },
 });

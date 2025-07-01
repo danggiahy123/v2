@@ -11,6 +11,11 @@ interface ViewAllModalProps {
 }
 
 export default function ViewAllModal({ visible, onClose, category, title, customMovies }: ViewAllModalProps) {
+  const handleMoviePress = () => {
+    // Close modal immediately when user taps on a movie to reduce delay
+    onClose();
+  };
+
   return (
     <Modal
       visible={visible}
@@ -26,6 +31,7 @@ export default function ViewAllModal({ visible, onClose, category, title, custom
           onClose={onClose}
           showAll={true}
           customMovies={customMovies}
+          onMoviePress={handleMoviePress}
         />
       </View>
     </Modal>

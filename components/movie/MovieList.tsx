@@ -21,7 +21,6 @@ import {
   Dimensions,
   StatusBar,
   Platform,
-  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -47,33 +46,16 @@ interface MovieListProps {
   onClose?: () => void;
   showAll?: boolean;
   customMovies?: any[];
+  onMoviePress?: () => void;
 }
 
-// Movie Item Component với animation và continue watching badge
+// Movie Item Component - Optimized for performance
 const MovieItem = ({ item, onPress, userId }: { item: GridMovie; onPress: () => void; userId?: string }) => {
-  const scaleAnim = new Animated.Value(1);
-
-  const handlePressIn = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 0.95,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handlePressOut = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      useNativeDriver: true,
-    }).start();
-  };
-
   return (
-    <Animated.View style={[styles.movieItem, { transform: [{ scale: scaleAnim }] }]}>
+    <View style={styles.movieItem}>
       <TouchableOpacity
         onPress={onPress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        activeOpacity={1}
+        activeOpacity={0.8}
         style={styles.movieCard}
       >
         <View style={styles.posterContainer}>
@@ -135,11 +117,11 @@ const MovieItem = ({ item, onPress, userId }: { item: GridMovie; onPress: () => 
           </View>
         </View>
       </TouchableOpacity>
-    </Animated.View>
+    </View>
   );
 };
 
-export default function MovieList({ category, title, onClose, showAll = false, customMovies }: MovieListProps) {
+export default function MovieList({ category, title, onClose, showAll = false, customMovies, onMoviePress }: MovieListProps) {
   const [movies, setMovies] = useState<GridMovie[]>(customMovies || []);
   const [loading, setLoading] = useState(!customMovies);
   // Page state for pagination - will be implemented when pagination is added
@@ -151,6 +133,20 @@ export default function MovieList({ category, title, onClose, showAll = false, c
   // Get authenticated user for continue watching badges
   const authState = useAppSelector((state) => state.auth);
   const userId = authState?.isLoggedIn && authState?.userId ? authState.userId : undefined;
+
+  // Helper function to get appropriate content type text
+  const getContentType = () => {
+    if (category === 'sports' || category === 'all-sports' || category === 'nba' || category === 'football' || category === 'sports-trending') {
+      return 'trận đấu';
+    }
+    if (category === 'anime') {
+      return 'anime';
+    }
+    if (category === 'vietnamese') {
+      return 'phim Việt Nam';
+    }
+    return 'phim';
+  };
 
   useEffect(() => {
     if (customMovies && customMovies.length > 0) {
@@ -174,6 +170,13 @@ export default function MovieList({ category, title, onClose, showAll = false, c
       switch (category) {
         case 'trending':
           response = await movieService.getTrending(showAll ? undefined : ITEMS_PER_PAGE, showAll);
+          break;
+        case 'sports-trending':
+          response = await movieService.getSports({ 
+            limit: showAll ? undefined : ITEMS_PER_PAGE, 
+            status: 'released',
+            showAll 
+          });
           break;
         case 'toprated':
           response = await movieService.getTopRated(showAll ? undefined : ITEMS_PER_PAGE, showAll);
@@ -244,8 +247,24 @@ export default function MovieList({ category, title, onClose, showAll = false, c
   };
 
   const handleMoviePress = (movie: GridMovie) => {
-    console.log('Navigating to movie:', movie.movieId);
-    router.push(`/movie/${movie.movieId}`);
+    // Handle both _id and movieId formats consistently with sports data
+    const movieId = (movie as any)._id || movie.movieId;
+    console.log('Navigating to movie:', movieId, 'from category:', category);
+    
+    if (!movieId) {
+      console.error('❌ Movie ID is missing:', movie);
+      return;
+    }
+    
+    // Call external callback first (e.g., to close modal)
+    if (onMoviePress) {
+      onMoviePress();
+    }
+    
+    // Small delay to let modal close animation start
+    setTimeout(() => {
+      router.push(`/movie/${movieId}`);
+    }, 100);
   };
 
   const renderMovie = ({ item }: { item: GridMovie }) => (
@@ -289,7 +308,7 @@ export default function MovieList({ category, title, onClose, showAll = false, c
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#E50914" />
-          <Text style={styles.loadingText}>Đang tải phim...</Text>
+          <Text style={styles.loadingText}>Đang tải {getContentType()}...</Text>
         </View>
       </View>
     );
@@ -311,7 +330,7 @@ export default function MovieList({ category, title, onClose, showAll = false, c
           <View style={styles.headerContent}>
             <Text style={styles.headerTitle} numberOfLines={1}>{title}</Text>
             <Text style={styles.headerSubtitle}>
-              {movies.length} phim{showAll ? ' • Tất cả' : ''}
+              {movies.length} {getContentType()}{showAll ? ' • Tất cả' : ''}
             </Text>
           </View>
         </View>
@@ -320,7 +339,10 @@ export default function MovieList({ category, title, onClose, showAll = false, c
       <FlatList
         data={movies}
         renderItem={renderMovie}
-        keyExtractor={(item, index) => `${category}-${item.movieId}-${index}`}
+        keyExtractor={(item, index) => {
+          const movieId = (item as any)._id || item.movieId;
+          return movieId ? `${category}-${movieId}` : `${category}-${index}`;
+        }}
         numColumns={COLUMN_COUNT}
         contentContainerStyle={[
           styles.movieGrid,
@@ -333,9 +355,16 @@ export default function MovieList({ category, title, onClose, showAll = false, c
         ListEmptyComponent={renderEmpty}
         columnWrapperStyle={COLUMN_COUNT > 1 ? styles.columnWrapper : undefined}
         removeClippedSubviews={true}
-        maxToRenderPerBatch={10}
-        updateCellsBatchingPeriod={50}
-        windowSize={10}
+        maxToRenderPerBatch={6}
+        updateCellsBatchingPeriod={100}
+        windowSize={5}
+        initialNumToRender={8}
+        getItemLayout={(data, index) => ({
+          length: ITEM_HEIGHT + SPACING * 1.5,
+          offset: (ITEM_HEIGHT + SPACING * 1.5) * Math.floor(index / COLUMN_COUNT),
+          index,
+        })}
+        disableIntervalMomentum={true}
       />
     </View>
   );

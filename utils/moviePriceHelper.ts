@@ -23,6 +23,12 @@ const priceInfoCache = new Map<string, MoviePriceInfo>();
  */
 export const getMoviePriceInfo = async (movieId: string): Promise<MoviePriceInfo | null> => {
   try {
+    // Validate movieId trước khi gọi API
+    if (!movieId || movieId === 'undefined' || movieId === 'null') {
+      console.warn('⚠️ [MoviePriceHelper] Invalid movieId:', movieId);
+      return null;
+    }
+
     // Check cache trước
     if (priceInfoCache.has(movieId)) {
       return priceInfoCache.get(movieId)!;
@@ -39,7 +45,7 @@ export const getMoviePriceInfo = async (movieId: string): Promise<MoviePriceInfo
     ]) as any;
     
     const priceInfo: MoviePriceInfo = {
-      movieId: movieDetail.movieId,
+      movieId: movieDetail.movieId || movieId,
       price: movieDetail.price || 0,
       is_free: movieDetail.is_free ?? true, // Default true nếu không có info
       price_display: movieDetail.price_display || 'Miễn phí'
@@ -82,12 +88,21 @@ export const enrichMoviesWithPriceInfo = async (
       const batch = movies.slice(i, i + maxConcurrent);
       
       // Parallel fetch price info cho batch này
-      const priceInfoPromises = batch.map(movie => 
-        getMoviePriceInfo(movie.movieId).catch(error => {
+      const priceInfoPromises = batch.map(movie => {
+        // Validate movieId trước khi gọi API
+        if (!movie.movieId || movie.movieId === 'undefined' || movie.movieId === 'null') {
+          console.warn(`⚠️ [MoviePriceHelper] Skipping movie with invalid ID:`, {
+            movieId: movie.movieId,
+            title: movie.title || 'Unknown'
+          });
+          return Promise.resolve(null);
+        }
+        
+        return getMoviePriceInfo(movie.movieId).catch(error => {
           console.warn(`⚠️ [MoviePriceHelper] Failed to get price for ${movie.movieId}:`, error.message);
           return null; // Return null instead of throwing
-        })
-      );
+        });
+      });
       
       const priceInfoResults = await Promise.allSettled(priceInfoPromises);
       
