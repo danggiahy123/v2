@@ -8,6 +8,8 @@
  * COMPONENTS:
  * - Notification: Toast/alert notifications với type support
  * - TabHeader: Specialized header cho tab screens (absolute positioning với animation)
+ * - MovieDescriptionPreview: Hiển thị nội dung phim rút gọn với nút "xem thêm"
+ * - MovieDescriptionInline: Hiển thị nội dung phim rút gọn và mở rộng inline
  * 
  * ARCHITECTURE:
  * Barrel pattern giúp:
@@ -19,6 +21,8 @@
 
 export { default as AnimatedElements } from './AnimatedElements';
 export { default as DebugHighlight } from './DebugHighlight';
+export { default as MovieDescriptionInline } from './MovieDescriptionInline';
+export { default as MovieDescriptionPreview } from './MovieDescriptionPreview';
 export { default as Notification } from './Notification';
 export { default as SearchModal } from './SearchModal';
 export { default as TabHeader } from './TabHeader';

@@ -42,7 +42,7 @@ import { Notification } from '../../components/ui';
 import { SkeletonLoader } from '../../components/ui/AnimatedElements';
 import { getResumeWatchingInfo, getResumeButtonText, shouldShowContinueBadge } from '../../utils/watchingHelper';
 import { useFocusEffect } from '@react-navigation/native';
-import { Collapsible } from '../../components/layout/Collapsible';
+// Removed Collapsible import - using inline logic
 
 
 // Screen width for responsive design - will be used in future updates
@@ -165,6 +165,9 @@ export default function MovieDetailScreen() {
   );
   
   const [activeTab, setActiveTab] = useState<'related' | 'comments'>('related');
+  
+  // 📖 DESCRIPTION EXPAND STATE
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
 
   // 🎫 FORCE REFRESH RENTAL STATUS AFTER SUCCESSFUL PAYMENT
   useEffect(() => {
@@ -851,11 +854,32 @@ export default function MovieDetailScreen() {
                 )}
               </View>
               <View style={{ marginTop: 4 }}>
-                <Collapsible iconColor="#888">
-                  <Text style={styles.movieDescription}>
-                    {movieDetail.description}
+                {/* Custom Collapsible logic: show 3 lines, expand in place */}
+                {movieDetail.description ? (
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                    <Text 
+                      style={styles.movieDescription}
+                      numberOfLines={isDescriptionExpanded ? undefined : 3}
+                    >
+                      {movieDetail.description}
+                    </Text>
+                    
+                    {movieDetail.description.length > 150 && (
+                      <TouchableOpacity 
+                        style={{ marginLeft: 4 }}
+                        onPress={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                      >
+                        <Text style={[styles.movieDescription, { marginLeft: 4 }]}>
+                          {isDescriptionExpanded ? '... thu gọn' : '... xem thêm'}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                ) : (
+                  <Text style={[styles.movieDescription, { fontSize: 16, color: '#ccc', lineHeight: 24 }]}>
+                    Không có nội dung phim.
                   </Text>
-                </Collapsible>
+                )}
               </View>
             </View>
           </View>
