@@ -28,8 +28,7 @@ import { logout } from '../../store/slices/authSlice';
 
 export default function ExploreScreen() {
   // REDUX STATE - Lấy thông tin user từ auth state
-  const auth = useAppSelector((state) => state.auth);
-  const { user, isLoggedIn } = auth || {};
+  const { user } = useAppSelector((state) => state.auth);
   const dispatch = useAppDispatch();
   const router = useRouter();
 
@@ -73,18 +72,7 @@ export default function ExploreScreen() {
 
   // --- HANDLERS FOR MOVIE FEATURES ---
   const handleFavoriteMovies = () => {
-    if (!isLoggedIn) {
-      Alert.alert(
-        'Cần đăng nhập',
-        'Vui lòng đăng nhập để xem danh sách phim yêu thích',
-        [
-          { text: 'Hủy', style: 'cancel' },
-          { text: 'Đăng nhập', onPress: () => router.push('/(auth)/login') }
-        ]
-      );
-      return;
-    }
-    router.push('/favorites');
+    Alert.alert('Phim yêu thích', 'Tính năng đang phát triển');
   };
   const handleSubscribedMovies = () => {
     router.push('/settings/subscriptions' as any);

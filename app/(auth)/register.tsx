@@ -25,8 +25,7 @@ export default function RegisterScreen() {
   const [gender, setGender] = useState<'male' | 'female'>('male');
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const auth = useAppSelector((state) => state.auth);
-  const { loading, error, message } = auth || {};
+  const { loading, error, message } = useAppSelector((state) => state.auth);
 
   const [notification, setNotification] = useState({
     visible: false,
