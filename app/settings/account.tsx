@@ -22,7 +22,8 @@ import { clearError, clearMessage, updateProfile } from '../../store/slices/auth
 import Notification from '../../components/ui/Notification'; 
 
 export default function AccountInfoScreen() {
-  const { user, userId, loading, error, message } = useAppSelector((state) => state.auth);
+  const auth = useAppSelector((state) => state.auth);
+  const { user, userId, loading, error, message } = auth || {};
   const dispatch = useAppDispatch();
   const router = useRouter();
 

@@ -15,7 +15,8 @@ import { useAppSelector } from '../../store/hooks';
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { user } = useAppSelector((state) => state.auth);
+  const auth = useAppSelector((state) => state.auth);
+  const { user } = auth || {};
 
   const handleAccountInfo = () => {
    

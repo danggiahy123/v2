@@ -19,7 +19,8 @@ export default function OTPScreen() {
   const [countdown, setCountdown] = useState(300); // 5 minutes
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { phone, loading, error, message } = useAppSelector(state => state.auth);
+  const auth = useAppSelector(state => state.auth);
+  const { phone, loading, error, message } = auth || {};
   const inputRefs = useRef<(TextInput | null)[]>([]);
 
   const [notification, setNotification] = useState({

@@ -40,7 +40,8 @@ export default function BannerLogin() {
   const dispatch = useAppDispatch();
   
   // REDUX STATE - Lấy auth state từ store
-  const { loading, error, message } = useAppSelector((state) => state.auth);
+  const auth = useAppSelector((state) => state.auth);
+  const { loading, error, message } = auth || {};
   
   // LOCAL STATE - Quản lý form và UI
   const [phone, setPhone] = useState('');                    // Số điện thoại nhập vào

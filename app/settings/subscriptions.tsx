@@ -24,7 +24,7 @@ import { clearRentalCache } from '../../hooks/useRentalStatus';
 export default function SubscriptionsScreen() {
   const router = useRouter();
   const auth = useAppSelector(state => state.auth);
-  const userId = auth.userId;
+  const userId = auth?.userId;
 
   const [rentals, setRentals] = useState<RentalInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
