@@ -281,9 +281,394 @@ paths:
                     type: string
                     example: 'Internal server error'
 
+  /api/rentals/history:
+    get:
+      tags:
+        - Rental
+      summary: 'Lấy lịch sử thuê phim của user'
+      description: |
+        Lấy danh sách các phim đã thuê của user với các tùy chọn lọc và tìm kiếm.
+        - Hỗ trợ tìm kiếm theo tên phim
+        - Hỗ trợ lọc theo trạng thái và loại thuê
+        - Có phân trang
+      parameters:
+        - in: query
+          name: userId
+          description: 'ID của user cần lấy lịch sử'
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: searchTitle
+          description: 'Tìm kiếm theo tên phim'
+          required: false
+          schema:
+            type: string
+        - in: query
+          name: status
+          description: 'Lọc theo trạng thái rental'
+          required: false
+          schema:
+            type: string
+            enum: ['active', 'expired', 'cancelled']
+        - in: query
+          name: rentalType
+          description: 'Lọc theo loại thuê'
+          required: false
+          schema:
+            type: string
+            enum: ['48h', '30d']
+        - in: query
+          name: page
+          description: 'Số trang (mặc định: 1)'
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          description: 'Số lượng kết quả mỗi trang (mặc định: 10)'
+          required: false
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: 'Lấy lịch sử thuê phim thành công'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: 'Lấy lịch sử thuê phim thành công'
+                  data:
+                    type: object
+                    properties:
+                      rentals:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            _id:
+                              type: string
+                              example: '685d9d203a9c6fb031724ed4'
+                            movie:
+                              type: object
+                              properties:
+                                _id:
+                                  type: string
+                                  example: '683d8ef0602b36157f1c7ae5'
+                                title:
+                                  type: string
+                                  example: 'Spider Man: Far from home'
+                                poster:
+                                  type: string
+                                  example: 'https://imagedelivery.net/...'
+                                type:
+                                  type: string
+                                  example: 'Phim lẻ'
+                            payment:
+                              type: object
+                              properties:
+                                amount:
+                                  type: number
+                                  example: 30000
+                                orderCode:
+                                  type: string
+                                  example: '1750965493929'
+                                paymentTime:
+                                  type: string
+                                  format: date-time
+                            rentalType:
+                              type: string
+                              enum: ['48h', '30d']
+                              example: '48h'
+                            startTime:
+                              type: string
+                              format: date-time
+                            endTime:
+                              type: string
+                              format: date-time
+                            status:
+                              type: string
+                              enum: ['active', 'expired', 'cancelled']
+                              example: 'active'
+                            accessCount:
+                              type: integer
+                              example: 5
+                      pagination:
+                        type: object
+                        properties:
+                          currentPage:
+                            type: integer
+                            example: 1
+                          totalPages:
+                            type: integer
+                            example: 5
+                          total:
+                            type: integer
+                            example: 50
+                          hasNext:
+                            type: boolean
+                            example: true
+                          hasPrev:
+                            type: boolean
+                            example: false
+        '400':
+          description: 'Lỗi validation'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: 'userId là bắt buộc'
+        '500':
+          description: 'Lỗi server'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: 'Lỗi server khi lấy lịch sử thuê phim'
+
+  /api/favorites/movies/{movie_id}:
+    put:
+      tags:
+        - Favorite
+      summary: 'Thêm/xóa phim khỏi danh sách yêu thích'
+      description: |
+        API thống nhất để thêm hoặc xóa phim khỏi danh sách yêu thích.
+        - Sử dụng isFavorite=true để thêm vào danh sách
+        - Sử dụng isFavorite=false để xóa khỏi danh sách
+        - Tự động kiểm tra và xử lý trùng lặp
+      parameters:
+        - in: path
+          name: movie_id
+          description: 'ID của phim'
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+                - isFavorite
+              properties:
+                userId:
+                  type: string
+                  description: 'ID của user'
+                  example: '684f9b3e1876450d6bc28307'
+                isFavorite:
+                  type: boolean
+                  description: 'true để thêm vào yêu thích, false để xóa khỏi yêu thích'
+                  example: true
+      responses:
+        '200':
+          description: 'Thao tác thành công'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: 'success'
+                  message:
+                    type: string
+                    example: 'Đã thêm phim vào danh sách yêu thích'
+                  data:
+                    type: object
+                    properties:
+                      movieId:
+                        type: string
+                        example: '683d8ef0602b36157f1c7ae5'
+                      isFavorite:
+                        type: boolean
+                        example: true
+                      favoriteId:
+                        type: string
+                        example: '685d9d203a9c6fb031724ed4'
+                      addedAt:
+                        type: string
+                        format: date-time
+        '400':
+          description: 'Lỗi validation hoặc phim đã tồn tại'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: 'error'
+                  message:
+                    type: string
+                    example: 'userId là bắt buộc'
+        '404':
+          description: 'Không tìm thấy phim'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: 'error'
+                  message:
+                    type: string
+                    example: 'Không tìm thấy phim'
+
+  /api/favorites:
+    get:
+      tags:
+        - Favorite
+      summary: 'Lấy danh sách phim yêu thích'
+      description: |
+        Lấy danh sách phim yêu thích của user với phân trang.
+        - Trả về thông tin chi tiết của từng phim
+        - Sắp xếp theo thời gian thêm vào mới nhất
+        - Hỗ trợ phân trang
+      parameters:
+        - in: query
+          name: userId
+          description: 'ID của user'
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: page
+          description: 'Số trang (mặc định: 1)'
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          description: 'Số lượng kết quả mỗi trang (mặc định: 20)'
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: 'Lấy danh sách thành công'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: 'success'
+                  data:
+                    type: object
+                    properties:
+                      favorites:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            _id:
+                              type: string
+                              example: '683d8ef0602b36157f1c7ae5'
+                            movie_title:
+                              type: string
+                              example: 'Spider Man: Far from home'
+                            description:
+                              type: string
+                            production_time:
+                              type: string
+                            producer:
+                              type: string
+                            movie_type:
+                              type: string
+                              example: 'Phim lẻ'
+                            price:
+                              type: number
+                            is_free:
+                              type: boolean
+                            price_display:
+                              type: string
+                            added_at:
+                              type: string
+                              format: date-time
+                      pagination:
+                        type: object
+                        properties:
+                          current_page:
+                            type: integer
+                            example: 1
+                          has_more:
+                            type: boolean
+                            example: true
+                          total_items:
+                            type: integer
+                            example: 50
+
+  /api/favorites/check/{movie_id}:
+    get:
+      tags:
+        - Favorite
+      summary: 'Kiểm tra phim có trong danh sách yêu thích không'
+      description: |
+        Kiểm tra một phim có trong danh sách yêu thích của user hay không.
+      parameters:
+        - in: path
+          name: movie_id
+          description: 'ID của phim cần kiểm tra'
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: userId
+          description: 'ID của user'
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 'Kiểm tra thành công'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: 'success'
+                  data:
+                    type: object
+                    properties:
+                      is_favorite:
+                        type: boolean
+                        example: true
+
 components:
   schemas: {}
 
 tags:
   - name: Movie
-    description: Movie management APIs 
+    description: Movie management APIs
+  - name: Rental
+    description: Rental management APIs
+  - name: Favorite
+    description: Favorite management APIs 
