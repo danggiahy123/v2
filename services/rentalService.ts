@@ -1,4 +1,5 @@
 import { Linking } from 'react-native';
+import { API_CONFIG } from '../config/api';
 import {
   CreateRentalRequest,
   CreateRentalResponse,
@@ -14,7 +15,7 @@ import {
 } from '../types/rental';
 
 class RentalService {
-  private baseURL = 'https://backend-app-lou3.onrender.com/api/rentals';
+  private baseURL = `${API_CONFIG.BASE_URL}/api/rentals`;
 
   /**
    * 🎬 Tạo order thuê phim

@@ -37,6 +37,7 @@ import VideoPlayer from '../../components/movie/player/VideoPlayer';
 import { RentalOptionsModal } from '../../components/rental/RentalOptionsModal';
 import { useRentalStatus } from '../../hooks/useRentalStatus';
 import { rentalService } from '../../services/rentalService';
+import { shareMovie } from '../../services/shareService';
 
 import { Notification } from '../../components/ui';
 import { SkeletonLoader } from '../../components/ui/AnimatedElements';
@@ -762,6 +763,20 @@ hasMovieDetail: !!movieDetail,
     router.push(`/movie/${movieId}`);
   };
 
+  const handleSharePress = async () => {
+    try {
+      const result = await shareMovie(id);
+      if (result.success) {
+        showNotificationMessage('Chia sẻ thành công!', 'success');
+      } else {
+        showNotificationMessage('Lỗi khi chia sẻ: ' + (result.error || 'Unknown error'), 'error');
+      }
+    } catch (error) {
+      console.error('Error sharing movie:', error);
+      showNotificationMessage('Không thể chia sẻ phim', 'error');
+    }
+  };
+
   // 🎫 RENTAL HANDLERS
   const handleRentPress = () => {
 if (!movieDetail) return;
@@ -951,7 +966,7 @@ name={hasLiked ? "heart" : "heart-outline"}
 
 
               {/* Share Button - Icon 📤 */}
-              <TouchableOpacity style={styles.actionItemWithCount}>
+              <TouchableOpacity style={styles.actionItemWithCount} onPress={handleSharePress}>
                 <Ionicons name="share-social-outline" size={24} color="#ffffff" />
                 <Text style={styles.actionText}>Chia sẻ</Text>
               </TouchableOpacity>

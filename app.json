@@ -5,18 +5,47 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "datn2025v2",
+    "scheme": "tech5",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "associatedDomains": [
+        "applinks:backend-app-lou3.onrender.com",
+        "applinks:192.168.5.146:3003"
+      ],
+      "bundleIdentifier": "com.tech5.movies"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "package": "com.tech5.movies",
+      "edgeToEdgeEnabled": true,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "tech5",
+              "host": "*",
+              "pathPattern": ".*"
+            },
+            {
+              "scheme": "https",
+              "host": "backend-app-lou3.onrender.com",
+              "pathPattern": "/movie/.*"
+            },
+            {
+              "scheme": "http",
+              "host": "192.168.5.146:3003",
+              "pathPattern": "/movie/.*"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "bundler": "metro",
