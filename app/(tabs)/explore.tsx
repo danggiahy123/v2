@@ -25,6 +25,7 @@ import {
 } from 'react-native';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { logout } from '../../store/slices/authSlice';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function ExploreScreen() {
   // REDUX STATE - Lấy thông tin user từ auth state
@@ -72,7 +73,7 @@ export default function ExploreScreen() {
 
   // --- HANDLERS FOR MOVIE FEATURES ---
   const handleFavoriteMovies = () => {
-    Alert.alert('Phim yêu thích', 'Tính năng đang phát triển');
+    router.push('/watch-later' as any);
   };
   const handleSubscribedMovies = () => {
     router.push('/settings/subscriptions' as any);
@@ -100,123 +101,119 @@ export default function ExploreScreen() {
         router.replace('/(auth)/login' as any);
       } else if (logout.rejected.match(result)) {
 // Đăng xuất thất bại - hiển thị error
-setNotificationMessage('Không thể đăng xuất. Vui lòng thử lại.');
-setIsLogoutModalVisible(true);
-}
-} catch (err) {
-console.error('Logout error:', err);
-setNotificationMessage('Có lỗi xảy ra khi đăng xuất');
-setIsLogoutModalVisible(true);
-}
-};
+        setNotificationMessage('Không thể đăng xuất. Vui lòng thử lại.');
+        setIsLogoutModalVisible(true);
+      }
+    } catch (err) {
+      console.error('Logout error:', err);
+      setNotificationMessage('Có lỗi xảy ra khi đăng xuất');
+      setIsLogoutModalVisible(true);
+    }
+  };
 
-// Hủy đăng xuất - đóng modal
-const cancelLogout = () => {
-setIsLogoutModalVisible(false);
-};
+  // Hủy đăng xuất - đóng modal
+  const cancelLogout = () => {
+    setIsLogoutModalVisible(false);
+  };
 
-return (
-<SafeAreaView style={styles.container}>
+  return (
+    <SafeAreaView style={styles.container}>
+      {/* Settings icon at top right */}
+      {/* Removed absolute positioned settings button */}
 
-<View style={styles.header}>
-<Text style={styles.headerTitle}>Mở rộng</Text>
-<TouchableOpacity style={styles.settingsButton} onPress={handleSettings}>
-  <Ionicons name="settings-outline" size={24} color="#fff" />
-</TouchableOpacity>
-</View>
-
-<ScrollView contentContainerStyle={styles.scrollContent}>
-<View style={styles.section}>
-  <TouchableOpacity onPress={() => router.push('/(tabs)/profile')} style={styles.userHeader}>
-    <View style={styles.userAvatarContainer}>
-      {user?.avatar ? (
-        <Image source={{ uri: user.avatar }} style={styles.userAvatar} resizeMode="cover" />
-      ) : (
-        <View style={styles.userAvatarPlaceholder}>
-          <Ionicons name="person" size={24} color="#666" />
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* User Card */}
+        <View style={styles.card}>
+          <View style={styles.userHeader}>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/profile')} style={{flexDirection: 'row', alignItems: 'center', flex: 1}} activeOpacity={0.8}>
+              <View style={styles.userAvatarContainer}>
+                {user?.avatar ? (
+                  <LinearGradient colors={['#ff512f', '#dd2476']} style={styles.avatarGlow}>
+                    <Image source={{ uri: user.avatar }} style={styles.userAvatar} resizeMode="cover" />
+                  </LinearGradient>
+                ) : (
+                  <View style={[styles.userAvatarPlaceholder, styles.avatarGlow]}>
+                    <Ionicons name="person" size={32} color="#bbb" />
+                  </View>
+                )}
+              </View>
+              <View>
+                <Text style={styles.userText}>{user?.full_name || 'Người dùng'}</Text>
+                <Text style={styles.userEmail}>{user?.email}</Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleSettings} style={styles.settingsButtonProfile}>
+              <Ionicons name="settings-outline" size={26} color="#fff" />
+            </TouchableOpacity>
+          </View>
         </View>
-      )}
-    </View>
-    <View>
-      <Text style={styles.userText}>{user?.full_name || 'Người dùng'}</Text>
-      <Text style={styles.userEmail}>{user?.email}</Text>
-    </View>
-  </TouchableOpacity>
 
-  <View style={styles.divider} />
+        {/* Lịch sử Section */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Lịch sử</Text>
+          <TouchableOpacity style={styles.menuItem} onPress={handleFavoriteMovies} activeOpacity={0.7}>
+            <Ionicons name="bookmark-outline" size={26} color="#ffb347" style={styles.menuIcon} />
+            <Text style={styles.menuItemText}>Phim xem sau</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.menuItem} onPress={handleSubscribedMovies} activeOpacity={0.7}>
+            <Ionicons name="card-outline" size={26} color="#6dd5ed" style={styles.menuIcon} />
+            <Text style={styles.menuItemText}>Lịch sử thuê phim</Text>
+          </TouchableOpacity>
+        </View>
 
-  <Text style={styles.sectionTitle}>Lịch sử</Text>
+        {/* Trợ giúp Section */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Trợ giúp</Text>
+          <TouchableOpacity style={styles.menuItem} onPress={handleHelp} activeOpacity={0.7}>
+            <Ionicons name="help-circle-outline" size={26} color="#f7971e" style={styles.menuIcon} />
+            <Text style={styles.menuItemText}>Trung tâm hỗ trợ</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.menuItem} onPress={handleContact} activeOpacity={0.7}>
+            <Ionicons name="mail-outline" size={26} color="#43cea2" style={styles.menuIcon} />
+            <Text style={styles.menuItemText}>Thông tin liên hệ</Text>
+          </TouchableOpacity>
+        </View>
 
-  <TouchableOpacity style={styles.menuItem} onPress={handleFavoriteMovies}>
-    <Ionicons name="bookmark-outline" size={24} color="#fff" style={styles.menuIcon} />
-    <Text style={styles.menuItemText}>Phim xem sau</Text>
-  </TouchableOpacity>
-  <TouchableOpacity style={styles.menuItem} onPress={handleSubscribedMovies}>
-    <Ionicons name="card-outline" size={24} color="#fff" style={styles.menuIcon} />
-    <Text style={styles.menuItemText}>Lịch sử thuê phim</Text>
-  </TouchableOpacity>
- 
-</View>
-
-<View style={styles.section}>
-  <Text style={styles.sectionTitle}>Trợ giúp</Text>
-
-  <TouchableOpacity style={styles.menuItem} onPress={handleHelp}>
-    <Ionicons name="help-circle-outline" size={24} color="#fff" style={styles.menuIcon} />
-    <Text style={styles.menuItemText}>Trung tâm hỗ trợ</Text>
-  </TouchableOpacity>
-
-  <TouchableOpacity style={styles.menuItem} onPress={handleContact}>
-    <Ionicons name="mail-outline" size={24} color="#fff" style={styles.menuIcon} />
-    <Text style={styles.menuItemText}>Thông tin liên hệ</Text>
-  </TouchableOpacity>
-</View>
-<View style={styles.section}>
+        {/* Giới thiệu Section */}
+        <View style={styles.card}>
           <Text style={styles.sectionTitle}>Giới thiệu</Text>
-
-          <TouchableOpacity style={styles.menuItem} onPress={handleAbout}>
-            <Ionicons name="information-circle-outline" size={24} color="#fff" style={styles.menuIcon} />
+          <TouchableOpacity style={styles.menuItem} onPress={handleAbout} activeOpacity={0.7}>
+            <Ionicons name="information-circle-outline" size={26} color="#36d1c4" style={styles.menuIcon} />
             <Text style={styles.menuItemText}>Thông tin về Tech5 Play </Text>
           </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem} onPress={handleTerms}>
-            <Ionicons name="document-text-outline" size={24} color="#fff" style={styles.menuIcon} />
+          <TouchableOpacity style={styles.menuItem} onPress={handleTerms} activeOpacity={0.7}>
+            <Ionicons name="document-text-outline" size={26} color="#f7971e" style={styles.menuIcon} />
             <Text style={styles.menuItemText}>Điều khoản sử dụng</Text>
           </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem} onPress={handlePrivacyPolicy}>
-            <Ionicons name="shield-checkmark-outline" size={24} color="#fff" style={styles.menuIcon} />
+          <TouchableOpacity style={styles.menuItem} onPress={handlePrivacyPolicy} activeOpacity={0.7}>
+            <Ionicons name="shield-checkmark-outline" size={26} color="#43cea2" style={styles.menuIcon} />
             <Text style={styles.menuItemText}>Chính sách bảo mật</Text>
           </TouchableOpacity>
-
-          <TouchableOpacity style={[styles.menuItem, styles.logoutButton]} onPress={handleLogout}>
-            <Ionicons name="log-out-outline" size={24} color="#fff" style={styles.menuIcon} />
-            <Text style={styles.menuItemText}>Đăng xuất</Text>
+          <TouchableOpacity style={[styles.menuItem, styles.logoutButton]} onPress={handleLogout} activeOpacity={0.8}>
+            <Ionicons name="log-out-outline" size={26} color="#ff4b2b" style={styles.menuIcon} />
+            <Text style={styles.menuItemTextLogout}>Đăng xuất</Text>
           </TouchableOpacity>
         </View>
 
         {user && (
           <View style={styles.footer}>
-            <Text style={styles.footerText}>
-              Đăng nhập với: {user.full_name}
-            </Text>
-            <Text style={styles.footerSubText}>
-              {user.email}
-            </Text>
+            <Text style={styles.footerText}>Đăng nhập với: {user.full_name}</Text>
+            <Text style={styles.footerSubText}>{user.email}</Text>
           </View>
         )}
       </ScrollView>
 
-
+      {/* Modal xác nhận đăng xuất */}
       <Modal transparent={true} visible={isLogoutModalVisible} animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
+            <Ionicons name="alert-circle" size={40} color="#ff4b2b" style={{ marginBottom: 10 }} />
             <Text style={styles.modalMessage}>{notificationMessage}</Text>
             <View style={styles.modalButtons}>
-              <TouchableOpacity style={styles.cancelButton} onPress={cancelLogout}>
-                <Text style={styles.buttonTextCancel }>Hủy</Text>
+              <TouchableOpacity style={styles.cancelButton} onPress={cancelLogout} activeOpacity={0.7}>
+                <Text style={styles.buttonTextCancel}>Hủy</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.confirmButton} onPress={confirmLogout}>
+              <TouchableOpacity style={styles.confirmButton} onPress={confirmLogout} activeOpacity={0.8}>
                 <Text style={styles.buttonText}>Đăng xuất</Text>
               </TouchableOpacity>
             </View>
@@ -232,30 +229,28 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000',
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  settingsButton: {
-    padding: 8,
+  settingsButtonProfile: {
+    marginLeft: 12,
+    padding: 0,
+    alignSelf: 'center',
   },
   scrollContent: {
-    paddingVertical: 20,
-    paddingHorizontal: 15,
+    paddingVertical: 18,
+    paddingHorizontal: 12,
+    marginTop: 56,
   },
-  section: {
-    marginBottom: 32,
-    backgroundColor: 'transparent',
-    borderRadius: 14,
-    paddingBottom: 2,
+  card: {
+    backgroundColor: '#000',
+    borderRadius: 18,
+    marginBottom: 22,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#222',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.13,
+    shadowRadius: 8,
+    elevation: 3,
   },
   sectionTitle: {
     color: '#fff',
@@ -264,59 +259,69 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     marginLeft: 2,
     letterSpacing: 0.2,
+    fontFamily: 'System',
   },
   userHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1c1c1e',
-    padding: 18,
+    justifyContent: 'space-between',
+    backgroundColor: 'transparent',
+    paddingVertical: 8,
+    paddingHorizontal: 2,
     borderRadius: 12,
-    marginBottom: 18,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 2,
+    marginBottom: 2,
   },
   userAvatarContainer: {
-    marginRight: 15,
+    marginRight: 18,
+  },
+  avatarGlow: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#ff4b2b',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
   },
   userAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    borderWidth: 2,
+    borderColor: '#fff',
   },
   userAvatarPlaceholder: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#333',
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: '#000',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
   },
   userText: {
     color: '#fff',
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 2,
+    fontFamily: 'System',
   },
   userEmail: {
     color: '#aaa',
     fontSize: 14,
     marginTop: 2,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#222',
-    marginVertical: 12,
-    borderRadius: 1,
+    fontFamily: 'System',
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#18181b',
+    backgroundColor: '#000',
     paddingVertical: 15,
-    paddingHorizontal: 18,
+    paddingHorizontal: 12,
     borderRadius: 10,
     marginBottom: 10,
     shadowColor: '#000',
@@ -324,25 +329,38 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 2,
     elevation: 1,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.04)',
   },
   menuIcon: {
-    marginRight: 15,
+    marginRight: 18,
   },
   menuItemText: {
     color: '#fff',
     fontSize: 16,
     flex: 1,
     fontWeight: '500',
+    fontFamily: 'System',
+  },
+  menuItemTextLogout: {
+    color: '#ff4b2b',
+    fontSize: 16,
+    flex: 1,
+    fontWeight: 'bold',
+    fontFamily: 'System',
   },
   logoutButton: {
-    marginTop: 20,
+    marginTop: 18,
     justifyContent: 'center',
+    backgroundColor: 'rgba(255,75,43,0.08)',
+    borderWidth: 1,
+    borderColor: '#ff4b2b',
   },
   footer: {
-    padding: 16,
+    padding: 12,
     borderTopWidth: 1,
-    borderTopColor: '#222',
-    marginTop: 24,
+    borderTopColor: '#232526',
+    marginTop: 8,
     marginBottom: 8,
     backgroundColor: 'transparent',
   },
@@ -350,60 +368,70 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#888',
     textAlign: 'center',
+    fontFamily: 'System',
   },
   footerSubText: {
     fontSize: 12,
     color: '#666',
     textAlign: 'center',
     marginTop: 2,
+    fontFamily: 'System',
   },
-
   // Custom Modal styles
   modalOverlay: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
   },
   modalContent: {
-    backgroundColor: '#1c1c1e',
-    padding: 20,
-    borderRadius: 12,
+    backgroundColor: '#232526',
+    padding: 28,
+    borderRadius: 16,
     alignItems: 'center',
+    width: 320,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 6,
   },
   modalMessage: {
     color: '#fff',
-    fontSize: 16,
-    marginBottom: 20,
+    fontSize: 17,
+    marginBottom: 18,
     textAlign: 'center',
+    fontFamily: 'System',
   },
   modalButtons: {
     flexDirection: 'row',
-    justifyContent: 'center', 
-    width: '60%', 
-    gap: 10, 
+    justifyContent: 'center',
+    width: '100%',
+    gap: 14,
   },
   cancelButton: {
     paddingVertical: 10,
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     backgroundColor: '#444444',
     borderRadius: 8,
-   
+    marginRight: 6,
   },
   confirmButton: {
     paddingVertical: 10,
-    paddingHorizontal: 20,
-    backgroundColor: '#D11030',
+    paddingHorizontal: 24,
+    backgroundColor: '#ff4b2b',
     borderRadius: 8,
   },
   buttonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+    fontFamily: 'System',
   },
   buttonTextCancel: {
-    color: '#888',
+    color: '#bbb',
     fontSize: 16,
     fontWeight: 'bold',
+    fontFamily: 'System',
   },
 });

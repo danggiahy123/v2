@@ -92,7 +92,7 @@ export default function MovieDetailScreen() {
       
       if (hours > 0) {
         const remainingMinutes = minutes % 60;
-        return `${hours}h ${remainingMinutes}min`;
+return `${hours}h ${remainingMinutes}min`;
       }
       return `${minutes}min`;
     }
@@ -179,7 +179,7 @@ export default function MovieDetailScreen() {
       
       // Show success notification
       showNotificationMessage('Thanh toán thành công! Bạn có thể xem phim ngay.', 'success');
-    }
+}
   }, [rentalSuccess, fromPayment, userId, forceRefreshRental]);
 
   // 🔍 DEBUG: Track rental access changes
@@ -254,7 +254,7 @@ export default function MovieDetailScreen() {
       }
 
       // Check if any episode has valid URI (only for paid/accessible movies)
-      const episodesWithUri = movieDetail.episodes.filter(ep => ep.uri && ep.uri.trim() !== '');
+const episodesWithUri = movieDetail.episodes.filter(ep => ep.uri && ep.uri.trim() !== '');
       if (episodesWithUri.length === 0) {
         console.log('❌ [DEBUG] Series has episodes but no valid URIs');
         return { 
@@ -336,7 +336,7 @@ export default function MovieDetailScreen() {
 
   // Handle notifications in useEffect (only for accessible movies)
   useEffect(() => {
-    // Only show error notification if movieDetail is loaded and there's actually an error
+// Only show error notification if movieDetail is loaded and there's actually an error
     if (defaultEpisodeError && movieDetail && !loading && !hasShownEpisodeError) {
       // Don't show error notification if movie is not accessible (not paid)
       const hasAccessToMovie = movieDetail.is_free || hasRentalAccess || hasEverHadRentalAccess;
@@ -411,7 +411,7 @@ export default function MovieDetailScreen() {
           id: ep._id,
           title: ep.episode_title,
           number: ep.episode_number,
-          hasUri: !!ep.uri
+hasUri: !!ep.uri
         })),
         userInteractions: movieDetail.userInteractions,
         watchingProgress: movieDetail.userInteractions?.watchingProgress
@@ -478,8 +478,7 @@ export default function MovieDetailScreen() {
       if (rentalSuccess === 'true' && fromPayment === 'true') {
         return;
       }
-      
-      // Only show rental notification after rental status is loaded and user doesn't have access
+// Only show rental notification after rental status is loaded and user doesn't have access
       // Skip if we're still loading rental status or have initial access
       if (initialRentalAccess !== 'true' && hasRentalAccess === false && !hasShownRentalNotification) {
         console.log('🎫 [DEBUG] User needs to rent movie:', {
@@ -555,7 +554,7 @@ export default function MovieDetailScreen() {
   };
 
   // 🔧 ENHANCED: URL validation with better handling
-  const isValidVideoUrl = (url: string): boolean => {
+const isValidVideoUrl = (url: string): boolean => {
     if (!url || url.trim() === '') return false;
     
     try {
@@ -646,7 +645,7 @@ export default function MovieDetailScreen() {
     console.log('🔥 [DEBUG] Like button pressed!', {
       isLoggedIn: auth.isLoggedIn,
       userId: auth.userId,
-      hasMovieDetail: !!movieDetail,
+hasMovieDetail: !!movieDetail,
       hasUserInteractions: !!movieDetail?.userInteractions
     });
 
@@ -698,14 +697,14 @@ export default function MovieDetailScreen() {
       await toggleFavorite(newFavoriteState);
 
       showNotificationMessage(
-        newFavoriteState ? 'Đã thêm vào bộ sưu tập!' : 'Đã xóa khỏi bộ sưu tập',
+        newFavoriteState ? 'Đã thêm vào danh sách xem sau!' : 'Đã xóa khỏi danh sách xem sau',
         'success'
       );
       
       // Favorite action completed successfully
     } catch (err) {
       console.error('Favorite toggle error:', err);
-      showNotificationMessage('Không thể cập nhật trạng thái bộ sưu tập', 'error');
+      showNotificationMessage('Không thể cập nhật danh sách xem sau', 'error');
     }
   };
 
@@ -744,7 +743,7 @@ export default function MovieDetailScreen() {
 
   // 🎫 RENTAL HANDLERS
   const handleRentPress = () => {
-    if (!movieDetail) return;
+if (!movieDetail) return;
     
     if (movieDetail.is_free) {
       showNotificationMessage('Phim này miễn phí!', 'success');
@@ -836,7 +835,8 @@ export default function MovieDetailScreen() {
           <View style={styles.movieMetaRow}>
                 <Text style={styles.movieYear}>
                   {movieDetail.production_time ? new Date(movieDetail.production_time).getFullYear() : '2024'}
-                </Text>
+3.
+</Text>
             <Text style={styles.movieDot}>•</Text>
                 <Text style={styles.movieStudio}>{movieDetail.producer || 'Studio'}</Text>
             <Text style={styles.movieDot}>•</Text>
@@ -902,8 +902,8 @@ export default function MovieDetailScreen() {
                     ]}
                     onPress={handleLikePress}
               >
-                <Ionicons 
-                  name={hasLiked ? "heart" : "heart-outline"} 
+                <Ionicons
+name={hasLiked ? "heart" : "heart-outline"} 
                   size={24} 
                   color={hasLiked ? "#ff6b6b" : "#ffffff"} 
                 />
@@ -924,7 +924,7 @@ export default function MovieDetailScreen() {
                   size={24} 
                   color={isFavorite ? "#ffc107" : "#ffffff"} 
                 />
-                    <Text style={styles.actionText}>Lưu</Text>
+                    <Text style={styles.actionText}>Xem sau</Text>
                   </TouchableOpacity>
 
 
@@ -973,7 +973,7 @@ export default function MovieDetailScreen() {
                       console.log('🎬 [DEBUG] Xem ngay pressed', {
                         showVideoPlayer,
                         hasRentalAccess,
-                        defaultEpisode: !!defaultEpisode,
+defaultEpisode: !!defaultEpisode,
                         movieIsFree: movieDetail?.is_free,
                         userId
                       });
@@ -1052,7 +1052,7 @@ export default function MovieDetailScreen() {
               <Text style={styles.episodeNumber}>Tập {episode.episode_number}</Text>
               <Text style={[
                 styles.episodeTitle,
-                (!hasValidUri || !canAccess) && styles.episodeTitleDisabled
+(!hasValidUri || !canAccess) && styles.episodeTitleDisabled
               ]}>
                 {episode.episode_title}
               </Text>
@@ -1112,6 +1112,7 @@ export default function MovieDetailScreen() {
     if (!movieDetail) return null;
 
     return (
+
       <View style={styles.relatedContainer}>
         <RelatedMovies
           movieId={id}
@@ -1121,6 +1122,7 @@ export default function MovieDetailScreen() {
           onMoviePress={handleRelatedMoviePress}
         />
       </View>
+
     );
   };
 
@@ -1199,7 +1201,7 @@ export default function MovieDetailScreen() {
     return (
       
         <SafeAreaView style={styles.container}>
-          <StatusBar barStyle="light-content" backgroundColor="#000" />
+<StatusBar barStyle="light-content" backgroundColor="#000" />
           
             <View style={styles.centerContainer}>
               <Text style={styles.errorText}>Error: {error}</Text>
@@ -1282,7 +1284,7 @@ export default function MovieDetailScreen() {
               // Nếu đã chọn tập phim cụ thể, không sử dụng defaultEpisode
               const episodeToPlay = currentEpisode || (!currentEpisode && defaultEpisode);
               const canShowVideo = movieDetail?.is_free || hasRentalAccess;
-              const renderTime = Date.now();
+const renderTime = Date.now();
 
               console.log('🎬 [DEBUG] Video Player Conditions:', {
                 canShowVideo: true,
@@ -1352,7 +1354,7 @@ export default function MovieDetailScreen() {
                   showTitle={false}
                   resumeFromTime={(() => {
                     // 🔧 FIX: Handle resume time correctly for auto-play vs manual play
-                    // Case 1: Auto-play from Continue Watching - use resume info from getResumeWatchingInfo
+// Case 1: Auto-play from Continue Watching - use resume info from getResumeWatchingInfo
                     if (autoPlay === 'true' && fromContinueWatching === 'true') {
                       const { resumeFromTime: autoResumeTime } = getResumeWatchingInfo({
                         movieDetail,
@@ -1410,7 +1412,7 @@ export default function MovieDetailScreen() {
                   </Text>
                 </View>
               );
-            })()}
+})()}
           </View>
         )}
         
@@ -1491,7 +1493,7 @@ export default function MovieDetailScreen() {
               onSubmitEditing={handleCommentSubmit}
               blurOnSubmit={false}
                          />
-                         <TouchableOpacity
+<TouchableOpacity
                            style={[
                 styles.fixedCommentSubmitButton,
                 !commentText.trim() && styles.commentSubmitDisabled
@@ -1615,7 +1617,7 @@ const styles = StyleSheet.create({
     height: 180,
     borderRadius: 12,
     backgroundColor: '#333',
-  },
+},
   movieInfoContent: {
     flex: 1,
     justifyContent: 'flex-start',
@@ -1778,7 +1780,7 @@ const styles = StyleSheet.create({
   },
   commentSubmitButton: {
     backgroundColor: '#ff6b6b',
-    borderRadius: 20,
+borderRadius: 20,
     paddingHorizontal: 20,
     paddingVertical: 10,
     minWidth: 60,
@@ -1947,7 +1949,7 @@ const styles = StyleSheet.create({
   },
   episodeItem: {
     flexDirection: 'row',
-    alignItems: 'center',
+alignItems: 'center',
     padding: 15,
     backgroundColor: '#222',
     borderRadius: 8,
@@ -2109,7 +2111,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingHorizontal: 20,
     paddingVertical: 10,
-    justifyContent: 'center',
+justifyContent: 'center',
     alignItems: 'center',
     minWidth: 60,
   },
@@ -2266,7 +2268,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   freeWatchButton: {
-    backgroundColor: '#D11030',
+backgroundColor: '#D11030',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 24,
@@ -2333,4 +2335,4 @@ const styles = StyleSheet.create({
     marginTop: 4,
     textAlign: 'center',
   },
-}); 
+});

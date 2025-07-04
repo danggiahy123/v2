@@ -562,6 +562,8 @@ const styles = StyleSheet.create({
   },
   movieItem: {
     marginRight: 20,
+    width: 320, // tăng từ 240
+    height: 180, // tăng từ 135
   },
   posterContainer: {
     position: 'relative',
@@ -570,8 +572,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#1A1A1A',
   },
   poster: {
-    width: 120,
-    height: 180,
+    width: 320, // tăng từ 240
+    height: 180, // tăng từ 135
     borderRadius: 8,
   },
   paidBadge: {
@@ -597,7 +599,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: '50%',
+    height: '40%', // giảm từ 50% còn 40% cho hợp với ảnh ngang
   },
   movieInfo: {
     position: 'absolute',
@@ -627,8 +629,8 @@ const styles = StyleSheet.create({
     paddingTop: 15,
   },
   trendingItem: {
-    width: 160,
-    height: 240,
+    width: 320, // tăng từ 240
+    height: 200, // tăng từ 155
     marginRight: 16,
     position: 'relative',
   },
@@ -655,15 +657,16 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   trendingPosterContainer: {
-    width: 160,
-    height: 240,
+    width: 320, // tăng từ 240
+    height: 180, // tăng từ 135
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: '#1a1a1a',
   },
   trendingPoster: {
-    width: '100%',
-    height: '100%',
+    width: 320, // tăng từ '100%'
+    height: 180, // tăng từ '100%'
+    borderRadius: 12,
   },
   trendingPaidBadge: {
     position: 'absolute',
@@ -789,10 +792,12 @@ const styles = StyleSheet.create({
      shadowOffset: { width: 0, height: 3 },
      shadowOpacity: 0.3,
      shadowRadius: 6,
+     width: 360, // tăng từ 270
+     height: 200, // tăng từ 150
    },
    enhancedPoster: {
-     width: 140,
-     height: 210,
+     width: 360, // tăng từ 270
+     height: 200, // tăng từ 150
    },
      enhancedPaidBadge: {
     position: 'absolute',
@@ -824,7 +829,7 @@ const styles = StyleSheet.create({
      bottom: 0,
      left: 0,
      right: 0,
-     height: '40%',
+     height: '50%', // tăng từ 40% lên 50% cho overlay rõ hơn với ảnh ngang
      justifyContent: 'flex-end',
    },
    enhancedMovieInfo: {
