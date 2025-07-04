@@ -15,8 +15,11 @@ function RootLayoutContent() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="(auth)" />
-      {/* Movie Detail */}
-
+      {/* Deep linking route */}
+      <Stack.Screen 
+        name="movie/[id]" 
+        options={{ headerShown: false }}
+      />
     </Stack>
   );
 }
