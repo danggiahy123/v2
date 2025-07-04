@@ -1,7 +1,6 @@
 /**
  * 🎬 MOVIE DETAIL SERVICE
- * 
- * Service để gọi các API liên quan đến màn hình chi tiết phim
+ * * Service để gọi các API liên quan đến màn hình chi tiết phim
  * Chính: getMovieDetailWithInteractions API
  */
 
@@ -144,11 +143,9 @@ export const movieDetailService = {
   
   /**
    * 📖 GET MOVIE DETAIL WITH INTERACTIONS
-   * 
-   * API chính cho màn hình chi tiết phim
+   * * API chính cho màn hình chi tiết phim
    * ENDPOINT: GET /api/movies/{id}/detail-with-interactions?userId={userId}
-   * 
-   * @param movieId - ID của phim
+   * * @param movieId - ID của phim
    * @param userId - ID của user (optional)
    * @returns Promise<MovieDetail>
    */
@@ -250,10 +247,8 @@ export const movieDetailService = {
   
   /**
    * 🔄 REFRESH MOVIE DETAIL
-   * 
-   * Làm mới dữ liệu chi tiết phim (sau khi user tương tác)
-   * 
-   * @param movieId - ID của phim
+   * * Làm mới dữ liệu chi tiết phim (sau khi user tương tác)
+   * * @param movieId - ID của phim
    * @param userId - ID của user (optional)
    * @returns Promise<MovieDetail>
    */
@@ -264,10 +259,8 @@ export const movieDetailService = {
   
   /**
    * 📊 GET MOVIE STATISTICS
-   * 
-   * Lấy thống kê của phim (like count, view count, rating)
-   * 
-   * @param movieId - ID của phim
+   * * Lấy thống kê của phim (like count, view count, rating)
+   * * @param movieId - ID của phim
    * @returns Promise với các thống kê
    */
   async getMovieStats(movieId: string): Promise<{
@@ -307,44 +300,125 @@ export const movieDetailService = {
   
   /**
    * 🎭 GET RELATED MOVIES
-   * 
-   * Lấy danh sách phim liên quan
-   * 
-   * @param movieId - ID của phim hiện tại
-   * @param limit - Số lượng phim liên quan (default: 5)
+   * * Lấy danh sách phim liên quan
+   * * @param movieId - ID của phim hiện tại
+   * @param limit - Số lượng phim liên quan (default: 8)
+   * @param genreIds - ID của các thể loại muốn lọc (string, phân cách bằng dấu phẩy)
+   * @param useParentGenres - Có sử dụng thể loại cha không (default: true)
    * @returns Promise với danh sách phim liên quan
    */
-  async getRelatedMovies(movieId: string, limit: number = 5): Promise<any[]> {
+  async getRelatedMovies(
+    movieId: string,
+    options: {
+      limit?: number;
+      genreIds?: string;
+      useParentGenres?: boolean;
+    } = {}
+  ): Promise<any[]> {
+    const { limit = 8, genreIds, useParentGenres = true } = options;
     try {
-      const url = `${API_BASE_URL}/api/movies/${movieId}/related?limit=${limit}`;
+      // First try the related movies endpoint
+      const queryParams = new URLSearchParams();
+      if (genreIds) {
+        queryParams.append('genreIds', genreIds);
+      }
+      if (useParentGenres !== undefined) {
+        queryParams.append('useParentGenres', useParentGenres.toString());
+      }
+      if (limit) {
+        queryParams.append('limit', limit.toString());
+      }
+      const url = `${API_BASE_URL}/api/movies/${movieId}/related${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
       
+      console.log('🎭 [MovieDetailService] Fetching related movies:', {
+        movieId,
+        url,
+        options: { limit, genreIds, useParentGenres }
+      });
+
       const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
       });
-      
+
+      console.log('🎭 [MovieDetailService] Related movies response:', {
+        status: response.status,
+        ok: response.ok,
+        statusText: response.statusText
+      });
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-      
+
       const result = await response.json();
       
-      return result.data.movies || [];
+      // Log the raw result for debugging
+      console.log('🎭 [MovieDetailService] Raw API response:', result);
       
+      // Check if data is an array directly
+      const movies = Array.isArray(result.data) ? result.data : 
+                    (result.data?.movies || []); // Fallback to data.movies if exists
+      
+      console.log('🎭 [MovieDetailService] Related movies result:', {
+        success: result.status === 'success',
+        moviesCount: movies.length,
+        firstMovie: movies[0]?.movie_title || movies[0]?.title,
+        movies: movies
+      });
+
+      return movies;
     } catch (error) {
-      console.error('❌ [MovieDetailService] Error fetching related movies:', error);
-      return []; // Return empty array on error
+      console.error('❌ [MovieDetailService] Error fetching related movies:', {
+        error,
+        movieId,
+        options: { limit, genreIds, useParentGenres }
+      });
+      
+      // Try fallback to search
+      try {
+        console.log('⚠️ [MovieDetailService] Related movies endpoint failed, trying search fallback');
+        
+        // Get the movie details first to get the title
+        const movieDetailResponse = await fetch(`${API_BASE_URL}/api/movies/${movieId}/detail-with-interactions`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (!movieDetailResponse.ok) {
+          throw new Error(`Failed to get movie details: ${movieDetailResponse.status}`);
+        }
+        
+        const movieDetail = await movieDetailResponse.json();
+        const movieTitle = movieDetail.data.movie.movie_title;
+        
+        // Use the movie title to search for similar movies
+        const searchResults = await this.searchSimilarMovies(movieTitle, limit);
+        
+        // Filter out the current movie from results
+        const filteredResults = searchResults.filter(movie => movie._id !== movieId);
+        
+        console.log('✅ [MovieDetailService] Found similar movies via search:', {
+          searchQuery: movieTitle,
+          resultsCount: filteredResults.length
+        });
+        
+        return filteredResults;
+      } catch (fallbackError) {
+        console.error('❌ [MovieDetailService] Fallback search also failed:', fallbackError);
+        return [];
+      }
     }
   },
   
   /**
    * 💬 GET MOVIE COMMENTS
-   * 
-   * Lấy comments của phim (with pagination)
-   * 
-   * @param movieId - ID của phim
+   * * Lấy comments của phim (with pagination)
+   * * @param movieId - ID của phim
    * @param page - Trang hiện tại (default: 1)
    * @param limit - Số comments per page (default: 10)
    * @returns Promise với danh sách comments
@@ -399,10 +473,8 @@ export const movieDetailService = {
   
   /**
    * 🔍 SEARCH MOVIES (for related/similar)
-   * 
-   * Tìm kiếm phim tương tự cho recommendations
-   * 
-   * @param query - Từ khóa tìm kiếm
+   * * Tìm kiếm phim tương tự cho recommendations
+   * * @param query - Từ khóa tìm kiếm
    * @param limit - Số kết quả (default: 10)
    * @returns Promise với kết quả tìm kiếm
    */
@@ -433,11 +505,9 @@ export const movieDetailService = {
   
   /**
    * ⚡ PRELOAD MOVIE DETAIL
-   * 
-   * Preload movie detail để cải thiện performance
+   * * Preload movie detail để cải thiện performance
    * Sử dụng khi user hover/focus vào movie card
-   * 
-   * @param movieId - ID của phim cần preload
+   * * @param movieId - ID của phim cần preload
    * @param userId - ID của user (optional)
    */
   async preloadMovieDetail(movieId: string, userId?: string): Promise<void> {
@@ -460,4 +530,4 @@ export const movieDetailService = {
 /**
  * 🚀 Export default for convenience
  */
-export default movieDetailService; 
+export default movieDetailService;  

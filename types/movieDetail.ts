@@ -87,7 +87,7 @@ export interface WatchingProgress {
 
 export interface Genre {
   _id: string;
-  name: string;
+  genre_name: string;
   slug: string;
 }
 
