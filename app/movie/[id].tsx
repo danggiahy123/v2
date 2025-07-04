@@ -42,6 +42,7 @@ import { Notification } from '../../components/ui';
 import { SkeletonLoader } from '../../components/ui/AnimatedElements';
 import { getResumeWatchingInfo, getResumeButtonText, shouldShowContinueBadge } from '../../utils/watchingHelper';
 import { useFocusEffect } from '@react-navigation/native';
+import { RelatedMovies } from '../../components/movie';
 // Removed Collapsible import - using inline logic
 
 
@@ -1108,33 +1109,20 @@ defaultEpisode: !!defaultEpisode,
   };
 
   const renderRelatedMovies = () => {
-    if (!movieDetail?.relatedMovies || movieDetail.relatedMovies.length === 0) return null;
+    if (!movieDetail) return null;
 
     return (
-      
-        <View style={styles.relatedContainer}>
-          <Text style={styles.sectionTitle}>Phim liên quan</Text>
-          
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {movieDetail.relatedMovies.map((movie, index) => (
-                  <TouchableOpacity
-                  key={movie.movieId || index}
-                    style={styles.relatedMovieItem}
-                    onPress={() => handleRelatedMoviePress(movie.movieId)}
-                  >
-                      <Image
-                        source={{ uri: movie.poster }}
-                        style={styles.relatedMoviePoster}
-                        resizeMode="cover"
-                      />
-                      <Text style={styles.relatedMovieTitle} numberOfLines={2}>
-                        {movie.title}
-                      </Text>
-                  </TouchableOpacity>
-              ))}
-            </ScrollView>
-</View>
-      
+
+      <View style={styles.relatedContainer}>
+        <RelatedMovies
+          movieId={id}
+          currentMovieGenres={movieDetail.genres}
+          limit={8}
+          showTitle={true}
+          onMoviePress={handleRelatedMoviePress}
+        />
+      </View>
+
     );
   };
 
@@ -1459,11 +1447,13 @@ const renderTime = Date.now();
              {/* Tab Content */}
              <View style={styles.tabContent}>
                {activeTab === 'related' && (
-                 
-                   <View style={styles.emptyTabContent}>
-                     <Text style={styles.emptyTabText}>Phim liên quan sẽ được phát triển trong tương lai</Text>
-                   </View>
-                 
+                 <RelatedMovies    
+                   movieId={id}
+                   currentMovieGenres={movieDetail?.genres || []}
+                   limit={8}
+                   showTitle={false}
+                   onMoviePress={handleRelatedMoviePress}
+                 />
                )}
                
                {activeTab === 'comments' && (
