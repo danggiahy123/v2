@@ -168,6 +168,9 @@ return `${hours}h ${remainingMinutes}min`;
   
   // 📖 DESCRIPTION EXPAND STATE
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  
+  // 🎬 WATCH BUTTON STATE - để ẩn button sau khi click
+  const [hasClickedWatchButton, setHasClickedWatchButton] = useState(false);
 
   // 🎫 FORCE REFRESH RENTAL STATUS AFTER SUCCESSFUL PAYMENT
   useEffect(() => {
@@ -199,6 +202,24 @@ return `${hours}h ${remainingMinutes}min`;
       setHasEverHadRentalAccess(true);
     }
   }, [hasRentalAccess, currentRental, isLoadingRentalStatus, movieDetail?.is_free, rentalSuccess, fromPayment]);
+
+  // 🎬 RESET WATCH BUTTON STATE ON COMPONENT MOUNT
+  useEffect(() => {
+    console.log('🎬 [MovieDetail] Component mounting, resetting watch button state');
+    // Chỉ reset nếu không phải từ Continue Watching
+    if (fromContinueWatching !== 'true') {
+      setHasClickedWatchButton(false);
+    }
+  }, [id, fromContinueWatching]); // Reset when movie ID changes
+
+  // 🎬 AUTO-PLAY FROM CONTINUE WATCHING
+  useEffect(() => {
+    if (fromContinueWatching === 'true' && movieDetail) {
+      console.log('🎬 [MovieDetail] Auto-playing from Continue Watching');
+      setHasClickedWatchButton(true); // Ẩn button
+      setShowVideoPlayer(true); // Mở video player
+    }
+  }, [fromContinueWatching, movieDetail]);
 
   // ⭐ DERIVED STATE FOR UI
   const hasLiked = Boolean(movieDetail?.userInteractions?.hasLiked);
@@ -936,11 +957,14 @@ name={hasLiked ? "heart" : "heart-outline"}
               </View>
 
           {/* Free Movie Watch Button */}
-          {movieDetail && movieDetail.is_free && (
+          {movieDetail && movieDetail.is_free && !hasClickedWatchButton && (
             <View style={styles.freeMovieContainer}>
               <TouchableOpacity 
                 style={styles.freeWatchButton}
-                onPress={() => setShowVideoPlayer(true)}
+                onPress={() => {
+                  setHasClickedWatchButton(true);
+                  setShowVideoPlayer(true);
+                }}
               >
                 <Ionicons name="play-circle" size={24} color="#ffffff" />
                 <Text style={styles.freeWatchText}>Xem miễn phí</Text>
@@ -949,7 +973,7 @@ name={hasLiked ? "heart" : "heart-outline"}
           )}
 
           {/* Rental Status Banner */}
-          {movieDetail && !movieDetail.is_free && (
+          {movieDetail && !movieDetail.is_free && !hasClickedWatchButton && (
             <View style={styles.rentalContainer}>
               {hasRentalAccess && currentRental ? (
                 <View style={styles.rentalAccessBanner}>
@@ -972,15 +996,16 @@ name={hasLiked ? "heart" : "heart-outline"}
                       console.log('🎬 [DEBUG] Xem ngay pressed', {
                         showVideoPlayer,
                         hasRentalAccess,
-defaultEpisode: !!defaultEpisode,
+                        defaultEpisode: !!defaultEpisode,
                         movieIsFree: movieDetail?.is_free,
                         userId
                       });
+                      setHasClickedWatchButton(true);
                       setShowVideoPlayer(true);
                     }}
                   >
                     <Text style={styles.watchNowText}>Xem ngay</Text>
-              </TouchableOpacity>
+                  </TouchableOpacity>
                 </View>
               ) : (
                 <View style={styles.rentalPrompt}>
