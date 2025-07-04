@@ -99,83 +99,79 @@ export default function ExploreScreen() {
         // Đăng xuất thành công - chuyển về login screen
         router.replace('/(auth)/login' as any);
       } else if (logout.rejected.match(result)) {
-        // Đăng xuất thất bại - hiển thị error
-        setNotificationMessage('Không thể đăng xuất. Vui lòng thử lại.');
-        setIsLogoutModalVisible(true);
-      }
-    } catch (err) {
-      console.error('Logout error:', err);
-      setNotificationMessage('Có lỗi xảy ra khi đăng xuất');
-      setIsLogoutModalVisible(true);
-    }
-  };
+// Đăng xuất thất bại - hiển thị error
+setNotificationMessage('Không thể đăng xuất. Vui lòng thử lại.');
+setIsLogoutModalVisible(true);
+}
+} catch (err) {
+console.error('Logout error:', err);
+setNotificationMessage('Có lỗi xảy ra khi đăng xuất');
+setIsLogoutModalVisible(true);
+}
+};
 
-  // Hủy đăng xuất - đóng modal
-  const cancelLogout = () => {
-    setIsLogoutModalVisible(false);
-  };
+// Hủy đăng xuất - đóng modal
+const cancelLogout = () => {
+setIsLogoutModalVisible(false);
+};
 
-  return (
-    <SafeAreaView style={styles.container}>
+return (
+<SafeAreaView style={styles.container}>
+
+<View style={styles.header}>
+<Text style={styles.headerTitle}>Mở rộng</Text>
+<TouchableOpacity style={styles.settingsButton} onPress={handleSettings}>
+  <Ionicons name="settings-outline" size={24} color="#fff" />
+</TouchableOpacity>
+</View>
+
+<ScrollView contentContainerStyle={styles.scrollContent}>
+<View style={styles.section}>
+  <TouchableOpacity onPress={() => router.push('/(tabs)/profile')} style={styles.userHeader}>
+    <View style={styles.userAvatarContainer}>
+      {user?.avatar ? (
+        <Image source={{ uri: user.avatar }} style={styles.userAvatar} resizeMode="cover" />
+      ) : (
+        <View style={styles.userAvatarPlaceholder}>
+          <Ionicons name="person" size={24} color="#666" />
+        </View>
+      )}
+    </View>
+    <View>
+      <Text style={styles.userText}>{user?.full_name || 'Người dùng'}</Text>
+      <Text style={styles.userEmail}>{user?.email}</Text>
+    </View>
+  </TouchableOpacity>
+
+  <View style={styles.divider} />
+
+  <Text style={styles.sectionTitle}>Lịch sử</Text>
+
+  <TouchableOpacity style={styles.menuItem} onPress={handleFavoriteMovies}>
+    <Ionicons name="bookmark-outline" size={24} color="#fff" style={styles.menuIcon} />
+    <Text style={styles.menuItemText}>Phim xem sau</Text>
+  </TouchableOpacity>
+  <TouchableOpacity style={styles.menuItem} onPress={handleSubscribedMovies}>
+    <Ionicons name="card-outline" size={24} color="#fff" style={styles.menuIcon} />
+    <Text style={styles.menuItemText}>Lịch sử thuê phim</Text>
+  </TouchableOpacity>
  
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Mở rộng</Text>
-        <TouchableOpacity style={styles.settingsButton} onPress={handleSettings}>
-          <Ionicons name="settings-outline" size={24} color="#fff" />
-        </TouchableOpacity>
-      </View>
+</View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.section}>
-          <TouchableOpacity onPress={() => router.push('/(tabs)/profile')} style={styles.userHeader}>
-            <View style={styles.userAvatarContainer}>
-              {user?.avatar ? (
-                <Image source={{ uri: user.avatar }} style={styles.userAvatar} resizeMode="cover" />
-              ) : (
-                <View style={styles.userAvatarPlaceholder}>
-                  <Ionicons name="person" size={24} color="#666" />
-                </View>
-              )}
-            </View>
-            <View>
-              <Text style={styles.userText}>{user?.full_name || 'Người dùng'}</Text>
-              <Text style={styles.userEmail}>{user?.email}</Text>
-            </View>
-          </TouchableOpacity>
+<View style={styles.section}>
+  <Text style={styles.sectionTitle}>Trợ giúp</Text>
 
-          <View style={styles.divider} />
+  <TouchableOpacity style={styles.menuItem} onPress={handleHelp}>
+    <Ionicons name="help-circle-outline" size={24} color="#fff" style={styles.menuIcon} />
+    <Text style={styles.menuItemText}>Trung tâm hỗ trợ</Text>
+  </TouchableOpacity>
 
-          <Text style={styles.sectionTitle}>Lịch sử</Text>
-
-          <TouchableOpacity style={styles.menuItem} onPress={handleFavoriteMovies}>
-            <Ionicons name="heart-outline" size={24} color="#fff" style={styles.menuIcon} />
-            <Text style={styles.menuItemText}>Phim yêu thích</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.menuItem} onPress={handleSubscribedMovies}>
-            <Ionicons name="bookmark-outline" size={24} color="#fff" style={styles.menuIcon} />
-            <Text style={styles.menuItemText}>Phim đăng ký</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.menuItem} onPress={handleTransactionHistory}>
-            <Ionicons name="card-outline" size={24} color="#fff" style={styles.menuIcon} />
-            <Text style={styles.menuItemText}>Lịch sử giao dịch</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Trợ giúp</Text>
-
-          <TouchableOpacity style={styles.menuItem} onPress={handleHelp}>
-            <Ionicons name="help-circle-outline" size={24} color="#fff" style={styles.menuIcon} />
-            <Text style={styles.menuItemText}>Trung tâm hỗ trợ</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem} onPress={handleContact}>
-            <Ionicons name="mail-outline" size={24} color="#fff" style={styles.menuIcon} />
-            <Text style={styles.menuItemText}>Thông tin liên hệ</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.section}>
+  <TouchableOpacity style={styles.menuItem} onPress={handleContact}>
+    <Ionicons name="mail-outline" size={24} color="#fff" style={styles.menuIcon} />
+    <Text style={styles.menuItemText}>Thông tin liên hệ</Text>
+  </TouchableOpacity>
+</View>
+<View style={styles.section}>
           <Text style={styles.sectionTitle}>Giới thiệu</Text>
 
           <TouchableOpacity style={styles.menuItem} onPress={handleAbout}>
