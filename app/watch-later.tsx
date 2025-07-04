@@ -257,7 +257,7 @@ await loadWatchLaterMovies();
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+          <Ionicons name="chevron-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Phim xem sau</Text>
         <View style={styles.headerRight}>
@@ -299,8 +299,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: '#000',
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
   },
   backButton: {
     padding: 8,
