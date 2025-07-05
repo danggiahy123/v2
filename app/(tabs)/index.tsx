@@ -21,6 +21,8 @@ import { animeService } from '../../services/animeService';
 import { seriesService } from '../../services/seriesService';
 import { sportsService } from '../../services/sportsService';
 import { genreService } from '../../services/genreService';
+import { shareMovie } from '../../services/shareService';
+import { userInteractionService } from '../../services/userInteractionService';
 import { useAppSelector } from '../../store/hooks';
 import { BannerMovie, ContinueWatchingItem, GridMovie } from '../../types/movie';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -74,6 +76,10 @@ export default function HomeScreen() {
   const [homeGenreViewAllVisible, setHomeGenreViewAllVisible] = useState(false);
   const [homeGenreCustomMovies, setHomeGenreCustomMovies] = useState<GridMovie[]>([]);
   const [homeGenreLoading, setHomeGenreLoading] = useState(false);
+  
+  // Banner interaction states
+  const [bannerFavorites, setBannerFavorites] = useState<{[key: string]: boolean}>({});
+  const [bannerLikes, setBannerLikes] = useState<{[key: string]: boolean}>({});
 
   const bannerFlatListRef = useRef<FlatList>(null);
 
@@ -363,6 +369,67 @@ export default function HomeScreen() {
     }
   };
 
+  // Banner interaction handlers (no notifications)
+  const handleBannerSharePress = async (movieId: string) => {
+    try {
+      await shareMovie(movieId);
+    } catch (error) {
+      console.error('Error sharing movie:', error);
+    }
+  };
+
+  const handleBannerFavoritePress = async (movieId: string) => {
+    if (!userId) {
+      return;
+    }
+
+    try {
+      const currentFavoriteStatus = bannerFavorites[movieId] || false;
+      const newFavoriteStatus = !currentFavoriteStatus;
+
+      // Optimistically update UI
+      setBannerFavorites(prev => ({ ...prev, [movieId]: newFavoriteStatus }));
+
+      const result = await userInteractionService.toggleFavorite(movieId, newFavoriteStatus, userId);
+      
+      if (result.status !== 'success') {
+        // Revert on failure
+        setBannerFavorites(prev => ({ ...prev, [movieId]: currentFavoriteStatus }));
+      }
+    } catch (error) {
+      // Revert on error
+      const currentFavoriteStatus = bannerFavorites[movieId] || false;
+      setBannerFavorites(prev => ({ ...prev, [movieId]: currentFavoriteStatus }));
+      console.error('Error toggling favorite:', error);
+    }
+  };
+
+  const handleBannerLikePress = async (movieId: string) => {
+    if (!userId) {
+      return;
+    }
+
+    try {
+      const currentLikeStatus = bannerLikes[movieId] || false;
+      const newLikeStatus = !currentLikeStatus;
+
+      // Optimistically update UI
+      setBannerLikes(prev => ({ ...prev, [movieId]: newLikeStatus }));
+
+      const result = await userInteractionService.toggleLike(movieId, newLikeStatus, userId);
+      
+      if (result.status !== 'success') {
+        // Revert on failure
+        setBannerLikes(prev => ({ ...prev, [movieId]: currentLikeStatus }));
+      }
+    } catch (error) {
+      // Revert on error
+      const currentLikeStatus = bannerLikes[movieId] || false;
+      setBannerLikes(prev => ({ ...prev, [movieId]: currentLikeStatus }));
+      console.error('Error toggling like:', error);
+    }
+  };
+
   const onRefresh = () => {
     setRefreshing(true);
     loadHomeData();
@@ -512,6 +579,18 @@ export default function HomeScreen() {
             {currentBannerMovie.title || 'Untitled'}
           </Text>
           <View style={styles.bannerButtons}>
+            <View style={styles.leftIconContainer}>
+              <TouchableOpacity 
+                style={styles.iconButton}
+                onPress={() => handleBannerLikePress(currentBannerMovie.movieId)}
+              >
+                <Ionicons 
+                  name={bannerLikes[currentBannerMovie.movieId] ? "heart" : "heart-outline"} 
+                  size={16} 
+                  color={bannerLikes[currentBannerMovie.movieId] ? "#ff1744" : "#fff"} 
+                />
+              </TouchableOpacity>
+            </View>
             <TouchableOpacity 
               style={styles.playButton}
               onPress={() => router.push(`/movie/${currentBannerMovie.movieId}`)}
@@ -519,13 +598,24 @@ export default function HomeScreen() {
               <Ionicons name="play" size={16} color="#fff" />
               <Text style={styles.playButtonText}>Xem ngay</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.moreButton}
-              onPress={() => router.push(`/movie/${currentBannerMovie.movieId}`)}
-            >
-              <Ionicons name="add" size={16} color="#fff" />
-              <Text style={styles.moreButtonText}>Xem thêm</Text>
-            </TouchableOpacity>
+            <View style={styles.iconButtonsContainer}>
+              <TouchableOpacity 
+                style={styles.iconButton}
+                onPress={() => handleBannerSharePress(currentBannerMovie.movieId)}
+              >
+                <Ionicons name="share-social-outline" size={16} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.iconButton}
+                onPress={() => handleBannerFavoritePress(currentBannerMovie.movieId)}
+              >
+                <Ionicons 
+                  name={bannerFavorites[currentBannerMovie.movieId] ? "bookmark" : "bookmark-outline"} 
+                  size={16} 
+                  color={bannerFavorites[currentBannerMovie.movieId] ? "#ffc107" : "#fff"} 
+                />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </View>
@@ -1256,9 +1346,36 @@ const styles = StyleSheet.create({
   },
   bannerButtons: {
     flexDirection: 'row',
-    gap: 16,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 16,
+    paddingHorizontal: 16,
+  },
+  leftIconContainer: {
+    flex: 1,
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
+  },
+  iconButtonsContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  iconButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.19)',
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    borderRadius: 50,
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    backdropFilter: 'blur(10px)',
+    width: 36,
+    height: 36,
   },
   // Test Movie Detail Button
   testMovieButton: {
