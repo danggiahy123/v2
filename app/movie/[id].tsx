@@ -1009,7 +1009,7 @@ name={hasLiked ? "heart" : "heart-outline"}
                   <TouchableOpacity 
                     style={styles.watchNowButton}
                     onPress={() => {
-                      console.log('🎬 [DEBUG] Xem ngay pressed', {
+                      console.log('🎬 [DEBUG] Watch button pressed', {
                         showVideoPlayer,
                         hasRentalAccess,
                         defaultEpisode: !!defaultEpisode,
@@ -1020,7 +1020,7 @@ name={hasLiked ? "heart" : "heart-outline"}
                       setShowVideoPlayer(true);
                     }}
                   >
-                    <Text style={styles.watchNowText}>Xem ngay</Text>
+                    <Text style={styles.watchNowText}>{movieDetail ? getResumeButtonText(movieDetail) : 'Xem ngay'}</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
