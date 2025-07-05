@@ -849,205 +849,166 @@ if (!movieDetail) return;
     const userInteractions = movieDetail.userInteractions;
     const hasLiked = Boolean(userInteractions?.hasLiked);
     const isFavorite = Boolean(userInteractions?.isFavorite);
+    const year = movieDetail.production_time ? new Date(movieDetail.production_time).getFullYear() : 'N/A';
+    const studioOrDirector = movieDetail.producer || 'Studio';
+    const rating = movieDetail.rating ? movieDetail.rating.toFixed(1) : '9.6';
+    const duration = movieDetail.duration ? formatDuration(movieDetail.duration) : '';
+    const type = movieDetail.movie_type || 'Phim lẻ';
+    const desc = movieDetail.description || '';
 
     return (
-      
-        <View style={styles.movieInfoContainer}>
-          {/* Header with Poster and Info */}
-          <View style={styles.movieHeaderContainer}>
-            {/* Movie Poster */}
-            <View style={styles.posterContainer}>
-              <Image 
-                source={{ uri: movieDetail.poster_path }} 
-                style={styles.moviePoster}
-                resizeMode="cover"
-              />
-            </View>
-            
-            {/* Movie Info */}
-            <View style={styles.movieInfoContent}>
-          <Text style={styles.movieTitle}>{movieDetail.movie_title}</Text>
-          
-          <View style={styles.movieMetaRow}>
-                <Text style={styles.movieYear}>
-                  {movieDetail.production_time ? new Date(movieDetail.production_time).getFullYear() : '2024'}
-3.
-</Text>
-            <Text style={styles.movieDot}>•</Text>
-                <Text style={styles.movieStudio}>{movieDetail.producer || 'Studio'}</Text>
-            <Text style={styles.movieDot}>•</Text>
-            <Text style={styles.movieRating}>⭐ {movieDetail.rating ? movieDetail.rating.toFixed(1) : '9.6'}/10</Text>
+      <View style={styles.movieInfoContainer}>
+        {/* Header với Poster và Info */}
+        <View style={styles.movieHeaderContainer}>
+          <View style={styles.posterContainer}>
+            <Image 
+              source={{ uri: movieDetail.poster_path }} 
+              style={styles.moviePoster}
+              resizeMode="cover"
+            />
           </View>
-          
-              <View style={styles.movieTypeContainer}>
-                <Text style={styles.movieTypeText}>{movieDetail.movie_type || 'Phim lẻ'}</Text>
-                {movieDetail.duration && (
-                  <>
-                    <Text style={styles.movieDot}>•</Text>
-                    <Text style={styles.movieDuration}>
-                      {formatDuration(movieDetail.duration)}
-                    </Text>
-                  </>
-                )}
-              </View>
-              <View style={{ marginTop: 4 }}>
-                {/* Custom Collapsible logic: show 3 lines, expand in place */}
-                {movieDetail.description ? (
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start' }}>
-                    <Text 
-                      style={styles.movieDescription}
-                      numberOfLines={isDescriptionExpanded ? undefined : 3}
-                    >
-                      {movieDetail.description}
-                    </Text>
-                    
-                    {movieDetail.description.length > 150 && (
-                      <TouchableOpacity 
-                        style={{ marginLeft: 4 }}
-                        onPress={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
-                      >
-                        <Text style={[styles.movieDescription, { marginLeft: 4 }]}>
-                          {isDescriptionExpanded ? '... thu gọn' : '... xem thêm'}
-                        </Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                ) : (
-                  <Text style={[styles.movieDescription, { fontSize: 16, color: '#ccc', lineHeight: 24 }]}>
-                    Không có nội dung phim.
-                  </Text>
-                )}
-              </View>
+          <View style={styles.movieInfoContentNew}>
+            <Text style={styles.movieTitleBig}>
+              {movieDetail.movie_title}
+            </Text>
+            <Text style={styles.movieDirectorHighlight}>
+              {studioOrDirector}
+            </Text>
+            <View style={styles.metaRowTop}>
+              <Text style={styles.yearInDetail}>{year}</Text>
+              <Text style={styles.dot}>•</Text>
+              <Text style={styles.rating}>⭐ {rating}/10</Text>
+              {duration ? <><Text style={styles.dot}>•</Text><Text style={styles.duration}>{duration}</Text></> : null}
+              <Text style={styles.dot}>•</Text>
+              <View style={styles.typeBadge}><Text style={styles.typeText}>{type}</Text></View>
             </View>
           </View>
+        </View>
 
-          {/* Action Buttons với icon vector chất lượng cao */}
-          
-            <View style={styles.actionRowContainer}>
-              {/* View Count */}
-              <View style={styles.actionItemWithCount}>
-                <Ionicons name="eye-outline" size={24} color="#ffffff" />
-                <Text style={styles.actionCount}>{movieDetail.viewCount || 70}</Text>
-              </View>
-
-              {/* Like Button with Count - Icon ❤️ */}
-                  <TouchableOpacity
-                    style={[
-                      styles.actionItemWithCount,
-                      !auth.isLoggedIn && styles.disabledAction
-                    ]}
-                    onPress={handleLikePress}
-              >
-                <Ionicons
-name={hasLiked ? "heart" : "heart-outline"} 
-                  size={24} 
-                  color={hasLiked ? "#ff6b6b" : "#ffffff"} 
-                />
-                    <Text style={styles.actionCount}>{movieDetail.likeCount || 67}</Text>
-                  </TouchableOpacity>
-              
-
-              {/* Favorite Button - Icon 🔖 */}
-                  <TouchableOpacity
-                    style={[
-                      styles.actionItemWithCount,
-                      !auth.isLoggedIn && styles.disabledAction
-                    ]}
-                    onPress={handleFavoritePress}
-              >
-                <Ionicons 
-                  name={isFavorite ? "bookmark" : "bookmark-outline"} 
-                  size={24} 
-                  color={isFavorite ? "#ffc107" : "#ffffff"} 
-                />
-                    <Text style={styles.actionText}>Xem sau</Text>
-                  </TouchableOpacity>
-
-
-
-              {/* Share Button - Icon 📤 */}
-              <TouchableOpacity style={styles.actionItemWithCount} onPress={handleSharePress}>
-                <Ionicons name="share-social-outline" size={24} color="#ffffff" />
-                <Text style={styles.actionText}>Chia sẻ</Text>
-              </TouchableOpacity>
-              </View>
-
-          {/* Free Movie Watch Button */}
-          {movieDetail && movieDetail.is_free && !hasClickedWatchButton && (
-            <View style={styles.freeMovieContainer}>
-              <TouchableOpacity 
-                style={styles.freeWatchButton}
-                onPress={() => {
-                  setHasClickedWatchButton(true);
-                  setShowVideoPlayer(true);
-                }}
-              >
-                <Ionicons name="play-circle" size={24} color="#ffffff" />
-                <Text style={styles.freeWatchText}>Xem miễn phí</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* Rental Status Banner */}
-          {movieDetail && !movieDetail.is_free && !hasClickedWatchButton && (
-            <View style={styles.rentalContainer}>
-              {hasRentalAccess && currentRental ? (
-                <View style={styles.rentalAccessBanner}>
-                  <View style={styles.rentalAccessInfo}>
-                    <Text style={styles.rentalAccessTitle}> Đã thuê phim</Text>
-                    {/* Debug info */}
-                  
-                    <Text style={styles.rentalAccessSubtitle}>
-                      Gói: {currentRental.rentalType === '48h' ? 'Thuê 48 giờ' : 'Thuê 30 ngày'}
-                </Text>
-                    {remainingTime && (
-                      <Text style={styles.rentalTimeRemaining}>
-                        Còn lại: {rentalService.formatRemainingTime(remainingTime).formatted}
-                </Text>
-                    )}
-                  </View>
-                  <TouchableOpacity 
-                    style={styles.watchNowButton}
-                    onPress={() => {
-                      console.log('🎬 [DEBUG] Xem ngay pressed', {
-                        showVideoPlayer,
-                        hasRentalAccess,
-                        defaultEpisode: !!defaultEpisode,
-                        movieIsFree: movieDetail?.is_free,
-                        userId
-                      });
-                      setHasClickedWatchButton(true);
-                      setShowVideoPlayer(true);
-                    }}
-                  >
-                    <Text style={styles.watchNowText}>Xem ngay</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <View style={styles.rentalPrompt}>
-                  <View style={styles.rentalPromptInfo}>
-                    <Text style={styles.rentalPromptTitle}>Thuê phim để xem</Text>
-                    <Text style={styles.rentalPromptSubtitle}>
-                      Từ {rentalService.formatPrice(Math.round((movieDetail.price || 0) * 0.3))}
-                    </Text>
-                  </View>
-            <TouchableOpacity
-                    style={styles.rentButton}
-                    onPress={handleRentPress}
-            >
-                    <Text style={styles.rentButtonText}>Thuê ngay</Text>
+        {/* detailBox gọn, không tràn */}
+        <View style={styles.detailBox}>
+          <Text
+            style={styles.descText}
+            numberOfLines={isDescriptionExpanded ? undefined : 3}
+          >
+            {desc}
+          </Text>
+          <View style={styles.yearRow}>
+            <View />
+            <TouchableOpacity onPress={() => setIsDescriptionExpanded(!isDescriptionExpanded)}>
+              <Text style={styles.seeMoreBtn}>{isDescriptionExpanded ? 'Thu gọn' : 'Xem thêm'}</Text>
             </TouchableOpacity>
+          </View>
+        {/* metaRowExpandedCenter không còn dùng ở đây */}
         </View>
-              )}
-            </View>
-          )}
-          
+
+        {/* Action Buttons với icon vector chất lượng cao */}
+        <View style={styles.actionRowContainer}>
+          {/* View Count */}
+          <View style={styles.actionItemWithCount}>
+            <Ionicons name="eye-outline" size={24} color="#ffffff" />
+            <Text style={styles.actionCount}>{movieDetail.viewCount || 70}</Text>
+          </View>
+          {/* Like Button with Count - Icon ❤️ */}
+          <TouchableOpacity
+            style={[
+              styles.actionItemWithCount,
+              !auth.isLoggedIn && styles.disabledAction
+            ]}
+            onPress={handleLikePress}
+          >
+            <Ionicons
+              name={hasLiked ? "heart" : "heart-outline"}
+              size={24}
+              color={hasLiked ? "#ff6b6b" : "#ffffff"}
+            />
+            <Text style={styles.actionCount}>{movieDetail.likeCount || 67}</Text>
+          </TouchableOpacity>
+          {/* Favorite Button - Icon 🔖 */}
+          <TouchableOpacity
+            style={[
+              styles.actionItemWithCount,
+              !auth.isLoggedIn && styles.disabledAction
+            ]}
+            onPress={handleFavoritePress}
+          >
+            <Ionicons
+              name={isFavorite ? "bookmark" : "bookmark-outline"}
+              size={24}
+              color={isFavorite ? "#ffc107" : "#ffffff"}
+            />
+            <Text style={styles.actionText}>Xem sau</Text>
+          </TouchableOpacity>
+          {/* Share Button - Icon 📤 */}
+          <TouchableOpacity style={styles.actionItemWithCount} onPress={handleSharePress}>
+            <Ionicons name="share-social-outline" size={24} color="#ffffff" />
+            <Text style={styles.actionText}>Chia sẻ</Text>
+          </TouchableOpacity>
         </View>
-      
+
+        {/* Free Movie Watch Button */}
+        {movieDetail && movieDetail.is_free && !hasClickedWatchButton && (
+          <View style={styles.freeMovieContainer}>
+            <TouchableOpacity 
+              style={styles.freeWatchButton}
+              onPress={() => {
+                setHasClickedWatchButton(true);
+                setShowVideoPlayer(true);
+              }}
+            >
+              <Ionicons name="play-circle" size={24} color="#ffffff" />
+              <Text style={styles.freeWatchText}>Xem miễn phí</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {/* Rental Status Banner */}
+        {movieDetail && !movieDetail.is_free && !hasClickedWatchButton && (
+          <View style={styles.rentalContainer}>
+            {hasRentalAccess && currentRental ? (
+              <View style={styles.rentalAccessBanner}>
+                <View style={styles.rentalAccessInfo}>
+                  <Text style={styles.rentalAccessTitle}> Đã thuê phim</Text>
+                  {/* Debug info */}
+                  <Text style={styles.rentalAccessSubtitle}>
+                    Gói: {currentRental.rentalType === '48h' ? 'Thuê 48 giờ' : 'Thuê 30 ngày'}
+                  </Text>
+                  {remainingTime && (
+                    <Text style={styles.rentalTimeRemaining}>
+                      Còn lại: {rentalService.formatRemainingTime(remainingTime).formatted}
+                    </Text>
+                  )}
+                </View>
+                <TouchableOpacity 
+                  style={styles.watchNowButton}
+                  onPress={() => {
+                    setHasClickedWatchButton(true);
+                    setShowVideoPlayer(true);
+                  }}
+                >
+                  <Text style={styles.watchNowText}>Xem ngay</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.rentalPrompt}>
+                <View style={styles.rentalPromptInfo}>
+                  <Text style={styles.rentalPromptTitle}>Thuê phim để xem</Text>
+                  <Text style={styles.rentalPromptSubtitle}>
+                    Từ {rentalService.formatPrice(Math.round((movieDetail.price || 0) * 0.3))}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.rentButton}
+                  onPress={handleRentPress}
+                >
+                  <Text style={styles.rentButtonText}>Thuê ngay</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
+      </View>
     );
   };
-
-
 
   const renderEpisodes = () => {
     // Don't render if it's not a series
@@ -1596,7 +1557,7 @@ const renderTime = Date.now();
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#0a0a0a',
   },
   keyboardAvoidingView: {
     flex: 1,
@@ -1615,62 +1576,79 @@ const styles = StyleSheet.create({
   customHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    backgroundColor: '#000',
-
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: 'rgba(0,0,0,0.95)',
+    borderBottomWidth: 1,
+    borderBottomColor: '#1a1a1a',
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 22,
   },
   headerTitle: {
     flex: 1,
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: '#fff',
     textAlign: 'center',
-    marginHorizontal: 10,
+    marginHorizontal: 15,
   },
   headerSpacer: {
-    width: 40, // Same width as back button for centering
+    width: 44, // Same width as back button for centering
   },
   
   // Movie Info Styles - New clean layout
   movieInfoContainer: {
-    padding: 20,
-    backgroundColor: '#000',
+    padding: 24,
+    backgroundColor: '#0a0a0a',
   },
   
   // Movie Header with Poster
   movieHeaderContainer: {
     flexDirection: 'row',
-    marginBottom: 20,
+    marginBottom: 24,
   },
   posterContainer: {
-    marginRight: 15,
+    marginRight: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.44,
+    shadowRadius: 10.32,
+    elevation: 16,
   },
   moviePoster: {
-    width: 120,
-    height: 180,
-    borderRadius: 12,
-    backgroundColor: '#333',
-},
+    width: 130,
+    height: 195,
+    borderRadius: 16,
+    backgroundColor: '#1a1a1a',
+  },
   movieInfoContent: {
     flex: 1,
     justifyContent: 'flex-start',
+    paddingLeft: 4,
   },
   movieTypeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 16,
+    gap: 8,
   },
   movieTypeText: {
     fontSize: 14,
     color: '#ff6b6b',
-    fontWeight: 'bold',
+    fontWeight: '700',
+    backgroundColor: 'rgba(255,107,107,0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   movieDuration: {
     fontSize: 14,
@@ -1678,41 +1656,49 @@ const styles = StyleSheet.create({
   },
   
   movieTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
+    fontSize: 24,
+    fontWeight: '800',
     color: '#fff',
-    marginBottom: 8,
-    lineHeight: 26,
+    marginBottom: 10,
+    lineHeight: 28,
+    letterSpacing: -0.5,
   },
   movieMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
     flexWrap: 'wrap',
+    gap: 8,
   },
   movieYear: {
-    fontSize: 14,
-    color: '#aaa',
+    fontSize: 15,
+    color: '#bbb',
+    fontWeight: '500',
   },
   movieDot: {
-    fontSize: 14,
-    color: '#aaa',
-    marginHorizontal: 6,
+    fontSize: 15,
+    color: '#666',
   },
   movieStudio: {
-    fontSize: 14,
-    color: '#aaa',
+    fontSize: 15,
+    color: '#bbb',
+    fontWeight: '500',
   },
   movieRating: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#ffc107',
-    fontWeight: 'bold',
+    fontWeight: '700',
+    backgroundColor: 'rgba(255,193,7,0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
   },
   movieDescription: {
     fontSize: 16,
     color: '#ccc',
     lineHeight: 24,
     marginBottom: 20,
+    fontWeight: '400',
   },
   
   // Action Buttons with Count - New horizontal layout
@@ -1720,14 +1706,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    paddingVertical: 15,
-    borderTopWidth: 0.5,
-    borderTopColor: '#333',
+    paddingVertical: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#1a1a1a',
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderRadius: 16,
+    marginTop: 8,
   },
   actionItemWithCount: {
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 60,
+    minWidth: 70,
+    paddingVertical: 8,
   },
   actionIcon: {
     fontSize: 20,
@@ -1736,11 +1726,14 @@ const styles = StyleSheet.create({
   actionCount: {
     fontSize: 14,
     color: '#fff',
-    fontWeight: 'bold',
+    fontWeight: '700',
+    marginTop: 4,
   },
   actionText: {
     fontSize: 12,
-    color: '#fff',
+    color: '#bbb',
+    fontWeight: '500',
+    marginTop: 4,
   },
   likedIcon: {
     color: '#ff6b6b',
@@ -1754,31 +1747,33 @@ const styles = StyleSheet.create({
   
   // Tab System Styles
   tabContainer: {
-    backgroundColor: '#000',
+    backgroundColor: '#0a0a0a',
+    marginTop: 8,
   },
   tabHeaderContainer: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    borderBottomColor: '#1a1a1a',
+    backgroundColor: 'rgba(255,255,255,0.02)',
   },
   tabHeader: {
     flex: 1,
-    paddingVertical: 15,
+    paddingVertical: 18,
     paddingHorizontal: 20,
     alignItems: 'center',
   },
   activeTabHeader: {
-    borderBottomWidth: 2,
+    borderBottomWidth: 3,
     borderBottomColor: '#ff6b6b',
   },
   tabHeaderText: {
     fontSize: 16,
     color: '#aaa',
-    fontWeight: '500',
+    fontWeight: '600',
   },
   activeTabHeaderText: {
-    color: '#ff6b6b',
-    fontWeight: 'bold',
+    color: '#ff0000', // đỏ rực
+    fontWeight: '700',
   },
   tabContent: {
     minHeight: 200,
@@ -1820,7 +1815,7 @@ const styles = StyleSheet.create({
   },
   commentSubmitButton: {
     backgroundColor: '#ff6b6b',
-borderRadius: 20,
+    borderRadius: 20,
     paddingHorizontal: 20,
     paddingVertical: 10,
     minWidth: 60,
@@ -1941,10 +1936,11 @@ borderRadius: 20,
   
   // Content Sections
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontWeight: '800',
     color: '#fff',
-    marginBottom: 15,
+    marginBottom: 18,
+    letterSpacing: -0.5,
   },
   
   // Empty Comments
@@ -1958,13 +1954,31 @@ borderRadius: 20,
   
   // Description
   descriptionContainer: {
-    padding: 20,
+    marginTop: 16,
+  },
+  descriptionWrapper: {
+    flexDirection: 'column',
   },
   descriptionText: {
     fontSize: 16,
     color: '#ccc',
     lineHeight: 24,
     marginBottom: 15,
+  },
+  expandButton: {
+    marginTop: 8,
+    alignSelf: 'flex-start',
+  },
+  expandButtonText: {
+    fontSize: 14,
+    color: '#ff6b6b',
+    fontWeight: '600',
+  },
+  emptyDescriptionText: {
+    fontSize: 16,
+    color: '#ccc',
+    lineHeight: 24,
+    fontStyle: 'italic',
   },
   genresContainer: {
     flexDirection: 'row',
@@ -1985,62 +1999,75 @@ borderRadius: 20,
   
   // Episodes
   episodesContainer: {
-    padding: 20,
+    padding: 24,
   },
   episodeItem: {
     flexDirection: 'row',
-alignItems: 'center',
-    padding: 15,
-    backgroundColor: '#222',
-    borderRadius: 8,
-    marginBottom: 10,
+    alignItems: 'center',
+    padding: 18,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   episodeNumber: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#ff6b6b',
-    fontWeight: 'bold',
-    minWidth: 40,
+    fontWeight: '700',
+    minWidth: 45,
+    backgroundColor: 'rgba(255,107,107,0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    textAlign: 'center',
   },
   episodeTitle: {
     flex: 1,
     fontSize: 16,
     color: '#fff',
-    marginLeft: 10,
+    marginLeft: 12,
+    fontWeight: '500',
   },
   episodeDuration: {
     fontSize: 14,
     color: '#aaa',
+    fontWeight: '500',
   },
   
   // Comments
   commentsContainer: {
-    padding: 20,
+    padding: 24,
   },
   commentItem: {
-    padding: 15,
-    backgroundColor: '#222',
-    borderRadius: 8,
-    marginBottom: 10,
+    padding: 18,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   commentUser: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#ff6b6b',
-    fontWeight: 'bold',
-    marginBottom: 5,
+    fontWeight: '700',
+    marginBottom: 6,
   },
   commentText: {
     fontSize: 16,
     color: '#fff',
-    marginBottom: 5,
+    marginBottom: 6,
+    lineHeight: 22,
   },
   commentDate: {
     fontSize: 12,
-    color: '#aaa',
+    color: '#888',
+    fontWeight: '500',
   },
   
   // Related Movies
   relatedContainer: {
-    padding: 20,
+    padding: 24,
   },
   relatedMovieItem: {
     width: 120,
@@ -2122,43 +2149,52 @@ alignItems: 'center',
 
   // Fixed Comment Input (Bottom)
   fixedCommentInputContainer: {
-    backgroundColor: '#000',
+    backgroundColor: 'rgba(0,0,0,0.95)',
     borderTopWidth: 1,
-    borderTopColor: '#333',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    paddingBottom: Platform.OS === 'ios' ? 20 : 10,
+    borderTopColor: '#1a1a1a',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    paddingBottom: Platform.OS === 'ios' ? 25 : 15,
   },
   commentInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    // marginBottom: 1,
   },
   fixedCommentInput: {
     flex: 1,
-    backgroundColor: '#333',
+    backgroundColor: 'rgba(255,255,255,0.1)',
     color: '#fff',
-    borderRadius: 20,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    marginRight: 10,
+    borderRadius: 24,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    marginRight: 12,
     fontSize: 16,
     maxHeight: 100,
     textAlignVertical: 'top',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   fixedCommentSubmitButton: {
     backgroundColor: '#ff6b6b',
-    borderRadius: 20,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-justifyContent: 'center',
+    borderRadius: 24,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    justifyContent: 'center',
     alignItems: 'center',
-    minWidth: 60,
+    minWidth: 70,
+    shadowColor: '#ff6b6b',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   fixedCommentSubmitText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   fixedCharacterCount: {
     fontSize: 12,
@@ -2167,8 +2203,6 @@ justifyContent: 'center',
     marginTop: 2,
   },
 
-
-  
   // Video Player Container
   videoPlayerContainer: {
     margin: 0, // Loại bỏ margin để video full width
@@ -2226,11 +2260,13 @@ justifyContent: 'center',
 
   // === RENTAL STYLES ===
   rentalContainer: {
-    backgroundColor: '#1a1a1a',
-    margin: 20,
-    marginTop: 15,
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    margin: 24,
+    marginTop: 16,
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   rentalAccessBanner: {
     flexDirection: 'row',
@@ -2241,31 +2277,40 @@ justifyContent: 'center',
     flex: 1,
   },
   rentalAccessTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 17,
+    fontWeight: '700',
     color: '#4CAF50',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   rentalAccessSubtitle: {
-    fontSize: 14,
-    color: '#aaa',
-    marginBottom: 2,
+    fontSize: 15,
+    color: '#bbb',
+    marginBottom: 4,
+    fontWeight: '500',
   },
   rentalTimeRemaining: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#FFA500',
-    fontWeight: '500',
+    fontWeight: '600',
   },
   watchNowButton: {
     backgroundColor: '#D11030',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+    shadowColor: '#D11030',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   watchNowText: {
     color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
+    fontSize: 15,
+    fontWeight: '700',
   },
   rentalPrompt: {
     flexDirection: 'row',
@@ -2276,50 +2321,68 @@ justifyContent: 'center',
     flex: 1,
   },
   rentalPromptTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 17,
+    fontWeight: '700',
     color: '#fff',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   rentalPromptSubtitle: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#4CAF50',
     fontWeight: '600',
   },
   rentButton: {
-    backgroundColor: '#FF6B6B',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
+    backgroundColor: '#ff0000', // đỏ rực
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+    shadowColor: '#FF6B6B',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   rentButtonText: {
     color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
+    fontSize: 15,
+    fontWeight: '700',
   },
   
   // === FREE MOVIE STYLES ===
   freeMovieContainer: {
-    backgroundColor: '#000',
-    margin: 20,
-    marginTop: 15,
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    margin: 24,
+    marginTop: 16,
+    borderRadius: 16,
+    padding: 20,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   freeWatchButton: {
-backgroundColor: '#D11030',
+    backgroundColor: '#D11030',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-    gap: 8,
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 10,
+    shadowColor: '#D11030',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   freeWatchText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 17,
+    fontWeight: '700',
   },
   
   // Debug styles
@@ -2331,32 +2394,33 @@ backgroundColor: '#D11030',
 
   // === EMPTY EPISODES STYLES ===
   emptyEpisodesContainer: {
-    backgroundColor: '#1a1a1a',
-    padding: 20,
-    margin: 16,
-    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    padding: 24,
+    margin: 20,
+    borderRadius: 16,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   emptyEpisodesText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 17,
+    fontWeight: '700',
     textAlign: 'center',
     marginBottom: 8,
   },
   emptyEpisodesSubtext: {
-    color: '#aaa',
-    fontSize: 14,
+    color: '#bbb',
+    fontSize: 15,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 22,
+    fontWeight: '500',
   },
 
   // === DISABLED EPISODE STYLES ===
   episodeItemDisabled: {
     opacity: 0.5,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: 'rgba(255,255,255,0.02)',
   },
   episodeTitleDisabled: {
     color: '#666',
@@ -2364,15 +2428,188 @@ backgroundColor: '#D11030',
   episodeStatus: {
     color: '#FFA500',
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '600',
     marginTop: 4,
     textAlign: 'center',
+    backgroundColor: 'rgba(255,165,0,0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
   },
   episodeStatusLocked: {
     color: '#FF6B6B',
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '600',
     marginTop: 4,
     textAlign: 'center',
+    backgroundColor: 'rgba(255,107,107,0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  metaText: {
+    fontSize: 14,
+    color: '#bbb',
+    fontWeight: '500',
+  },
+  dot: {
+    fontSize: 14,
+    color: '#666',
+    marginHorizontal: 4,
+  },
+  rating: {
+    fontSize: 14,
+    color: '#ffc107',
+    fontWeight: '700',
+    backgroundColor: 'rgba(255,193,7,0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  duration: {
+    fontSize: 14,
+    color: '#aaa',
+    fontWeight: '500',
+  },
+  typeBadge: {
+    backgroundColor: '#ff6b6b',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginLeft: 8,
+  },
+  typeText: {
+    fontSize: 12,
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  descCollapsed: {
+    marginTop: 8,
+  },
+  descExpanded: {
+    marginTop: 16,
+  },
+  seeMoreBtn: {
+    fontSize: 14,
+    color: '#ff6b6b',
+    fontWeight: '600',
+  },
+  metaRowExpanded: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 24,
+    marginTop: 16,
+  },
+  movieInfoContentNew: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    alignItems: 'flex-end',
+    paddingRight: 4,
+  },
+  movieDirector: {
+    fontSize: 14,
+    color: '#bbb',
+    fontWeight: '500',
+  },
+  detailBox: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 14,
+    padding: 18,
+    marginTop: 16,
+    marginBottom: 16,
+    marginHorizontal: 0,
+  },
+  descText: {
+    color: '#eee',
+    fontSize: 15,
+    lineHeight: 22,
+    textAlign: 'left',
+  },
+  movieTitleSmall: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#fff',
+    marginBottom: 5,
+    lineHeight: 20,
+    letterSpacing: -0.5,
+  },
+  movieDirectorSmall: {
+    fontSize: 15,
+    color: '#bbb',
+    fontWeight: '500',
+    marginBottom: 5,
+  },
+  yearInDetail: {
+    fontSize: 15,
+    color: '#bbb',
+    fontWeight: '500',
+    marginBottom: 5,
+  },
+  headerTopBox: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  movieTitleHighlight: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#fff',
+    marginBottom: 4,
+    lineHeight: 22,
+    letterSpacing: -0.5,
+    flexShrink: 1,
+  },
+  movieDirectorHighlight: {
+    fontSize: 13,
+    color: '#bbb',
+    fontWeight: '400',
+    marginBottom: 2,
+    marginTop: 2,
+    flexShrink: 1,
+  },
+  metaRowExpandedCenter: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 24,
+    marginTop: 16,
+  },
+  infoBoxStyled: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 16,
+    padding: 12,
+    marginLeft: 16,
+    maxWidth: 220,      // <-- chỉnh số này để tăng/giảm chiều rộng tối đa
+    flexShrink: 1,
+    justifyContent: 'center',
+  },
+  yearRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  movieTitleBig: {
+    fontSize: 26,
+    fontWeight: '900',
+    color: '#fff',
+    marginBottom: 4,
+    lineHeight: 32,
+    letterSpacing: -0.5,
+  },
+  metaRowTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 2,
+    marginBottom: 2,
   },
 });
