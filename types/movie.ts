@@ -215,4 +215,48 @@ export interface SeriesGridResponse {
   };
 }
 
-export type WatchingContext = 'resume' | 'start_new' | 'continue_episode' | 'error'; 
+export type WatchingContext = 'resume' | 'start_new' | 'continue_episode' | 'error';
+
+/**
+ * SEARCH REGISTERED MOVIES TYPES - API /api/movies/search-registered
+ * FEATURES: Types cho tìm kiếm phim đã đăng ký
+ */
+
+// Movie đã đăng ký từ API search-registered
+export interface RegisteredMovie {
+  _id: string;                    // ID của phim
+  movie_title: string;            // Tên phim
+  description?: string;           // Mô tả phim
+  production_time?: string;       // Thời gian sản xuất
+  poster_path: string;            // URL poster
+  genres: string[];               // Danh sách thể loại
+  producer: string;               // Nhà sản xuất
+  movie_type: string;             // Loại phim
+  price?: number;                 // Giá thuê
+  total_episodes?: number;        // Tổng số tập
+  is_featured?: boolean;          // Có featured không
+  release_status?: string;        // Trạng thái phát hành
+  is_free: boolean;               // Có miễn phí không
+  view_count?: number;            // Lượt xem
+  rating_stats?: {                // Thống kê rating
+    total_ratings: number;
+    total_likes: number;
+    total_dislikes: number;
+    like_percentage: number;
+    rating_score: number;
+  };
+  favorite_count?: number;        // Lượt yêu thích
+  price_display?: string;         // Giá hiển thị
+}
+
+// Parameters cho API search-registered
+export interface SearchRegisteredParams {
+  userId: string;                 // Required: ID của user
+  q?: string;                     // Optional: Từ khóa tìm kiếm theo tên phim
+}
+
+// Response từ API search-registered
+export interface SearchRegisteredResponse {
+  status: string;                 // Status (success/error)
+  data: RegisteredMovie[];        // Danh sách phim đã đăng ký tìm được
+} 
