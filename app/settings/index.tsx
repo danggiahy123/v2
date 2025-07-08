@@ -22,11 +22,6 @@ export default function SettingsScreen() {
     router.push('/settings/account' as any);
   };
 
-  const handleNotifications = () => {
- 
-    Alert.alert('Thông báo', 'Tính năng đang phát triển');
-  };
-
   const handleFavoriteMovies = () => {
    
     Alert.alert('Phim yêu thích', 'Tính năng đang phát triển');
@@ -39,11 +34,6 @@ export default function SettingsScreen() {
   const handleTransactionHistory = () => {
   
     Alert.alert('Lịch sử giao dịch', 'Tính năng đang phát triển');
-  };
-
-  const handleDeviceManagement = () => {
-
-    Alert.alert('Quản lý thiết bị', 'Tính năng đang phát triển');
   };
 
   const handleGoBack = () => {
@@ -82,24 +72,6 @@ export default function SettingsScreen() {
             <Ionicons name="person-outline" size={24} color="#fff" style={styles.menuIcon} />
             <Text style={styles.menuItemText}>Chỉnh sửa hồ sơ </Text>
       
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={handleNotifications}
-          >
-            <Ionicons name="notifications-outline" size={24} color="#fff" style={styles.menuIcon} />
-            <Text style={styles.menuItemText}>Thông báo</Text>
-       
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={handleDeviceManagement}
-          >
-            <Ionicons name="phone-portrait-outline" size={24} color="#fff" style={styles.menuIcon} />
-            <Text style={styles.menuItemText}>Quản lý thiết bị</Text>
-          
           </TouchableOpacity>
 
         </View>
