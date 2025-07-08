@@ -579,31 +579,29 @@ export default function HomeScreen() {
             {currentBannerMovie.title || 'Untitled'}
           </Text>
           <View style={styles.bannerButtons}>
-            <View style={styles.leftIconContainer}>
+            <TouchableOpacity 
+              style={styles.playButton}
+              onPress={() => router.push(`/movie/${currentBannerMovie.movieId}`)}
+            >
+              <Ionicons name="play" size={18} color="#fff" />
+              <Text style={styles.playButtonText}>Xem ngay</Text>
+            </TouchableOpacity>
+            <View style={styles.actionIcons}>
               <TouchableOpacity 
                 style={styles.iconButton}
                 onPress={() => handleBannerLikePress(currentBannerMovie.movieId)}
               >
                 <Ionicons 
                   name={bannerLikes[currentBannerMovie.movieId] ? "heart" : "heart-outline"} 
-                  size={16} 
-                  color={bannerLikes[currentBannerMovie.movieId] ? "#ff1744" : "#fff"} 
+                  size={22} 
+                  color={bannerLikes[currentBannerMovie.movieId] ? "#D11030" : "#fff"} 
                 />
               </TouchableOpacity>
-            </View>
-            <TouchableOpacity 
-              style={styles.playButton}
-              onPress={() => router.push(`/movie/${currentBannerMovie.movieId}`)}
-            >
-              <Ionicons name="play" size={16} color="#fff" />
-              <Text style={styles.playButtonText}>Xem ngay</Text>
-            </TouchableOpacity>
-            <View style={styles.iconButtonsContainer}>
               <TouchableOpacity 
                 style={styles.iconButton}
                 onPress={() => handleBannerSharePress(currentBannerMovie.movieId)}
               >
-                <Ionicons name="share-social-outline" size={16} color="#fff" />
+                <Ionicons name="share-social-outline" size={22} color="#fff" />
               </TouchableOpacity>
               <TouchableOpacity 
                 style={styles.iconButton}
@@ -611,7 +609,7 @@ export default function HomeScreen() {
               >
                 <Ionicons 
                   name={bannerFavorites[currentBannerMovie.movieId] ? "bookmark" : "bookmark-outline"} 
-                  size={16} 
+                  size={22} 
                   color={bannerFavorites[currentBannerMovie.movieId] ? "#ffc107" : "#fff"} 
                 />
               </TouchableOpacity>
@@ -1335,88 +1333,65 @@ const styles = StyleSheet.create({
   },
   bannerTitle: {
     color: '#FFFFFF',
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 16,
+    fontSize: 23,
+    fontWeight: '800',
+    
+    marginHorizontal: 20,
     textAlign: 'center',
-    lineHeight: 34,
-    textShadowColor: 'rgba(0, 0, 0, 0.8)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+    lineHeight: 32,
+    letterSpacing: 0.5,
+    textShadowColor: 'rgba(0, 0, 0, 0.9)',
+    textShadowOffset: { width: 0, height: 3 },
+    textShadowRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.8,
+    shadowRadius: 10,
+    elevation: 10,
   },
   bannerButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: 'column',
     alignItems: 'center',
-    marginTop: 16,
-    paddingHorizontal: 16,
+    marginTop: 24,
+    paddingHorizontal: 20,
+    gap: 16,
   },
-  leftIconContainer: {
-    flex: 1,
-    justifyContent: 'flex-start',
-    alignItems: 'flex-start',
-  },
-  iconButtonsContainer: {
+  actionIcons: {
     flexDirection: 'row',
-    gap: 8,
     alignItems: 'center',
-    flex: 1,
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    gap: 20,
   },
   iconButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.19)',
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    borderRadius: 50,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    minWidth: 44,
+    minHeight: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    backdropFilter: 'blur(10px)',
-    width: 36,
-    height: 36,
-  },
-  // Test Movie Detail Button
-  testMovieButton: {
-    backgroundColor: '#ff6b6b',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
-    marginTop: 10,
-  },
-  testMovieButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  testLoginButton: {
-    backgroundColor: '#4CAF50',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
-    marginTop: 5,
-  },
-  testLoginButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   playButton: {
-    backgroundColor: '#D32F2F',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 25,
+    backgroundColor: '#D11030',
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 28,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    minWidth: 120,
+    gap: 10,
+    minWidth: 140,
     justifyContent: 'center',
-    shadowColor: '#E50914',
+    shadowColor: '#D11030',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
     elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   playButtonText: {
     color: '#FFFFFF',
