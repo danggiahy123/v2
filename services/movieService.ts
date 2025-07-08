@@ -233,15 +233,13 @@ export const movieService = {
       console.log('🔍 SearchMovies called with params:', params);
       
       const queryParams = new URLSearchParams();
-      // Gửi cả hai tham số để đảm bảo compatibility
-      if (params?.tuKhoa) {
-        queryParams.append('tuKhoa', params.tuKhoa);
-        queryParams.append('q', params.tuKhoa); // Fallback cho old API
-      }
+      // Chỉ sử dụng tham số q cho API
+      queryParams.append('q', params.tuKhoa.trim());
       if (params?.page) queryParams.append('page', params.page.toString());
       if (params?.limit) queryParams.append('limit', params.limit.toString());
       if (params?.category) queryParams.append('category', params.category);
-      if (params?.searchByTitle) queryParams.append('searchByTitle', 'true');
+      // Luôn tìm kiếm theo tên phim
+      queryParams.append('searchByTitle', 'true');
 
       const url = `${API_BASE_URL}/api/movies/search?${queryParams.toString()}`;
       console.log('🌐 Searching with URL:', url);
