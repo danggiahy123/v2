@@ -233,8 +233,22 @@ export const movieService = {
       console.log('🔍 SearchMovies called with params:', params);
       
       const queryParams = new URLSearchParams();
-      // Chỉ sử dụng tham số q cho API
-      queryParams.append('q', params.tuKhoa.trim());
+      // Kiểm tra params và tuKhoa tồn tại trước khi sử dụng
+      if (params?.tuKhoa) {
+        queryParams.append('q', params.tuKhoa.trim());
+      } else {
+        // Nếu không có từ khóa, trả về kết quả rỗng
+        return {
+          status: 'success',
+          data: {
+            movies: [],
+            total: 0,
+            page: 1,
+            limit: 10
+          }
+        };
+      }
+
       if (params?.page) queryParams.append('page', params.page.toString());
       if (params?.limit) queryParams.append('limit', params.limit.toString());
       if (params?.category) queryParams.append('category', params.category);
