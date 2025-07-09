@@ -1,10 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { rentalService } from '../services/rentalService';
 import {
-  UseRentalStatusResult,
+  UseRentalStatusResult as OriginalUseRentalStatusResult,
   RentalInfo,
   RentalTimeFormatting,
 } from '../types/rental';
+
+// Extended type to include needsActivation
+interface UseRentalStatusResult extends OriginalUseRentalStatusResult {
+  needsActivation: boolean;
+}
 
 // Simple cache for rental status (1 minute TTL)
 const rentalCache = new Map<string, { data: any; timestamp: number; ttl: number }>();
@@ -29,6 +34,7 @@ export const useRentalStatus = (
   initialRentalAccess?: boolean
 ): UseRentalStatusResult => {
   const [hasAccess, setHasAccess] = useState(initialRentalAccess || false);
+  const [needsActivation, setNeedsActivation] = useState(false);
   const [rental, setRental] = useState<RentalInfo | null>(null);
   const [remainingTime, setRemainingTime] = useState<number | null>(null);
   const [remainingHours, setRemainingHours] = useState<number | null>(null);
@@ -49,6 +55,7 @@ export const useRentalStatus = (
     if (!userId || !movieId || movieId === 'undefined' || typeof movieId !== 'string') {
       console.log('⚠️ [useRentalStatus] Invalid params:', { userId, movieId, movieIdType: typeof movieId });
       setHasAccess(false);
+      setNeedsActivation(false);
       setRental(null);
       setRemainingTime(null);
       setRemainingHours(null);
@@ -72,6 +79,7 @@ export const useRentalStatus = (
         });
         const data = cached.data;
         setHasAccess(data.hasAccess);
+        setNeedsActivation(data.needsActivation || false);
         setRental(data.rental || null);
         setRemainingTime(data.remainingTime || null);
         setRemainingHours(data.remainingHours || null);
@@ -103,12 +111,14 @@ export const useRentalStatus = (
         userId,
         movieId,
         hasAccess: data.hasAccess,
+        needsActivation: data.needsActivation,
         rental: data.rental,
         message: data.message,
         responseTime: endTime - startTime
       });
 
       setHasAccess(data.hasAccess);
+      setNeedsActivation(data.needsActivation || false);
       setRental(data.rental || null);
       setRemainingTime(data.remainingTime || null);
       setRemainingHours(data.remainingHours || null);
@@ -120,6 +130,7 @@ export const useRentalStatus = (
       console.error('❌ [useRentalStatus] Error checking rental access:', err);
       setError(errorMessage);
       setHasAccess(false);
+      setNeedsActivation(false);
       setRental(null);
       setRemainingTime(null);
       setRemainingHours(null);
@@ -157,6 +168,7 @@ export const useRentalStatus = (
 
   return {
     hasAccess,
+    needsActivation,
     rental,
     remainingTime,
     remainingHours,
