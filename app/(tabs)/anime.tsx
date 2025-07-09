@@ -298,7 +298,7 @@ export default function AnimeScreen() {
         <TabHeader
           title="Hoạt hình"
           onSearchPress={() => setSearchVisible(true)}
-          onNotificationPress={() => {}}
+          onNotificationPress={() => router.push('/notifications')}
           showGenreSelector
           genres={animeGenres}
           onGenreSelect={handleGenreSelect}
@@ -319,7 +319,7 @@ export default function AnimeScreen() {
         <TabHeader
           title="Hoạt hình"
           onSearchPress={() => setSearchVisible(true)}
-          onNotificationPress={() => {}}
+          onNotificationPress={() => router.push('/notifications')}
           showGenreSelector
           genres={animeGenres}
           onGenreSelect={handleGenreSelect}
@@ -360,7 +360,7 @@ export default function AnimeScreen() {
       <TabHeader 
         title="Hoạt hình"
         onSearchPress={() => setSearchVisible(true)}
-        onNotificationPress={() => {}}
+        onNotificationPress={() => router.push('/notifications')}
         showGenreSelector
         genres={animeGenres}
         onGenreSelect={handleGenreSelect}

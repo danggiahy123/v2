@@ -18,4 +18,5 @@
  */
 export { useOptimizedScrollAnimation } from './useOptimizedScrollAnimation';
 export { useRentalStatus } from './useRentalStatus';
-export { usePaymentStatus } from './usePaymentStatus'; 
+export { usePaymentStatus } from './usePaymentStatus';
+export { useNotifications } from './useNotifications'; 
