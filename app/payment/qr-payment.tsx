@@ -376,7 +376,7 @@ export default function QRPaymentScreen() {
               <Text style={styles.modalTitle}>Thanh toán thành công!</Text>
               
               <Text style={styles.modalMessage}>
-                Bạn đã thuê phim thành công. Có thể xem ngay bây giờ.
+                Thanh toán thành công! Nhấn "Xem ngay" để kích hoạt và bắt đầu thời gian thuê phim.
               </Text>
               
               <TouchableOpacity 
