@@ -26,7 +26,7 @@
  * - useCallback handlers recommended
  */
 // import { useRouter } from 'expo-router'; // Not used in this component
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import {
   Image,
   StyleSheet,
@@ -43,6 +43,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import GenreGrid from '../genre/GenreGrid';
+import { notificationService } from '../../services/notificationService';
 
 /**
  * TABHEADER PROPS INTERFACE
@@ -109,13 +110,61 @@ export default function TabHeader({
 }: TabHeaderProps) {
   const insets = useSafeAreaInsets();
   const [genreModalVisible, setGenreModalVisible] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   
+  // Animation refs
   const defaultOpacity = useMemo(() => new Animated.Value(1), []);
   const defaultTranslateY = useMemo(() => new Animated.Value(0), []);
   const animatedOpacity = opacity || defaultOpacity;
   const animatedTranslateY = translateY || defaultTranslateY;
   
+  // Badge animations
+  const badgeScale = useRef(new Animated.Value(1)).current;
+  const badgeOpacity = useRef(new Animated.Value(1)).current;
+  
   const memoizedGradientColors = useMemo(() => gradientColors, [gradientColors]);
+
+  // Subscribe to notification changes
+  useEffect(() => {
+    const unsubscribe = notificationService.subscribeToUnreadCount((count) => {
+      const oldCount = unreadCount;
+      setUnreadCount(count);
+      
+      // Animate badge when count changes
+      if (count > oldCount && count > 0) {
+        // Bounce animation for new notification
+        Animated.sequence([
+          Animated.parallel([
+            Animated.timing(badgeScale, {
+              toValue: 1.3,
+              duration: 200,
+              useNativeDriver: true,
+            }),
+            Animated.timing(badgeOpacity, {
+              toValue: 0.8,
+              duration: 100,
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.parallel([
+            Animated.spring(badgeScale, {
+              toValue: 1,
+              tension: 300,
+              friction: 10,
+              useNativeDriver: true,
+            }),
+            Animated.timing(badgeOpacity, {
+              toValue: 1,
+              duration: 100,
+              useNativeDriver: true,
+            }),
+          ]),
+        ]).start();
+      }
+    });
+
+    return unsubscribe;
+  }, [unreadCount]);
 
   const handleGenrePress = () => {
     if (showGenreSelector && genres.length > 0) {
@@ -149,7 +198,24 @@ export default function TabHeader({
           onPress={onNotificationPress}
           activeOpacity={0.7}
         >
-          <Ionicons name="notifications" size={24} color="white" />
+          <View style={styles.notificationContainer}>
+            <Ionicons name="notifications" size={24} color="white" />
+            {unreadCount > 0 && (
+              <Animated.View 
+                style={[
+                  styles.notificationBadge,
+                  {
+                    transform: [{ scale: badgeScale }],
+                    opacity: badgeOpacity,
+                  }
+                ]}
+              >
+                <Text style={styles.notificationBadgeText}>
+                  {unreadCount > 99 ? '99+' : unreadCount.toString()}
+                </Text>
+              </Animated.View>
+            )}
+          </View>
         </TouchableOpacity>
       )}
     </View>
@@ -249,7 +315,7 @@ export default function TabHeader({
                 </TouchableOpacity>
               </View>
               <View style={{ padding: 12, paddingTop: 0, maxHeight: SCREEN_HEIGHT * 0.92, minHeight: 100, width: '100%' }}>
-                <GenreGrid genres={genres} onGenrePress={handleGenreSelect} />
+                <GenreGrid genres={genres as any} onGenrePress={handleGenreSelect} />
               </View>
             </View>
           </View>
@@ -381,5 +447,33 @@ const styles = StyleSheet.create({
   movieCount: {
     color: '#999',
     fontSize: 14,
+  },
+  notificationContainer: {
+    position: 'relative',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#E50914',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: 'rgba(0, 0, 0, 0.8)',
+    shadowColor: '#E50914',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+    elevation: 8,
+  },
+  notificationBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
+    textAlign: 'center',
   },
 }); 

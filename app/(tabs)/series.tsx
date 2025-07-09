@@ -244,7 +244,7 @@ export default function SeriesScreen() {
         <TabHeader
           title="Phim bộ"
           onSearchPress={() => setSearchVisible(true)}
-          onNotificationPress={() => {}}
+          onNotificationPress={() => router.push('/notifications')}
           showGenreSelector
           genres={seriesGenres}
           onGenreSelect={handleGenreSelect}
@@ -265,7 +265,7 @@ export default function SeriesScreen() {
         <TabHeader
           title="Phim bộ"
           onSearchPress={() => setSearchVisible(true)}
-          onNotificationPress={() => {}}
+          onNotificationPress={() => router.push('/notifications')}
           showGenreSelector
           genres={seriesGenres}
           onGenreSelect={handleGenreSelect}
@@ -291,7 +291,7 @@ export default function SeriesScreen() {
       <TabHeader
         title="Phim bộ"
         onSearchPress={() => setSearchVisible(true)}
-        onNotificationPress={() => {}}
+        onNotificationPress={() => router.push('/notifications')}
         showGenreSelector
         genres={seriesGenres}
         onGenreSelect={handleGenreSelect}

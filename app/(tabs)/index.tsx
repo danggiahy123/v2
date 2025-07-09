@@ -1091,7 +1091,7 @@ export default function HomeScreen() {
           title=""
           showLogo
           onSearchPress={() => setSearchModalVisible(true)}
-          onNotificationPress={() => {}}
+          onNotificationPress={() => router.push('/notifications')}
           showGenreSelector
           genres={genres}
           onGenreSelect={handleHomeGenreSelect}
@@ -1328,7 +1328,7 @@ const styles = StyleSheet.create({
     bottom: 40, 
     left: 20,
     right: 20,
-    alignItems: 'center',
+    alignItems: 'flex-start',
     zIndex: 2,
   },
   bannerTitle: {
@@ -1337,7 +1337,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     
     marginHorizontal: 20,
-    textAlign: 'center',
+    textAlign: 'left',
     lineHeight: 32,
     letterSpacing: 0.5,
     textShadowColor: 'rgba(0, 0, 0, 0.9)',
@@ -1350,17 +1350,20 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   bannerButtons: {
-    flexDirection: 'column',
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginTop: 24,
     paddingHorizontal: 20,
-    gap: 16,
+    width: '100%',
   },
   actionIcons: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 20,
+    gap: 6,
+    marginLeft: 40,
+    marginRight: 10,
   },
   iconButton: {
     paddingHorizontal: 12,
@@ -1370,16 +1373,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minWidth: 44,
     minHeight: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+   
   },
   playButton: {
     backgroundColor: '#D11030',
     paddingHorizontal: 28,
     paddingVertical: 14,
-    borderRadius: 28,
+    borderRadius: 20,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,

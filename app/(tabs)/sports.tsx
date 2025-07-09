@@ -360,7 +360,7 @@ export default function SportsScreen() {
         <TabHeader
           title="Thể thao"
           onSearchPress={() => setSearchVisible(true)}
-          onNotificationPress={() => {}}
+          onNotificationPress={() => router.push('/notifications')}
           opacity={headerOpacity}
         />
         <View style={styles.loadingContainer}>
@@ -378,7 +378,7 @@ export default function SportsScreen() {
         <TabHeader
           title="Thể thao"
           onSearchPress={() => setSearchVisible(true)}
-          onNotificationPress={() => {}}
+          onNotificationPress={() => router.push('/notifications')}
           opacity={headerOpacity}
         />
         <View style={styles.errorContainer}>
@@ -452,7 +452,7 @@ export default function SportsScreen() {
       <TabHeader
         title="Thể thao"
         onSearchPress={() => setSearchVisible(true)}
-        onNotificationPress={() => {}}
+        onNotificationPress={() => router.push('/notifications')}
         opacity={headerOpacity}
       />
 
