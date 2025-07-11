@@ -18,12 +18,9 @@ import { sportsService } from '../../services/sportsService';
 import { GridMovie } from '../../types/movie';
 import { useRouter } from 'expo-router';
 import { TabHeader, SearchModal, ViewAllModal } from '../../components/ui';
-import { SportsBanner } from '../../components/sports/Banner';
 import { shouldShowPaidBadge, enrichMoviesWithPriceInfo } from '../../utils/moviePriceHelper';
 
 const { width } = Dimensions.get('window');
-
-
 
 export default function SportsScreen() {
   const router = useRouter();
@@ -363,7 +360,7 @@ export default function SportsScreen() {
         <TabHeader
           title="Thể thao"
           onSearchPress={() => setSearchVisible(true)}
-          onNotificationPress={() => {}}
+          onNotificationPress={() => router.push('/notifications')}
           opacity={headerOpacity}
         />
         <View style={styles.loadingContainer}>
@@ -381,7 +378,7 @@ export default function SportsScreen() {
         <TabHeader
           title="Thể thao"
           onSearchPress={() => setSearchVisible(true)}
-          onNotificationPress={() => {}}
+          onNotificationPress={() => router.push('/notifications')}
           opacity={headerOpacity}
         />
         <View style={styles.errorContainer}>
@@ -414,15 +411,40 @@ export default function SportsScreen() {
         }
       >
         <View style={styles.content}>
-          {/* Sports Banner */}
-          <SportsBanner />
+          {/* Clean Sports Header */}
+          <View style={styles.cleanSportsHeader}>
+            {/* Simple Gradient Background */}
+            <LinearGradient
+              colors={['#FF6B35', '#FF8C00', '#FFB84D']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.simpleGradient}
+            />
+            
+            {/* Main Content */}
+            <View style={styles.simpleContent}>
+              {/* Left Section */}
+              <View style={styles.leftContent}>
+                <View style={styles.simpleIcon}>
+                  <Ionicons name="trophy" size={24} color="#FFF" />
+                </View>
+                <View style={styles.textContent}>
+                  <Text style={styles.cleanTitle}>THỂ THAO</Text>
+                  <Text style={styles.cleanSubtitle}>Kênh thể thao hàng đầu</Text>
+                </View>
+              </View>
+              
+              {/* Right Section */}
+              
+            </View>
+          </View>
           
           {/* Trending Section */}
           {renderTrendingSection(allSports)}
           
           {/* Sports Sections */}
-          {renderSportsSection('🏀 NBA Basketball', nbaMovies, 'nba', 'basketball', '#1E88E5')}
-          {renderSportsSection('⚽ Football World Cup', footballMovies, 'football', 'football', '#4CAF50')}
+          {renderSportsSection('🏀 NBA ', nbaMovies, 'nba', 'basketball', '#1E88E5')}
+          {renderSportsSection('⚽ Football ', footballMovies, 'football', 'football', '#4CAF50')}
         </View>
       </Animated.ScrollView>
 
@@ -430,7 +452,7 @@ export default function SportsScreen() {
       <TabHeader
         title="Thể thao"
         onSearchPress={() => setSearchVisible(true)}
-        onNotificationPress={() => {}}
+        onNotificationPress={() => router.push('/notifications')}
         opacity={headerOpacity}
       />
 
@@ -850,4 +872,66 @@ const styles = StyleSheet.create({
      fontSize: 11,
      fontWeight: '500',
    },
+  // Clean Sports Header Styles
+  cleanSportsHeader: {
+    marginHorizontal: 16,
+    marginBottom: 20,
+    borderRadius: 16,
+    overflow: 'hidden',
+    elevation: 8,
+    shadowColor: '#FF6B35',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    position: 'relative',
+    height: 80,
+  },
+  simpleGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  simpleContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    height: '100%',
+  },
+  leftContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  simpleIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  textContent: {
+    flex: 1,
+  },
+  cleanTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFF',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  cleanSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  
 }); 

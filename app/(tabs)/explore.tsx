@@ -41,11 +41,6 @@ export default function ExploreScreen() {
    * NAVIGATION HANDLERS - Các function điều hướng đến screens khác
    */
   
-  // Điều hướng đến settings chính
-  const handleSettings = () => {
-    router.push('/settings' as any);
-  };
-
   // Điều hướng đến help center
   const handleHelp = () => {
     router.push('/settings/help');
@@ -54,6 +49,11 @@ export default function ExploreScreen() {
   // Điều hướng đến contact info
   const handleContact = () => {
     router.push('/settings/contact');
+  };
+
+  // Điều hướng đến quản lý thiết bị
+  const handleDeviceManagement = () => {
+    Alert.alert('Quản lý thiết bị', 'Tính năng đang phát triển');
   };
 
   // Điều hướng đến about page
@@ -128,7 +128,7 @@ export default function ExploreScreen() {
             <TouchableOpacity onPress={() => router.push('/(tabs)/profile')} style={{flexDirection: 'row', alignItems: 'center', flex: 1}} activeOpacity={0.8}>
               <View style={styles.userAvatarContainer}>
                 {user?.avatar ? (
-                  <LinearGradient colors={['#ff512f', '#dd2476']} style={styles.avatarGlow}>
+                  <LinearGradient colors={['#D11030', '#dd2476']} style={styles.avatarGlow}>
                     <Image source={{ uri: user.avatar }} style={styles.userAvatar} resizeMode="cover" />
                   </LinearGradient>
                 ) : (
@@ -141,9 +141,6 @@ export default function ExploreScreen() {
                 <Text style={styles.userText}>{user?.full_name || 'Người dùng'}</Text>
                 <Text style={styles.userEmail}>{user?.email}</Text>
               </View>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleSettings} style={styles.settingsButtonProfile}>
-              <Ionicons name="settings-outline" size={26} color="#fff" />
             </TouchableOpacity>
           </View>
         </View>
@@ -189,8 +186,17 @@ export default function ExploreScreen() {
             <Ionicons name="shield-checkmark-outline" size={26} color="#43cea2" style={styles.menuIcon} />
             <Text style={styles.menuItemText}>Chính sách bảo mật</Text>
           </TouchableOpacity>
+        </View>
+
+        {/* Quản lý tài khoản Section */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Quản lý tài khoản</Text>
+          <TouchableOpacity style={styles.menuItem} onPress={handleDeviceManagement} activeOpacity={0.7}>
+            <Ionicons name="phone-portrait-outline" size={26} color="#9b59b6" style={styles.menuIcon} />
+            <Text style={styles.menuItemText}>Quản lý thiết bị</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={[styles.menuItem, styles.logoutButton]} onPress={handleLogout} activeOpacity={0.8}>
-            <Ionicons name="log-out-outline" size={26} color="#ff4b2b" style={styles.menuIcon} />
+            <Ionicons name="log-out-outline" size={26} color="#D11030" style={styles.menuIcon} />
             <Text style={styles.menuItemTextLogout}>Đăng xuất</Text>
           </TouchableOpacity>
         </View>
@@ -207,7 +213,7 @@ export default function ExploreScreen() {
       <Modal transparent={true} visible={isLogoutModalVisible} animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Ionicons name="alert-circle" size={40} color="#ff4b2b" style={{ marginBottom: 10 }} />
+            <Ionicons name="log-out-outline" size={32} color="#D11030" style={{ marginBottom: 8 }} />
             <Text style={styles.modalMessage}>{notificationMessage}</Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity style={styles.cancelButton} onPress={cancelLogout} activeOpacity={0.7}>
@@ -227,12 +233,7 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
-  },
-  settingsButtonProfile: {
-    marginLeft: 12,
-    padding: 0,
-    alignSelf: 'center',
+        backgroundColor: '#000',
   },
   scrollContent: {
     paddingVertical: 18,
@@ -264,7 +265,6 @@ const styles = StyleSheet.create({
   userHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     backgroundColor: 'transparent',
     paddingVertical: 8,
     paddingHorizontal: 2,
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#ff4b2b',
+    shadowColor: '#D11030',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.4,
     shadowRadius: 8,
@@ -343,18 +343,18 @@ const styles = StyleSheet.create({
     fontFamily: 'System',
   },
   menuItemTextLogout: {
-    color: '#ff4b2b',
+    color: '#D11030',
     fontSize: 16,
     flex: 1,
     fontWeight: 'bold',
     fontFamily: 'System',
   },
   logoutButton: {
-    marginTop: 18,
+    marginTop: 6,
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,75,43,0.08)',
+    backgroundColor: 'rgba(209,16,48,0.08)',
     borderWidth: 1,
-    borderColor: '#ff4b2b',
+    borderColor: '#D11030',
   },
   footer: {
     padding: 12,
@@ -382,56 +382,66 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
   },
   modalContent: {
-    backgroundColor: '#232526',
-    padding: 28,
-    borderRadius: 16,
+    backgroundColor: '#000',
+    padding: 20,
+    borderRadius: 12,
     alignItems: 'center',
-    width: 320,
+    width: 290,
+    borderWidth: 1,
+    borderColor: '#222',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.18,
+    shadowOpacity: 0.13,
     shadowRadius: 8,
-    elevation: 6,
+    elevation: 3,
   },
   modalMessage: {
     color: '#fff',
-    fontSize: 17,
-    marginBottom: 18,
+    fontSize: 16,
+    marginBottom: 20,
     textAlign: 'center',
     fontFamily: 'System',
+    fontWeight: '500',
   },
   modalButtons: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     width: '100%',
-    gap: 14,
+    gap: 12,
   },
   cancelButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-    backgroundColor: '#444444',
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#1c1c1e',
     borderRadius: 8,
-    marginRight: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   confirmButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-    backgroundColor: '#ff4b2b',
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(209,16,48,0.1)',
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#D11030',
   },
   buttonText: {
-    color: '#fff',
-    fontSize: 16,
+    color: '#D11030',
+    fontSize: 15,
     fontWeight: 'bold',
     fontFamily: 'System',
+    textAlign: 'center',
   },
   buttonTextCancel: {
-    color: '#bbb',
-    fontSize: 16,
-    fontWeight: 'bold',
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
     fontFamily: 'System',
+    textAlign: 'center',
   },
 });

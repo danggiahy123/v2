@@ -75,9 +75,43 @@ const Notification: React.FC<NotificationProps> = ({
     })
   ).current;
 
+  // Define handleClose first to avoid hoisting issues
+  const handleClose = React.useCallback(() => {
+    // Prevent closing sync notifications that are still in progress
+    if (type === 'sync' && progress !== undefined && progress < 100) return;
+
+    // Only close if currently visible to avoid duplicate calls
+    if (!visible) return;
+
+    Animated.parallel([
+      Animated.timing(translateAnim, {
+        toValue: -100,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacityAnim, {
+        toValue: 0,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 0.95,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      // Call onClose after animation completes
+      onClose();
+    });
+  }, [type, progress, visible, translateAnim, opacityAnim, scaleAnim, onClose]);
+
+  // Handle show/hide animations
   useEffect(() => {
     if (visible) {
+      // Reset swipe animation
       swipeAnim.setValue(0);
+      
+      // Show notification with animations
       Animated.parallel([
         Animated.spring(translateAnim, {
           toValue: 0,
@@ -97,35 +131,23 @@ const Notification: React.FC<NotificationProps> = ({
           useNativeDriver: true,
         }),
       ]).start();
-
-      if (autoClose && type !== 'sync') {
-        const timer = setTimeout(handleClose, duration);
-        return () => clearTimeout(timer);
-      }
+    } else {
+      // Reset animations when hidden
+      translateAnim.setValue(-100);
+      opacityAnim.setValue(0);
+      scaleAnim.setValue(0.95);
     }
-  }, [visible, autoClose, duration, type]);
+  }, [visible, translateAnim, opacityAnim, scaleAnim, swipeAnim]);
 
-  const handleClose = () => {
-    if (type === 'sync' && progress !== undefined && progress < 100) return;
-
-    Animated.parallel([
-      Animated.timing(translateAnim, {
-        toValue: -100,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacityAnim, {
-        toValue: 0,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scaleAnim, {
-        toValue: 0.95,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-    ]).start(() => onClose());
-  };
+  // Handle auto-close timer separately
+  useEffect(() => {
+    if (visible && autoClose && type !== 'sync') {
+      const timer = setTimeout(() => {
+        handleClose();
+      }, duration);
+      return () => clearTimeout(timer);
+    }
+  }, [visible, autoClose, duration, type, handleClose]);
 
   const getTypeStyles = (): TypeStyle => {
     const baseColor = '#D11030';

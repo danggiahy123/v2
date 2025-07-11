@@ -155,6 +155,7 @@ return `${hours}h ${remainingMinutes}min`;
   const [showRentalModal, setShowRentalModal] = useState(false);
   const {
     hasAccess: hasRentalAccess,
+    needsActivation,
     rental: currentRental,
     remainingTime,
     isLoading: isLoadingRentalStatus,
@@ -259,13 +260,17 @@ return `${hours}h ${remainingMinutes}min`;
 
     // 🔧 PAYMENT CHECK FIRST: If movie is not free and user doesn't have rental access
     // But allow if user has ever had rental access (for back navigation from video player)
-    const hasAccessToMovie = movieDetail.is_free || hasRentalAccess || hasEverHadRentalAccess;
+    const hasAccessToMovie = movieDetail.is_free || 
+                            hasRentalAccess || 
+                            hasEverHadRentalAccess || 
+                            (initialRentalAccess === 'true') ||
+                            (rentalSuccess === 'true' && fromPayment === 'true');
     if (!hasAccessToMovie) {
       console.log('💰 [DEBUG] Movie requires payment - no error, just return null');
       return { episode: null }; // No error for unpaid movies
     }
 
-    // 🔧 ENHANCED: Handle series without episodes (only for paid movies)
+        // 🔧 ENHANCED: Handle series without episodes (only for paid movies)
     if (movieDetail.movie_type === 'Phim bộ') {
       if (!movieDetail.episodes || movieDetail.episodes.length === 0) {
         console.log('❌ [DEBUG] Series movie has no episodes');
@@ -275,8 +280,20 @@ return `${hours}h ${remainingMinutes}min`;
         };
       }
 
-      // Check if any episode has valid URI (only for paid/accessible movies)
-const episodesWithUri = movieDetail.episodes.filter(ep => ep.uri && ep.uri.trim() !== '');
+      // Skip URI validation if user has rental but needs activation
+      if (needsActivation) {
+        console.log('⏳ [DEBUG] Series - User has rental but needs activation - skip URI validation');
+        // Return first episode as placeholder for paid but not activated rentals
+        return {
+          episode: {
+            ...movieDetail.episodes[0],
+            uri: '', // Will be provided after activation
+          }
+        };
+      }
+
+      // Check if any episode has valid URI (only check after activation or for free movies)
+      const episodesWithUri = movieDetail.episodes.filter(ep => ep.uri && ep.uri.trim() !== '');
       if (episodesWithUri.length === 0) {
         console.log('❌ [DEBUG] Series has episodes but no valid URIs');
         return { 
@@ -288,7 +305,22 @@ const episodesWithUri = movieDetail.episodes.filter(ep => ep.uri && ep.uri.trim(
 
     // For single movies, check if we have episode data (only for paid/accessible movies)
     if (movieDetail.movie_type === 'Phim lẻ') {
-      // Single movies should have URI directly or in episodes
+      // Skip URI validation if user has rental but needs activation
+      if (needsActivation) {
+        console.log('⏳ [DEBUG] User has rental but needs activation - skip URI validation');
+        // Return a placeholder episode for paid but not activated rentals
+        return {
+          episode: movieDetail.episodes?.[0] || {
+            _id: 'placeholder',
+            episode_title: movieDetail.movie_title,
+            episode_number: 1,
+            duration: movieDetail.duration || 0,
+            uri: '', // Will be provided after activation
+          } as Episode
+        };
+      }
+      
+      // Single movies should have URI directly or in episodes (only check after activation)
       const hasDirectUri = movieDetail.uri && movieDetail.uri.trim() !== '';
       const hasEpisodeUri = movieDetail.episodes && movieDetail.episodes.length > 0 && 
                            movieDetail.episodes[0].uri && movieDetail.episodes[0].uri.trim() !== '';
@@ -356,14 +388,20 @@ const episodesWithUri = movieDetail.episodes.filter(ep => ep.uri && ep.uri.trim(
 
   const { episode: defaultEpisode, error: defaultEpisodeError } = getDefaultEpisode();
 
-  // Handle notifications in useEffect (only for accessible movies)
+    // Handle notifications in useEffect (only for accessible movies)
   useEffect(() => {
-// Only show error notification if movieDetail is loaded and there's actually an error
+    // Only show error notification if movieDetail is loaded and there's actually an error
     if (defaultEpisodeError && movieDetail && !loading && !hasShownEpisodeError) {
       // Don't show error notification if movie is not accessible (not paid)
       const hasAccessToMovie = movieDetail.is_free || hasRentalAccess || hasEverHadRentalAccess;
       if (!hasAccessToMovie) {
         console.log('💰 [DEBUG] Skipping error notification for unpaid movie');
+        return;
+      }
+      
+      // Don't show error notification if user has rental but needs activation
+      if (needsActivation) {
+        console.log('⏳ [DEBUG] Skipping error notification - user needs to activate rental first');
         return;
       }
       
@@ -373,12 +411,13 @@ const episodesWithUri = movieDetail.episodes.filter(ep => ep.uri && ep.uri.trim(
         movieType: movieDetail.movie_type,
         hasEpisodes: !!movieDetail.episodes?.length,
         movieIsFree: movieDetail.is_free,
-        hasRentalAccess
+        hasRentalAccess,
+        needsActivation
       });
       showNotificationMessage(defaultEpisodeError, 'error');
       setHasShownEpisodeError(true);
     }
-  }, [defaultEpisodeError, movieDetail, loading, hasShownEpisodeError, hasRentalAccess, hasEverHadRentalAccess]);
+  }, [defaultEpisodeError, movieDetail, loading, hasShownEpisodeError, hasRentalAccess, hasEverHadRentalAccess, needsActivation]);
 
   // 🔄 RESET NOTIFICATION STATE WHEN MOVIE CHANGES
   useEffect(() => {
@@ -813,6 +852,39 @@ if (!movieDetail) return;
     showNotificationMessage('Thuê phim thành công!', 'success');
   };
 
+  // 🎬 Handle Watch Now button with activation
+  const handleWatchNow = async () => {
+    try {
+      // If needs activation, call activate API first
+      if ((needsActivation as any) && userId && movieDetail && movieDetail._id) {
+        console.log('🎬 [DEBUG] Activating rental before playing video');
+        
+        await rentalService.activateRental(userId, movieDetail._id);
+        
+        // Wait for rental status to refresh to reflect activation
+        console.log('🎬 [DEBUG] Refreshing rental status after activation');
+        await new Promise<void>((resolve) => {
+          forceRefreshRental();
+          // Also refresh movie detail to get updated video URI
+          refresh();
+          // Give some time for the refresh to complete
+          setTimeout(resolve, 1500);
+        });
+        
+        showNotificationMessage('Kích hoạt thành công! Bắt đầu xem phim.', 'success');
+      }
+      
+      // Start playing video
+      console.log('🎬 [DEBUG] Starting video player');
+      setHasClickedWatchButton(true);
+      setShowVideoPlayer(true);
+      
+    } catch (error) {
+      console.error('❌ [DEBUG] Error activating rental:', error);
+      showNotificationMessage('Không thể kích hoạt rental. Vui lòng thử lại.', 'error');
+    }
+  };
+
   // =====================================
   // RENDER COMPONENTS
   // =====================================
@@ -946,15 +1018,51 @@ if (!movieDetail) return;
           </TouchableOpacity>
         </View>
 
-        {/* Free Movie Watch Button */}
-        {movieDetail && movieDetail.is_free && !hasClickedWatchButton && (
-          <View style={styles.freeMovieContainer}>
-            <TouchableOpacity 
-              style={styles.freeWatchButton}
-              onPress={() => {
-                setHasClickedWatchButton(true);
-                setShowVideoPlayer(true);
-              }}
+          {/* Rental Status Banner */}
+          {movieDetail && !movieDetail.is_free && !hasClickedWatchButton && (
+            <View style={styles.rentalContainer}>
+              {hasRentalAccess && currentRental ? (
+                <View style={styles.rentalAccessBanner}>
+                  <View style={styles.rentalAccessInfo}>
+                    <Text style={styles.rentalAccessTitle}>
+                      {(needsActivation as any) ? 'Đã thanh toán - Chưa kích hoạt' : 'Đã thuê phim'}
+                    </Text>
+                    {/* Debug info */}
+                  
+                    <Text style={styles.rentalAccessSubtitle}>
+                      Gói: {currentRental.rentalType === '48h' ? 'Thuê 48 giờ' : 'Thuê 30 ngày'}
+                    </Text>
+                    {!(needsActivation as any) && remainingTime && (
+                      <Text style={styles.rentalTimeRemaining}>
+                        Còn lại: {rentalService.formatRemainingTime(remainingTime).formatted}
+                      </Text>
+                    )}
+                    {(needsActivation as any) && (
+                      <Text style={styles.rentalTimeRemaining}>
+                        Nhấn "Xem ngay" để bắt đầu tính thời gian thuê
+                      </Text>
+                    )}
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.watchNowButton}
+                    onPress={handleWatchNow}
+                  >
+                    <Text style={styles.watchNowText}>
+                      {(needsActivation as any) ? 'Kích hoạt & Xem' : (movieDetail ? getResumeButtonText(movieDetail) : 'Xem ngay')}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.rentalPrompt}>
+                  <View style={styles.rentalPromptInfo}>
+                    <Text style={styles.rentalPromptTitle}>Thuê phim để xem</Text>
+                    <Text style={styles.rentalPromptSubtitle}>
+                      Từ {rentalService.formatPrice(Math.round((movieDetail.price || 0) * 0.3))}
+                    </Text>
+                  </View>
+            <TouchableOpacity
+                    style={styles.rentButton}
+                    onPress={handleRentPress}
             >
               <Ionicons name="play-circle" size={24} color="#ffffff" />
               <Text style={styles.freeWatchText}>Xem miễn phí</Text>
@@ -1281,14 +1389,19 @@ if (!movieDetail) return;
         {showVideoPlayer && (currentEpisode || (!currentEpisode && defaultEpisode)) && (
           <View style={styles.videoPlayerContainer}>
             {/* Show video if: free movie OR user has rental access */}
-            {(() => {
+                        {(() => {
               // Nếu đã chọn tập phim cụ thể, không sử dụng defaultEpisode
               const episodeToPlay = currentEpisode || (!currentEpisode && defaultEpisode);
-              const canShowVideo = movieDetail?.is_free || hasRentalAccess;
-const renderTime = Date.now();
+              // Enhanced canShowVideo logic to include all access scenarios
+              const canShowVideo = movieDetail?.is_free || 
+                                 hasRentalAccess || 
+                                 hasEverHadRentalAccess || 
+                                 (initialRentalAccess === 'true') ||
+                                 (rentalSuccess === 'true' && fromPayment === 'true');
+              const renderTime = Date.now();
 
               console.log('🎬 [DEBUG] Video Player Conditions:', {
-                canShowVideo: true,
+                canShowVideo,
                 episodeToPlay: episodeToPlay?.episode_title,
                 episodeToPlayId: episodeToPlay?._id,
                 episodeToPlayNumber: episodeToPlay?.episode_number,
@@ -1305,8 +1418,14 @@ const renderTime = Date.now();
                   title: defaultEpisode.episode_title,
                   number: defaultEpisode.episode_number
                 } : null,
-                hasRentalAccess,
-                movieIsFree: movieDetail?.is_free,
+                accessFlags: {
+                  hasRentalAccess,
+                  hasEverHadRentalAccess,
+                  initialRentalAccess,
+                  rentalSuccess,
+                  fromPayment,
+                  movieIsFree: movieDetail?.is_free
+                },
                 renderTime: Date.now(),
                 userId: !!userId
               });
@@ -1325,15 +1444,25 @@ const renderTime = Date.now();
 
               // Validate video URL (only for accessible movies)
               const videoUrl = episodeToPlay?.uri;
-              if (!videoUrl) {
+              if (!videoUrl || videoUrl.trim() === '') {
                 console.log('❌ [VideoPlayer] No video URL available:', { 
-                  episodeToPlay,
+                  episodeToPlay: episodeToPlay?.episode_title,
+                  videoUrl,
                   movieIsFree: movieDetail?.is_free,
-                  hasRentalAccess
+                  hasRentalAccess,
+                  canShowVideo,
+                  needsActivation
                 });
                 
                 // Don't show error placeholder if movie is not accessible
-                if (!movieDetail?.is_free && !hasRentalAccess) {
+                if (!canShowVideo) {
+                  console.log('💰 [VideoPlayer] Movie not accessible, hiding video player');
+                  return null;
+                }
+                
+                // Don't show error if user has rental but needs activation
+                if (needsActivation) {
+                  console.log('⏳ [VideoPlayer] User needs to activate rental first');
                   return null;
                 }
                 

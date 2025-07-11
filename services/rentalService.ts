@@ -1,5 +1,5 @@
 import { Linking } from 'react-native';
-import { API_CONFIG } from '../config/api';
+
 import {
   CreateRentalRequest,
   CreateRentalResponse,
@@ -14,8 +14,13 @@ import {
   RENTAL_TYPES,
 } from '../types/rental';
 
+// Direct Render URL for rental API
+const BASE_URL = 'https://backend-app-lou3.onrender.com/api/rentals';
+
 class RentalService {
-  private baseURL = `${API_CONFIG.BASE_URL}/api/rentals`;
+  private get baseURL() {
+    return BASE_URL;
+  }
 
   /**
    * 🎬 Tạo order thuê phim
@@ -74,19 +79,50 @@ class RentalService {
    */
   async checkRentalAccess(userId: string, movieId: string): Promise<RentalAccessResponse> {
     try {
-      const response = await fetch(
-        `${this.baseURL}/status/${movieId}?userId=${userId}`
-      );
+      const url = `${this.baseURL}/status/${movieId}?userId=${userId}`;
+      
+      console.log('🔍 [RentalService] checkRentalAccess:', {
+        baseURL: this.baseURL,
+        movieId,
+        userId,
+        url,
+        movieIdType: typeof movieId,
+        userIdType: typeof userId
+      });
 
-      const data = await response.json();
+      const response = await fetch(url);
+      
+      console.log('📡 [RentalService] Response status:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        url: response.url
+      });
 
-      if (!response.ok || !data.success) {
-        throw new Error(data.message || 'Không thể kiểm tra quyền xem');
+      const apiResponse = await response.json();
+      
+      console.log('📦 [RentalService] Full API Response:', apiResponse);
+
+      if (!response.ok || !apiResponse.success) {
+        console.error('❌ [RentalService] API Error:', {
+          status: response.status,
+          message: apiResponse.message,
+          data: apiResponse
+        });
+        throw new Error(apiResponse.message || 'Không thể kiểm tra quyền xem');
       }
 
-      return data;
+      // Return only the data part, wrapped in success structure
+      const result = {
+        success: true,
+        data: apiResponse.data
+      };
+
+      console.log('✅ [RentalService] Returning:', result);
+      
+      return result;
     } catch (error) {
-      console.error('Error checking rental access:', error);
+      console.error('💥 [RentalService] Error checking rental access:', error);
       throw error;
     }
   }
@@ -147,6 +183,35 @@ class RentalService {
       }
     } catch (error) {
       console.error('Error cancelling rental:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * ▶️ Kích hoạt rental khi user nhấn "xem ngay"
+   */
+  async activateRental(userId: string, movieId: string): Promise<RentalInfo> {
+    try {
+      const response = await fetch(`${this.baseURL}/activate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          movieId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Không thể kích hoạt rental');
+      }
+
+      return data.data;
+    } catch (error) {
+      console.error('Error activating rental:', error);
       throw error;
     }
   }

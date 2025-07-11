@@ -294,7 +294,7 @@ export const shouldShowContinueBadge = (movieDetail: MovieDetail): boolean => {
 
 /**
  * 🎯 Get Resume Button Text
- * Xác định text cho nút resume dựa trên trạng thái watching
+ * Xác định text cho nút resume dựa trên trạng thái watching và thời gian xem
  */
 export const getResumeButtonText = (movieDetail: MovieDetail): string => {
   const watchingProgress = movieDetail.userInteractions?.watchingProgress;
@@ -302,9 +302,26 @@ export const getResumeButtonText = (movieDetail: MovieDetail): string => {
   if (!watchingProgress) return 'Xem ngay';
   
   const progressPercent = watchingProgress.watchPercentage || 0;
+  const currentTime = watchingProgress.currentTime || 0;
   
+  // Nếu đã xem hơn 90%, hiển thị "Xem lại"
   if (progressPercent > 90) return 'Xem lại';
-  if (progressPercent > 5) return 'Tiếp tục xem';
+  
+  // Nếu đã xem hơn 5% và có thời gian xem, hiển thị "Tiếp tục từ [thời gian]"
+  if (progressPercent > 5 && currentTime > 0) {
+    const minutes = Math.floor(currentTime / 60);
+    const seconds = Math.floor(currentTime % 60);
+    const timeStr = minutes > 0 
+      ? `${minutes}:${seconds.toString().padStart(2, '0')}`
+      : `0:${seconds.toString().padStart(2, '0')}`;
+    
+    // Nếu là phim bộ, thêm thông tin tập phim
+    if (movieDetail.movie_type === 'Phim bộ' && watchingProgress.episodeNumber) {
+      return `Tiếp tục từ ${timeStr} - Tập ${watchingProgress.episodeNumber}`;
+    }
+    
+    return `Tiếp tục từ ${timeStr}`;
+  }
   
   return 'Xem ngay';
 }; 

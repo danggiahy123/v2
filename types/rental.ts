@@ -54,6 +54,7 @@ export interface RentalAccessResponse {
   success: boolean;
   data: {
     hasAccess: boolean;
+    needsActivation?: boolean;
     rental?: RentalInfo;
     remainingTime?: number;
     remainingHours?: number;
@@ -96,7 +97,7 @@ export interface RentalInfo {
     orderCode: string;
   };
   rentalType: '48h' | '30d';
-  status: 'active' | 'expired' | 'cancelled';
+  status: 'pending' | 'paid' | 'active' | 'expired' | 'cancelled';
   startTime: string;
   endTime: string;
   accessCount: number;

@@ -18,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAppSelector } from '../../store/hooks';
 import { rentalService } from '../../services/rentalService';
 import { RentalInfo } from '../../types/rental';
-import { Notification } from '../../components/ui';
+import { Notification, RegisteredMovieSearchModal } from '../../components/ui';
 import { clearRentalCache } from '../../hooks/useRentalStatus';
 
 export default function SubscriptionsScreen() {
@@ -32,6 +32,7 @@ export default function SubscriptionsScreen() {
   const [filter, setFilter] = useState<'all' | 'active' | 'expired'>('all');
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [selectedRental, setSelectedRental] = useState<RentalInfo | null>(null);
+  const [showSearchModal, setShowSearchModal] = useState(false);
   const [notification, setNotification] = useState<{
     visible: boolean;
     message: string;
@@ -279,7 +280,12 @@ export default function SubscriptionsScreen() {
           <Ionicons name="chevron-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Phim đăng ký</Text>
-        <View style={styles.headerRight} />
+        <TouchableOpacity 
+          style={styles.searchButton} 
+          onPress={() => setShowSearchModal(true)}
+        >
+          <Ionicons name="search" size={24} color="#fff" />
+        </TouchableOpacity>
       </View>
 
       {/* Filter Tabs */}
@@ -341,6 +347,15 @@ export default function SubscriptionsScreen() {
         </View>
       )}
 
+      {/* Search Modal */}
+      {userId && (
+        <RegisteredMovieSearchModal
+          visible={showSearchModal}
+          onClose={() => setShowSearchModal(false)}
+          userId={userId}
+        />
+      )}
+
       {/* Notification Component */}
       <Notification
         visible={notification.visible}
@@ -385,6 +400,12 @@ const styles = StyleSheet.create({
   },
   headerRight: {
     width: 40,
+  },
+  searchButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   filterContainer: {
     flexDirection: 'row',
