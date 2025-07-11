@@ -3,8 +3,10 @@ import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
-// Local IP configuration for Expo Go testing
-const API_BASE_URL = 'http://192.168.5.47:3003';
+// Production configuration for Render deployment
+const API_BASE_URL = 'https://backend-app-lou3.onrender.com';
+// Local IP configuration for Expo Go testing 
+// const API_BASE_URL = 'http://192.168.9.155:3003';
 
 // Configure notification behavior
 Notifications.setNotificationHandler({
