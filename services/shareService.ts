@@ -1,10 +1,26 @@
 import * as Sharing from 'expo-sharing';
-import { API_CONFIG, getApiUrl, getShareUrl } from '../config/api';
+
+// Local IP configuration for development
+const API_BASE_URL = 'http://192.168.5.47:3003';
 
 export interface ShareResult {
   success: boolean;
   error?: string;
 }
+
+/**
+ * Generate share URL for movie
+ */
+const getShareUrl = (movieId: string): string => {
+  return `${API_BASE_URL}/movie/${movieId}`;
+};
+
+/**
+ * Generate API URL
+ */
+const getApiUrl = (endpoint: string): string => {
+  return `${API_BASE_URL}${endpoint}`;
+};
 
 /**
  * Share movie with simple URL
@@ -14,7 +30,7 @@ export const shareMovie = async (movieId: string): Promise<ShareResult> => {
     const shareUrl = getShareUrl(movieId);
     
     console.log('📤 [ShareService] Sharing URL:', shareUrl);
-    console.log('📤 [ShareService] Environment:', API_CONFIG.IS_DEVELOPMENT ? 'DEV' : 'PROD');
+    console.log('📤 [ShareService] Using local development server');
     
     await Sharing.shareAsync(shareUrl, {
       dialogTitle: 'Chia sẻ phim này',
@@ -37,7 +53,7 @@ export const shareMovie = async (movieId: string): Promise<ShareResult> => {
  */
 export const generateShareLink = async (movieId: string): Promise<string> => {
   try {
-    const shareEndpoint = API_CONFIG.ENDPOINTS.MOVIE_SHARE(movieId);
+    const shareEndpoint = `/api/movies/${movieId}/share`;
     const url = getApiUrl(shareEndpoint);
     
     console.log('🔗 [ShareService] Fetching share link from:', url);
