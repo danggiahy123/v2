@@ -1,117 +1,146 @@
-import * as Linking from 'expo-linking';
-import { API_CONFIG, getShareUrl, getDeepLinkUrl } from '../config/api';
+import { Linking } from 'react-native';
+import { router } from 'expo-router';
+import { NotificationData } from './notificationService';
 
-export interface DeepLinkData {
-  movieId?: string;
-  screen?: string;
-  params?: Record<string, any>;
+export class DeepLinkService {
+  private static instance: DeepLinkService;
+
+  static getInstance(): DeepLinkService {
+    if (!DeepLinkService.instance) {
+      DeepLinkService.instance = new DeepLinkService();
+    }
+    return DeepLinkService.instance;
 }
 
-export interface DeepLinkHandler {
-  (data: DeepLinkData): void;
-}
+  initialize() {
+    // Handle deep links when app is opened via URL
+    Linking.addEventListener('url', this.handleDeepLink);
 
-// Local development configuration
-const LOCAL_BACKEND_URL = 'http://192.168.5.146:3003';
-const IS_DEV = __DEV__;
+    // Handle deep link when app is opened from cold start
+    this.handleInitialURL();
+  }
 
-/**
- * Parse deep link URL to extract data
- */
-export const parseDeepLink = (url: string): DeepLinkData => {
-  console.log('🔍 [DeepLink] Parsing deep link:', url);
-  console.log('🔍 [DeepLink] Environment:', API_CONFIG.IS_DEVELOPMENT ? 'DEV' : 'PROD');
+  private handleDeepLink = (event: { url: string }) => {
+    this.processURL(event.url);
+  };
+
+  private async handleInitialURL() {
+    try {
+      const initialUrl = await Linking.getInitialURL();
+      if (initialUrl) {
+        this.processURL(initialUrl);
+      }
+    } catch (error) {
+      console.error('Error handling initial URL:', error);
+    }
+  }
+
+  private processURL(url: string) {
+    console.log('Processing deep link:', url);
   
   try {
-    const parsed = Linking.parse(url);
-    console.log('🔍 [DeepLink] Parsed URL:', parsed);
+      const parsedUrl = new URL(url);
+      const path = parsedUrl.pathname;
+      const params = parsedUrl.searchParams;
     
-    // Handle different URL formats:
-    // tech5://movie/123
-    // https://backend-app-lou3.onrender.com/movie/123
-    // http://192.168.5.146:3003/movie/123 (local)
-    
-    let movieId: string | undefined;
-    
-    if (parsed.path) {
-      const pathParts = parsed.path.split('/').filter(Boolean);
-      if (pathParts[0] === 'movie' && pathParts[1]) {
-        movieId = pathParts[1];
+      // Handle different deep link patterns
+      if (path.startsWith('/movie/')) {
+        const movieId = path.split('/movie/')[1];
+        this.navigateToMovie(movieId);
+      } else if (path.startsWith('/series/')) {
+        const seriesId = path.split('/series/')[1];
+        const episode = params.get('episode');
+        this.navigateToSeries(seriesId, episode || undefined);
+      } else if (path === '/watch-later') {
+        this.navigateToWatchLater();
+      } else {
+        console.log('Unknown deep link path:', path);
+      }
+    } catch (error) {
+      console.error('Error processing URL:', error);
       }
     }
     
-    // Fallback to query params
-    if (!movieId && parsed.queryParams?.movieId) {
-      movieId = String(parsed.queryParams.movieId);
-    }
-    
-    console.log('🔍 [DeepLink] Extracted movieId:', movieId);
-    
-    return {
-      movieId,
-      screen: movieId ? 'Movie' : undefined,
-      params: movieId ? { id: movieId } : undefined
-    };
-  } catch (error) {
-    console.error('❌ [DeepLink] Error parsing deep link:', error);
-    return {};
-  }
-};
+  // Handle notification tap navigation
+  handleNotificationTap(notificationData: NotificationData) {
+    console.log('Handling notification tap:', notificationData);
 
-/**
- * Handle initial URL when app is launched from deep link
- */
-export const handleInitialURL = async (handler: DeepLinkHandler): Promise<void> => {
+    switch (notificationData.type) {
+      case 'NEW_MOVIE':
+        if (notificationData.movieId) {
+          this.navigateToMovie(notificationData.movieId);
+        }
+        break;
+
+      case 'NEW_EPISODE':
+        if (notificationData.seriesId) {
+          this.navigateToSeries(
+            notificationData.seriesId, 
+            notificationData.episodeNumber?.toString()
+          );
+        }
+        break;
+
+      case 'REMINDER':
+        this.navigateToWatchLater();
+        break;
+
+      default:
+        console.log('Unknown notification type:', notificationData.type);
+    }
+  }
+
+  // Navigation methods
+  private navigateToMovie(movieId: string) {
+    try {
+      console.log('Navigating to movie:', movieId);
+      router.push(`/movie/${movieId}`);
+    } catch (error) {
+      console.error('Error navigating to movie:', error);
+    }
+  }
+
+  private navigateToSeries(seriesId: string, episode?: string) {
+    try {
+      console.log('Navigating to series:', seriesId, 'episode:', episode);
+      
+      if (episode) {
+        // Navigate to specific episode
+        router.push(`/movie/${seriesId}?episode=${episode}&autoPlay=true`);
+      } else {
+        // Navigate to series details
+        router.push(`/movie/${seriesId}`);
+      }
+  } catch (error) {
+      console.error('Error navigating to series:', error);
+    }
+  }
+
+  private navigateToWatchLater() {
   try {
-    const initialUrl = await Linking.getInitialURL();
-    if (initialUrl) {
-      console.log('🚀 [DeepLink] Initial URL:', initialUrl);
-      const data = parseDeepLink(initialUrl);
-      handler(data);
-    }
+      console.log('Navigating to watch later');
+      router.push('/watch-later');
   } catch (error) {
-    console.error('❌ [DeepLink] Error handling initial URL:', error);
+      console.error('Error navigating to watch later:', error);
   }
-};
+  }
 
-/**
- * Set up deep link listener
- */
-export const setupDeepLinkListener = (handler: DeepLinkHandler) => {
-  const subscription = Linking.addEventListener('url', ({ url }) => {
-    console.log('📨 [DeepLink] Received deep link:', url);
-    const data = parseDeepLink(url);
-    handler(data);
-  });
-  
-  return subscription;
-};
+  // Helper method to create deep links
+  createMovieLink(movieId: string): string {
+    return `movieapp://movie/${movieId}`;
+  }
 
-/**
- * Validate if movieId is valid format
- */
-export const isValidMovieId = (movieId?: string): boolean => {
-  if (!movieId) return false;
-  
-  // Basic validation - should be non-empty string
-  // You can add more specific validation based on your movie ID format
-  const isValid = movieId.length > 0 && /^[a-zA-Z0-9]+$/.test(movieId);
-  console.log('✅ [DeepLink] MovieId validation:', { movieId, isValid });
-  return isValid;
-};
+  createSeriesLink(seriesId: string, episode?: number): string {
+    const baseUrl = `movieapp://series/${seriesId}`;
+    return episode ? `${baseUrl}?episode=${episode}` : baseUrl;
+  }
 
-/**
- * Create deep link URL
- */
-export const createDeepLink = (movieId: string): string => {
-  return getDeepLinkUrl(movieId);
-};
+  createWatchLaterLink(): string {
+    return 'movieapp://watch-later';
+  }
 
-/**
- * Create web URL (local or production)
- */
-export const createWebUrl = (movieId: string): string => {
-  const url = getShareUrl(movieId);
-  console.log('🌐 [DeepLink] Created web URL:', url);
-  return url;
-}; 
+  // Cleanup
+  cleanup() {
+    Linking.removeAllListeners('url');
+  }
+} 
