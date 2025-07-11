@@ -1,5 +1,15 @@
 import { useState, useEffect } from 'react';
-import { notificationService, NotificationItem } from '../services/notificationService';
+import { notificationService } from '../services/notificationService';
+
+export interface NotificationItem {
+  id: string;
+  title: string;
+  body: string;
+  timestamp: Date;
+  read: boolean;
+  type?: string;
+  data?: any;
+}
 
 export function useNotifications() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -10,31 +20,51 @@ export function useNotifications() {
     // Subscribe to unread count changes
     const unsubscribe = notificationService.subscribeToUnreadCount(setUnreadCount);
     
-    // Load initial notifications
-    setNotifications(notificationService.getNotifications());
+    // Initial setup
     setLoading(false);
 
     return unsubscribe;
   }, []);
 
   const markAsRead = (notificationId: string) => {
-    notificationService.markAsRead(notificationId);
-    setNotifications(notificationService.getNotifications());
+    // Mark single notification as read
+    setNotifications(prev => 
+      prev.map(notif => 
+        notif.id === notificationId 
+          ? { ...notif, read: true }
+          : notif
+      )
+    );
+    // Update unread count
+    const newUnreadCount = notifications.filter(n => !n.read && n.id !== notificationId).length;
+    notificationService.setUnreadCount(newUnreadCount);
   };
 
   const markAllAsRead = () => {
-    notificationService.markAllAsRead();
-    setNotifications(notificationService.getNotifications());
+    // Mark all notifications as read
+    setNotifications(prev => prev.map(notif => ({ ...notif, read: true })));
+    notificationService.markAsRead();
   };
 
   const addNotification = (notification: Omit<NotificationItem, 'id' | 'timestamp'>) => {
-    notificationService.addNotification(notification);
-    setNotifications(notificationService.getNotifications());
+    const newNotification: NotificationItem = {
+      ...notification,
+      id: Date.now().toString(),
+      timestamp: new Date(),
+      read: false
+    };
+    
+    setNotifications(prev => [newNotification, ...prev]);
+    notificationService.incrementUnreadCount();
   };
 
   const simulateNewNotification = () => {
-    notificationService.simulateNewNotification();
-    setNotifications(notificationService.getNotifications());
+    addNotification({
+      title: '🎬 Test Notification',
+      body: 'This is a test notification!',
+      type: 'TEST',
+      read: false
+    });
   };
 
   return {
