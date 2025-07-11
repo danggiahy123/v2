@@ -5,14 +5,14 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "tech5",
+    "scheme": "movieapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "associatedDomains": [
         "applinks:backend-app-lou3.onrender.com",
-        "applinks:192.168.5.146:3003"
+        "applinks:192.168.5.18:3003"
       ],
       "bundleIdentifier": "com.tech5.movies"
     },
@@ -28,7 +28,7 @@
           "action": "VIEW",
           "data": [
             {
-              "scheme": "tech5",
+              "scheme": "movieapp",
               "host": "*",
               "pathPattern": ".*"
             },
@@ -39,11 +39,14 @@
             },
             {
               "scheme": "http",
-              "host": "192.168.5.146:3003",
+              "host": "192.168.5.18:3003",
               "pathPattern": "/movie/.*"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -62,10 +65,25 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#ffffff",
+          "sounds": []
+        }
       ]
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "c0f28dab-8c4b-4747-884f-0561ca44ab88"
+      }
+    },
+    "owner": "leo0393790"
   }
 }

@@ -1,36 +1,43 @@
 import { Provider } from 'react-redux';
 import { store } from './store/store';
-import { Slot, useRouter } from 'expo-router';
-import { useEffect } from 'react';
-import { handleInitialURL, setupDeepLinkListener, DeepLinkData, isValidMovieId } from './services/deepLinkService';
+import { Slot } from 'expo-router';
+import { useEffect, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { usePushNotifications } from './hooks/usePushNotifications';
 
 function AppContent() {
-  const router = useRouter();
+  const [userId, setUserId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleDeepLink = (data: DeepLinkData) => {
-    console.log('Handling deep link data:', data);
-    
-    if (data.movieId && isValidMovieId(data.movieId)) {
-      // Navigate to movie detail screen
-      router.push(`/movie/${data.movieId}`);
-    } else if (data.movieId) {
-      console.warn('Invalid movie ID:', data.movieId);
-      // Optionally navigate to error screen or home
-      router.push('/');
-    }
-  };
+  // Initialize push notifications with userId
+  const pushNotifications = usePushNotifications(userId || undefined);
 
   useEffect(() => {
-    // Handle initial URL when app is launched from deep link
-    handleInitialURL(handleDeepLink);
-
-    // Set up listener for subsequent deep links
-    const subscription = setupDeepLinkListener(handleDeepLink);
-
-    return () => {
-      subscription?.remove();
+    // Get userId from storage when app starts
+    const initializeApp = async () => {
+      try {
+        // Assuming you store userId in AsyncStorage after login
+        const storedUserId = await AsyncStorage.getItem('userId');
+        if (storedUserId) {
+          setUserId(storedUserId);
+          console.log('📱 App initialized with userId:', storedUserId);
+        } else {
+          console.log('📱 No userId found, user needs to login');
+        }
+      } catch (error) {
+        console.error('❌ Error initializing app:', error);
+      } finally {
+        setIsLoading(false);
+      }
     };
+
+    initializeApp();
   }, []);
+
+  // Show loading screen while getting userId
+  if (isLoading) {
+    return <Slot />;
+  }
 
   return <Slot />;
 }
@@ -38,7 +45,7 @@ function AppContent() {
 export default function App() {
   return (
     <Provider store={store}>
-      <AppContent />
+      <Slot />
     </Provider>
   );
 } 
