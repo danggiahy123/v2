@@ -27,3 +27,6 @@ export * from './anime';
 
 // Home components
 export * from './home'; 
+
+// Rating components
+export * from './rating'; 

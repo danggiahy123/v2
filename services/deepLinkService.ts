@@ -4,13 +4,14 @@ import { NotificationData } from './notificationService';
 
 export class DeepLinkService {
   private static instance: DeepLinkService;
+  private navigationReady = false;
 
   static getInstance(): DeepLinkService {
     if (!DeepLinkService.instance) {
       DeepLinkService.instance = new DeepLinkService();
     }
     return DeepLinkService.instance;
-}
+  }
 
   initialize() {
     // Handle deep links when app is opened via URL
@@ -18,6 +19,11 @@ export class DeepLinkService {
 
     // Handle deep link when app is opened from cold start
     this.handleInitialURL();
+    
+    // Mark navigation as ready after a short delay
+    setTimeout(() => {
+      this.navigationReady = true;
+    }, 1000);
   }
 
   private handleDeepLink = (event: { url: string }) => {
@@ -38,7 +44,7 @@ export class DeepLinkService {
   private processURL(url: string) {
     console.log('Processing deep link:', url);
   
-  try {
+    try {
       const parsedUrl = new URL(url);
       const path = parsedUrl.pathname;
       const params = parsedUrl.searchParams;
@@ -58,8 +64,8 @@ export class DeepLinkService {
       }
     } catch (error) {
       console.error('Error processing URL:', error);
-      }
     }
+  }
     
   // Handle notification tap navigation
   handleNotificationTap(notificationData: NotificationData) {
@@ -90,11 +96,15 @@ export class DeepLinkService {
     }
   }
 
-  // Navigation methods
+  // Navigation methods with improved error handling
   private navigateToMovie(movieId: string) {
     try {
       console.log('Navigating to movie:', movieId);
-      router.push(`/movie/${movieId}`);
+      
+      // Use a safe navigation approach
+      this.safeNavigate(() => {
+        router.push(`/movie/${movieId}`);
+      });
     } catch (error) {
       console.error('Error navigating to movie:', error);
     }
@@ -104,25 +114,72 @@ export class DeepLinkService {
     try {
       console.log('Navigating to series:', seriesId, 'episode:', episode);
       
-      if (episode) {
-        // Navigate to specific episode
-        router.push(`/movie/${seriesId}?episode=${episode}&autoPlay=true`);
-      } else {
-        // Navigate to series details
-        router.push(`/movie/${seriesId}`);
-      }
-  } catch (error) {
+      this.safeNavigate(() => {
+        if (episode) {
+          // Navigate to specific episode
+          router.push(`/movie/${seriesId}?episode=${episode}&autoPlay=true`);
+        } else {
+          // Navigate to series details
+          router.push(`/movie/${seriesId}`);
+        }
+      });
+    } catch (error) {
       console.error('Error navigating to series:', error);
     }
   }
 
   private navigateToWatchLater() {
-  try {
+    try {
       console.log('Navigating to watch later');
-      router.push('/watch-later');
-  } catch (error) {
+      
+      this.safeNavigate(() => {
+        router.push('/watch-later');
+      });
+    } catch (error) {
       console.error('Error navigating to watch later:', error);
+    }
   }
+
+  // Safe navigation method that handles navigation stack properly
+  private safeNavigate(navigateFunction: () => void) {
+    try {
+      // If navigation is not ready yet, wait and try again
+      if (!this.navigationReady) {
+        console.log('Navigation not ready, retrying in 500ms...');
+        setTimeout(() => this.safeNavigate(navigateFunction), 500);
+        return;
+      }
+
+      // Check if we can navigate safely
+      if (router.canGoBack()) {
+        // We have a navigation stack, safe to navigate
+        navigateFunction();
+      } else {
+        // No navigation stack, ensure we have a base screen first
+        console.log('No navigation stack, ensuring base screen is loaded...');
+        
+        // Navigate to tabs first, then to the target after a delay
+        router.replace('/(tabs)');
+        
+        // Wait for tabs to load, then navigate to target
+        setTimeout(() => {
+          try {
+            navigateFunction();
+          } catch (error) {
+            console.error('Error in delayed navigation:', error);
+          }
+        }, 300);
+      }
+    } catch (error) {
+      console.error('Error in safe navigation:', error);
+      
+      // Fallback: try to go to home
+      try {
+        router.replace('/(tabs)');
+      } catch (fallbackError) {
+        console.error('Fallback navigation also failed:', fallbackError);
+      }
+    }
   }
 
   // Helper method to create deep links
@@ -142,5 +199,6 @@ export class DeepLinkService {
   // Cleanup
   cleanup() {
     Linking.removeAllListeners('url');
+    this.navigationReady = false;
   }
 } 
