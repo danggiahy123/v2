@@ -7,6 +7,7 @@
  * - Episode list
  * - Related movies
  * - Video player integration
+ * - Star rating system (NEW)
  */
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
@@ -44,6 +45,9 @@ import { SkeletonLoader } from '../../components/ui/AnimatedElements';
 import { getResumeWatchingInfo, getResumeButtonText, shouldShowContinueBadge } from '../../utils/watchingHelper';
 import { useFocusEffect } from '@react-navigation/native';
 import { RelatedMovies } from '../../components/movie';
+// Rating system imports (NEW)
+import { RatingModal, RatingDisplay, StarRating } from '../../components/rating';
+import { addStarRating, getUserStarRating, getMovieStarRatings, type RatingStats, type UserRating, type RatingItem } from '../../services/ratingService';
 // Removed Collapsible import - using inline logic
 
 
@@ -136,6 +140,16 @@ return `${hours}h ${remainingMinutes}min`;
     console.log('🔄 [MovieDetail] Component mounted, forcing refresh');
     refresh();
   }, []);
+  
+  // ⭐ FETCH RATING DATA ON COMPONENT MOUNT (NEW)
+  useEffect(() => {
+    if (id) {
+      fetchMovieRatings();
+      if (userId) {
+        fetchUserRating();
+      }
+    }
+  }, [id, userId]);
 
   // Comment input state - will be used when comment input is implemented
   const [commentText, setCommentText] = useState('');
@@ -167,7 +181,7 @@ return `${hours}h ${remainingMinutes}min`;
     initialRentalAccess === 'true' // Parse string to boolean
   );
   
-  const [activeTab, setActiveTab] = useState<'related' | 'comments'>('related');
+  const [activeTab, setActiveTab] = useState<'related' | 'comments' | 'ratings'>('related');
   
   // 📖 DESCRIPTION EXPAND STATE
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
@@ -235,6 +249,67 @@ return `${hours}h ${remainingMinutes}min`;
     setShowNotification(true);
   };
   
+  // ⭐ RATING SYSTEM FUNCTIONS (NEW)
+  const fetchUserRating = async () => {
+    if (!userId || !id) return;
+    
+    try {
+      const response = await getUserStarRating(id);
+      setCurrentUserRating(response.data.userRating);
+    } catch (error) {
+      console.error('Error fetching user rating:', error);
+    }
+  };
+  
+  const fetchMovieRatings = async () => {
+    if (!id) return;
+    
+    try {
+      setRatingLoading(true);
+      const response = await getMovieStarRatings(id, 1, 10);
+      setMovieRatingStats(response.data.movieStats);
+      setRatingsData(response.data.ratings);
+    } catch (error) {
+      console.error('Error fetching movie ratings:', error);
+    } finally {
+      setRatingLoading(false);
+    }
+  };
+  
+  const handleRatingSubmit = async (rating: number, comment: string) => {
+    if (!userId || !id) {
+      showNotificationMessage('Vui lòng đăng nhập để đánh giá', 'error');
+      return;
+    }
+    
+    try {
+      const response = await addStarRating(id, rating, comment);
+      setCurrentUserRating({
+        _id: response.data.rating._id,
+        star_rating: response.data.rating.star_rating,
+        comment: response.data.rating.comment,
+        createdAt: response.data.rating.createdAt,
+        updatedAt: response.data.rating.updatedAt,
+      });
+      setMovieRatingStats(response.data.movieStats);
+      showNotificationMessage('Đánh giá thành công!', 'success');
+      
+      // Refresh ratings list
+      await fetchMovieRatings();
+    } catch (error: any) {
+      console.error('Error submitting rating:', error);
+      showNotificationMessage(error.message || 'Có lỗi xảy ra khi đánh giá', 'error');
+    }
+  };
+  
+  const handleRatePress = () => {
+    if (!userId) {
+      showNotificationMessage('Vui lòng đăng nhập để đánh giá phim', 'error');
+      return;
+    }
+    setShowRatingModal(true);
+  };
+  
   // 🎫 RENTAL NOTIFICATION DELAY STATE
   const [hasShownRentalNotification, setHasShownRentalNotification] = useState(false);
   const [hasShownEpisodeError, setHasShownEpisodeError] = useState(false);
@@ -243,6 +318,17 @@ return `${hours}h ${remainingMinutes}min`;
   const [hasEverHadRentalAccess, setHasEverHadRentalAccess] = useState(
     initialRentalAccess === 'true' || rentalSuccess === 'true'
   );
+  
+  // ⭐ RATING SYSTEM STATE (NEW)
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [currentUserRating, setCurrentUserRating] = useState<UserRating | null>(null);
+  const [movieRatingStats, setMovieRatingStats] = useState<RatingStats>({
+    averageRating: 0,
+    totalRatings: 0,
+    ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+  });
+  const [ratingsData, setRatingsData] = useState<RatingItem[]>([]);
+  const [ratingLoading, setRatingLoading] = useState(false);
   
   // 🎬 GET DEFAULT EPISODE FOR VIDEO PLAYER WITH SMART RESUME
   const getDefaultEpisode = (): { 
@@ -923,198 +1009,189 @@ if (!movieDetail) return;
     const isFavorite = Boolean(userInteractions?.isFavorite);
 
     return (
-      
-        <View style={styles.movieInfoContainer}>
-          {/* Header with Poster and Info */}
-          <View style={styles.movieHeaderContainer}>
-            {/* Movie Poster */}
-            <View style={styles.posterContainer}>
-              <Image 
-                source={{ uri: movieDetail.poster_path }} 
-                style={styles.moviePoster}
-                resizeMode="cover"
-              />
+      <View style={styles.movieInfoContainer}>
+        {/* Header with Poster and Info */}
+        <View style={styles.movieHeaderContainer}>
+          {/* Movie Poster */}
+          <View style={styles.posterContainer}>
+            <Image 
+              source={{ uri: movieDetail.poster_path }} 
+              style={styles.moviePoster}
+              resizeMode="cover"
+            />
+          </View>
+          {/* Enhanced Movie Info - now left-aligned and grouped */}
+          <View style={styles.movieInfoContentNewLeft}>
+            {/* Move movie title above rating, both left-aligned */}
+            <Text style={styles.movieTitleBigLeft}>{movieDetail.movie_title}</Text>
+            <View style={styles.avgRatingModernRow2SmallLeft}>
+              <Text style={styles.avgRatingModernText2SmallLeft}>
+                {movieRatingStats.averageRating.toFixed(1)}
+              </Text>
+              <Ionicons name="star" size={22} color="#FFD700" style={{ marginLeft: 4 }} />
+              <Text style={styles.totalRatingsModernText2SmallLeft}>
+                {movieRatingStats.totalRatings} đánh giá
+              </Text>
             </View>
-            
-            {/* Enhanced Movie Info */}
-            <View style={styles.movieInfoContentNew}>
-              <Text style={styles.movieTitleBig}>
-                {movieDetail.movie_title}
+            <Text style={styles.movieDirectorHighlight}>
+              {movieDetail.producer || 'Studio'}
+            </Text>
+            <View style={styles.metaRowTop}>
+              <Text style={styles.yearInDetail}>
+                {movieDetail.production_time ? new Date(movieDetail.production_time).getFullYear() : '2024'}
               </Text>
-              <Text style={styles.movieDirectorHighlight}>
-                {movieDetail.producer || 'Studio'}
-              </Text>
-              <View style={styles.metaRowTop}>
-                <Text style={styles.yearInDetail}>
-                  {movieDetail.production_time ? new Date(movieDetail.production_time).getFullYear() : '2024'}
-                </Text>
-                <Text style={styles.dot}>•</Text>
-                <View style={styles.ratingContainer}>
-                  <Ionicons name="star" size={16} color="#ffc107" />
-                  <Text style={styles.rating}>{movieDetail.rating ? movieDetail.rating.toFixed(1) : '9.6'}/10</Text>
-                </View>
-                {movieDetail.duration && (
-                  <>
-                    <Text style={styles.dot}>•</Text>
-                    <Text style={styles.duration}>{formatDuration(movieDetail.duration)}</Text>
-                  </>
-                )}
-                <Text style={styles.dot}>•</Text>
-                <View style={styles.typeBadge}>
-                  <Text style={styles.typeText}>{movieDetail.movie_type || 'Phim lẻ'}</Text>
-                </View>
+              <Text style={styles.dot}>•</Text>
+              {movieDetail.duration && (
+                <>
+                  <Text style={styles.dot}>•</Text>
+                  <Text style={styles.duration}>{formatDuration(movieDetail.duration)}</Text>
+                </>
+              )}
+              <Text style={styles.dot}>•</Text>
+              <View style={styles.typeBadge}>
+                <Text style={styles.typeText}>{movieDetail.movie_type || 'Phim lẻ'}</Text>
               </View>
             </View>
           </View>
+        </View>
 
-          {/* Enhanced Description Box with Better UI */}
-          <View style={styles.detailBox}>
-            <Text
-              style={styles.descText}
-              numberOfLines={isDescriptionExpanded ? undefined : 3}
+        {/* Enhanced Description Box with Better UI */}
+        <View style={styles.detailBox}>
+          <Text
+            style={styles.descText}
+            numberOfLines={isDescriptionExpanded ? undefined : 3}
+          >
+            {movieDetail.description || 'Không có nội dung phim.'}
+          </Text>
+          {movieDetail.description && movieDetail.description.length > 150 && (
+            <View style={styles.yearRow}>
+              <View />
+              <TouchableOpacity onPress={() => setIsDescriptionExpanded(!isDescriptionExpanded)}>
+                <Text style={styles.seeMoreBtn}>
+                  {isDescriptionExpanded ? 'Thu gọn' : 'Xem thêm'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
+        {/* Action Buttons với icon vector chất lượng cao */}
+        <View style={styles.actionRowContainer}>
+          {/* View Count */}
+          <View style={styles.actionItemWithCount}>
+            <Ionicons name="eye-outline" size={24} color="#ffffff" />
+            <Text style={styles.actionCount}>{movieDetail.viewCount || 70}</Text>
+          </View>
+
+          {/* Like Button with Count - Icon ❤️ */}
+          <TouchableOpacity
+            style={[
+              styles.actionItemWithCount,
+              !auth.isLoggedIn && styles.disabledAction
+            ]}
+            onPress={handleLikePress}
+          >
+            <Ionicons
+              name={hasLiked ? "heart" : "heart-outline"}
+              size={24}
+              color={hasLiked ? "#ff6b6b" : "#ffffff"}
+            />
+            <Text style={styles.actionCount}>{movieDetail.likeCount || 67}</Text>
+          </TouchableOpacity>
+
+          {/* Favorite Button - Icon 🔖 */}
+          <TouchableOpacity
+            style={[
+              styles.actionItemWithCount,
+              !auth.isLoggedIn && styles.disabledAction
+            ]}
+            onPress={handleFavoritePress}
+          >
+            <Ionicons
+              name={isFavorite ? "bookmark" : "bookmark-outline"}
+              size={24}
+              color={isFavorite ? "#ffc107" : "#ffffff"}
+            />
+            <Text style={styles.actionText}>Xem sau</Text>
+          </TouchableOpacity>
+
+          {/* Share Button - Icon 📤 */}
+          <TouchableOpacity style={styles.actionItemWithCount} onPress={handleSharePress}>
+            <Ionicons name="share-social-outline" size={24} color="#ffffff" />
+            <Text style={styles.actionText}>Chia sẻ</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Free Movie Watch Button */}
+        {movieDetail && movieDetail.is_free && !hasClickedWatchButton && (
+          <View style={styles.freeMovieContainer}>
+            <TouchableOpacity
+              style={styles.freeWatchButton}
+              onPress={() => {
+                setHasClickedWatchButton(true);
+                setShowVideoPlayer(true);
+              }}
             >
-              {movieDetail.description || 'Không có nội dung phim.'}
-            </Text>
-            {movieDetail.description && movieDetail.description.length > 150 && (
-              <View style={styles.yearRow}>
-                <View />
-                <TouchableOpacity onPress={() => setIsDescriptionExpanded(!isDescriptionExpanded)}>
-                  <Text style={styles.seeMoreBtn}>
-                    {isDescriptionExpanded ? 'Thu gọn' : 'Xem thêm'}
+              <Ionicons name="play-circle" size={24} color="#ffffff" />
+              <Text style={styles.freeWatchText}>Xem miễn phí</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Rental Status Banner */}
+        {movieDetail && !movieDetail.is_free && !hasClickedWatchButton && (
+          <View style={styles.rentalContainer}>
+            {hasRentalAccess && currentRental ? (
+              <View style={styles.rentalAccessBanner}>
+                <View style={styles.rentalAccessInfo}>
+                  <Text style={styles.rentalAccessTitle}>
+                    {(needsActivation as any) ? 'Đã thanh toán - Chưa kích hoạt' : 'Đã thuê phim'}
                   </Text>
+                  {/* Debug info */}
+                  <Text style={styles.rentalAccessSubtitle}>
+                    Gói: {currentRental.rentalType === '48h' ? 'Thuê 48 giờ' : 'Thuê 30 ngày'}
+                  </Text>
+                  {!(needsActivation as any) && remainingTime && (
+                    <Text style={styles.rentalTimeRemaining}>
+                      Còn lại: {rentalService.formatRemainingTime(remainingTime).formatted}
+                    </Text>
+                  )}
+                  {(needsActivation as any) && (
+                    <Text style={styles.rentalTimeRemaining}>
+                      Nhấn "Xem ngay" để bắt đầu tính thời gian thuê
+                    </Text>
+                  )}
+                </View>
+                <TouchableOpacity
+                  style={styles.watchNowButton}
+                  onPress={handleWatchNow}
+                >
+                  <Text style={styles.watchNowText}>
+                    {(needsActivation as any) ? 'Kích hoạt & Xem' : (movieDetail ? getResumeButtonText(movieDetail) : 'Xem ngay')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.rentalPrompt}>
+                <View style={styles.rentalPromptInfo}>
+                  <Text style={styles.rentalPromptTitle}>Thuê phim để xem</Text>
+                  <Text style={styles.rentalPromptSubtitle}>
+                    Từ {rentalService.formatPrice(Math.round((movieDetail.price || 0) * 0.3))}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.rentButton}
+                  onPress={handleRentPress}
+                >
+                  <Text style={styles.rentButtonText}>Thuê ngay</Text>
                 </TouchableOpacity>
               </View>
             )}
           </View>
-
-                    {/* Action Buttons với icon vector chất lượng cao */}
-
-          {/* Action Buttons với icon vector chất lượng cao */}
-          
-            <View style={styles.actionRowContainer}>
-              {/* View Count */}
-              <View style={styles.actionItemWithCount}>
-                <Ionicons name="eye-outline" size={24} color="#ffffff" />
-                <Text style={styles.actionCount}>{movieDetail.viewCount || 70}</Text>
-              </View>
-
-              {/* Like Button with Count - Icon ❤️ */}
-                  <TouchableOpacity
-                    style={[
-                      styles.actionItemWithCount,
-                      !auth.isLoggedIn && styles.disabledAction
-                    ]}
-                    onPress={handleLikePress}
-              >
-                <Ionicons
-name={hasLiked ? "heart" : "heart-outline"} 
-                  size={24} 
-                  color={hasLiked ? "#ff6b6b" : "#ffffff"} 
-                />
-                    <Text style={styles.actionCount}>{movieDetail.likeCount || 67}</Text>
-                  </TouchableOpacity>
-              
-
-              {/* Favorite Button - Icon 🔖 */}
-                  <TouchableOpacity
-                    style={[
-                      styles.actionItemWithCount,
-                      !auth.isLoggedIn && styles.disabledAction
-                    ]}
-                    onPress={handleFavoritePress}
-              >
-                <Ionicons 
-                  name={isFavorite ? "bookmark" : "bookmark-outline"} 
-                  size={24} 
-                  color={isFavorite ? "#ffc107" : "#ffffff"} 
-                />
-                    <Text style={styles.actionText}>Xem sau</Text>
-                  </TouchableOpacity>
-
-
-
-              {/* Share Button - Icon 📤 */}
-              <TouchableOpacity style={styles.actionItemWithCount} onPress={handleSharePress}>
-                <Ionicons name="share-social-outline" size={24} color="#ffffff" />
-                <Text style={styles.actionText}>Chia sẻ</Text>
-              </TouchableOpacity>
-              </View>
-
-          {/* Free Movie Watch Button */}
-          {movieDetail && movieDetail.is_free && !hasClickedWatchButton && (
-            <View style={styles.freeMovieContainer}>
-              <TouchableOpacity 
-                style={styles.freeWatchButton}
-                onPress={() => {
-                  setHasClickedWatchButton(true);
-                  setShowVideoPlayer(true);
-                }}
-              >
-                <Ionicons name="play-circle" size={24} color="#ffffff" />
-                <Text style={styles.freeWatchText}>Xem miễn phí</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* Rental Status Banner */}
-          {movieDetail && !movieDetail.is_free && !hasClickedWatchButton && (
-            <View style={styles.rentalContainer}>
-              {hasRentalAccess && currentRental ? (
-                <View style={styles.rentalAccessBanner}>
-                  <View style={styles.rentalAccessInfo}>
-                    <Text style={styles.rentalAccessTitle}>
-                      {(needsActivation as any) ? 'Đã thanh toán - Chưa kích hoạt' : 'Đã thuê phim'}
-                    </Text>
-                    {/* Debug info */}
-                  
-                    <Text style={styles.rentalAccessSubtitle}>
-                      Gói: {currentRental.rentalType === '48h' ? 'Thuê 48 giờ' : 'Thuê 30 ngày'}
-                    </Text>
-                    {!(needsActivation as any) && remainingTime && (
-                      <Text style={styles.rentalTimeRemaining}>
-                        Còn lại: {rentalService.formatRemainingTime(remainingTime).formatted}
-                      </Text>
-                    )}
-                    {(needsActivation as any) && (
-                      <Text style={styles.rentalTimeRemaining}>
-                        Nhấn "Xem ngay" để bắt đầu tính thời gian thuê
-                      </Text>
-                    )}
-                  </View>
-                  <TouchableOpacity 
-                    style={styles.watchNowButton}
-                    onPress={handleWatchNow}
-                  >
-                    <Text style={styles.watchNowText}>
-                      {(needsActivation as any) ? 'Kích hoạt & Xem' : (movieDetail ? getResumeButtonText(movieDetail) : 'Xem ngay')}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <View style={styles.rentalPrompt}>
-                  <View style={styles.rentalPromptInfo}>
-                    <Text style={styles.rentalPromptTitle}>Thuê phim để xem</Text>
-                    <Text style={styles.rentalPromptSubtitle}>
-                      Từ {rentalService.formatPrice(Math.round((movieDetail.price || 0) * 0.3))}
-                    </Text>
-                  </View>
-            <TouchableOpacity
-                    style={styles.rentButton}
-                    onPress={handleRentPress}
-            >
-                    <Text style={styles.rentButtonText}>Thuê ngay</Text>
-            </TouchableOpacity>
-        </View>
-              )}
-            </View>
-          )}
-          
-        </View>
-      
+        )}
+      </View>
     );
   };
-
-
 
   const renderEpisodes = () => {
     // Don't render if it's not a series
@@ -1330,7 +1407,13 @@ name={hasLiked ? "heart" : "heart-outline"}
           
             <View style={styles.centerContainer}>
               <Text style={styles.errorText}>Movie not found</Text>
-              <TouchableOpacity style={styles.retryButton} onPress={() => router.back()}>
+              <TouchableOpacity style={styles.retryButton} onPress={() => {
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace('/(tabs)');
+                }
+              }}>
                 <Text style={styles.retryButtonText}>Go Back</Text>
               </TouchableOpacity>
             </View>
@@ -1352,7 +1435,15 @@ name={hasLiked ? "heart" : "heart-outline"}
       <View style={styles.customHeader}>
         <TouchableOpacity 
           style={styles.backButton}
-          onPress={() => router.back()}
+          onPress={() => {
+            // Check if we can go back, otherwise navigate to home
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              console.log('🔙 [MovieDetail] Cannot go back, navigating to home');
+              router.replace('/(tabs)');
+            }
+          }}
         >
           <Ionicons name="chevron-back" size={24} color="#fff" />
         </TouchableOpacity>
@@ -1563,6 +1654,14 @@ name={hasLiked ? "heart" : "heart-outline"}
                  </Text>
                </TouchableOpacity>
                <TouchableOpacity
+                 style={[styles.tabHeader, activeTab === 'ratings' && styles.activeTabHeader]}
+                 onPress={() => setActiveTab('ratings')}
+               >
+                 <Text style={[styles.tabHeaderText, activeTab === 'ratings' && styles.activeTabHeaderText]}>
+                   Đánh giá
+                 </Text>
+               </TouchableOpacity>
+               <TouchableOpacity
                  style={[styles.tabHeader, activeTab === 'comments' && styles.activeTabHeader]}
                  onPress={() => setActiveTab('comments')}
                >
@@ -1582,6 +1681,22 @@ name={hasLiked ? "heart" : "heart-outline"}
                    showTitle={false}
                    onMoviePress={handleRelatedMoviePress}
                  />
+               )}
+               
+               {activeTab === 'ratings' && (
+                 <View style={styles.ratingsTabContent}>
+                   <RatingDisplay
+                     movieStats={movieRatingStats}
+                     ratings={ratingsData}
+                     onRatePress={handleRatePress}
+                     loading={ratingLoading}
+                     currentUserRating={currentUserRating ? {
+                       _id: currentUserRating._id,
+                       star_rating: currentUserRating.star_rating,
+                       comment: currentUserRating.comment
+                     } : null}
+                   />
+                 </View>
                )}
                
                {activeTab === 'comments' && (
@@ -1671,6 +1786,23 @@ name={hasLiked ? "heart" : "heart-outline"}
           }}
           userId={userId || ''}
           onRentalSuccess={handleRentalSuccess}
+        />
+      )}
+      
+      {/* ⭐ RATING MODAL (NEW) */}
+      {movieDetail && (
+        <RatingModal
+          visible={showRatingModal}
+          onClose={() => setShowRatingModal(false)}
+          movie={{
+            _id: movieDetail._id || id || '',
+            title: movieDetail.movie_title,
+            poster: movieDetail.poster_path,
+            release_year: movieDetail.production_time ? new Date(movieDetail.production_time).getFullYear() : undefined,
+            genre: movieDetail.genres?.map(g => typeof g === 'string' ? g : g.genre_name) || [],
+          }}
+          currentUserRating={currentUserRating}
+          onSubmit={handleRatingSubmit}
         />
       )}
     </SafeAreaView>
@@ -1971,6 +2103,9 @@ const styles = StyleSheet.create({
   },
   tabContent: {
     minHeight: 200,
+  },
+  ratingsTabContent: {
+    backgroundColor: '#000',
   },
   emptyTabContent: {
     padding: 40,
@@ -2563,6 +2698,120 @@ backgroundColor: '#D11030',
     fontWeight: '500',
     marginTop: 4,
     textAlign: 'center',
+  },
+  avgRatingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  avgRatingText: {
+    fontSize: 24,
+    color: '#D11030',
+    fontWeight: 'bold',
+  },
+  totalRatingsText: {
+    fontSize: 14,
+    color: '#aaa',
+    marginLeft: 4,
+  },
+  avgRatingModernRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+    marginTop: 4,
+  },
+  avgRatingModernText: {
+    fontSize: 28,
+    color: '#D11030',
+    fontWeight: 'bold',
+    marginRight: 4,
+  },
+  totalRatingsModernText: {
+    fontSize: 15,
+    color: '#aaa',
+    marginLeft: 2,
+    fontWeight: '500',
+  },
+  avgRatingModernRow2: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 0,
+    marginTop: 8,
+  },
+  avgRatingModernText2: {
+    fontSize: 38,
+    color: '#FFD700',
+    fontWeight: 'bold',
+    marginRight: 0,
+  },
+  totalRatingsModernText2: {
+    fontSize: 16,
+    color: '#FFD700',
+    textAlign: 'center',
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  avgRatingModernRow2Small: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 0,
+    marginTop: 4,
+  },
+  avgRatingModernText2Small: {
+    fontSize: 22,
+    color: '#FFD700',
+    fontWeight: 'bold',
+    marginRight: 0,
+  },
+  totalRatingsModernText2Small: {
+    fontSize: 13,
+    color: '#FFD700',
+    textAlign: 'center',
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  movieInfoContentNewLeft: {
+    flex: 1,
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
+    paddingRight: 0,
+    paddingLeft: 0,
+  },
+  movieTitleBigLeft: {
+    fontSize: 26,
+    fontWeight: '900',
+    color: '#fff',
+    marginBottom: 4,
+    lineHeight: 32,
+    letterSpacing: -0.5,
+    textAlign: 'left',
+    alignSelf: 'flex-start',
+  },
+  avgRatingModernRow2SmallLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    marginBottom: 0,
+    marginTop: 4,
+    gap: 6,
+  },
+  avgRatingModernText2SmallLeft: {
+    fontSize: 22,
+    color: '#FFD700',
+    fontWeight: 'bold',
+    marginRight: 0,
+    textAlign: 'left',
+  },
+  totalRatingsModernText2SmallLeft: {
+    fontSize: 13,
+    color: '#FFD700',
+    textAlign: 'left',
+    fontWeight: '600',
+    marginBottom: 2,
+    marginLeft: 8,
   },
 });
 
