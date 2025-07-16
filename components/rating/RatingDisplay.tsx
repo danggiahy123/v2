@@ -73,52 +73,76 @@ const RatingDisplay: React.FC<RatingDisplayProps> = ({
     return `${Math.ceil(diffDays / 365)} năm trước`;
   };
 
+  // Thêm hàm formatTimeAgo
+  function formatTimeAgo(dateString: string) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+    if (diffInMinutes < 1) return 'Vừa xong';
+    if (diffInMinutes < 60) return `${diffInMinutes} phút trước`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)} giờ trước`;
+    return `${Math.floor(diffInMinutes / 1440)} ngày trước`;
+  }
+
   const getStarPercentage = (starCount: number): number => {
     if (movieStats.totalRatings === 0) return 0;
     return (movieStats.ratingDistribution[starCount as keyof typeof movieStats.ratingDistribution] / movieStats.totalRatings) * 100;
   };
 
-  const renderRatingItem = ({ item }: { item: RatingItem }) => (
-    <View style={styles.ratingItem}>
-      <View style={styles.ratingHeader}>
-        <View style={styles.userInfo}>
-          {/* Avatar user */}
-          {item.user.avatar ? (
-            <Image source={{ uri: item.user.avatar }} style={styles.userAvatarImg} />
-          ) : (
-            <View style={styles.userAvatar}>
-              <Text style={styles.userInitial}>
-                {item.user.name?.charAt(0).toUpperCase() || 'U'}
+  const renderRatingItem = ({ item }: { item: RatingItem }) => {
+    // Lấy phần trước dấu @ của email
+    const displayName = item.user.email ? item.user.email.split('@')[0] : 'Ẩn danh';
+    // Xác định thời gian hiển thị: nếu updatedAt khác createdAt thì là đã chỉnh sửa
+    const created = new Date(item.createdAt);
+    const updated = new Date(item.updatedAt);
+    let timeLabel = '';
+    if (updated.getTime() !== created.getTime()) {
+      timeLabel = ` ${formatTimeAgo(item.updatedAt)}`;
+    } else {
+      timeLabel = formatTimeAgo(item.createdAt);
+    }
+    return (
+      <View style={styles.ratingItem}>
+        <View style={styles.ratingHeader}>
+          <View style={styles.userInfo}>
+            {/* Avatar user */}
+            {item.user.avatar ? (
+              <Image source={{ uri: item.user.avatar }} style={styles.userAvatarImg} />
+            ) : (
+              <View style={styles.userAvatar}>
+                <Text style={styles.userInitial}>
+                  {displayName.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+            )}
+            <View style={styles.userDetails}>
+              <Text style={styles.userName}>
+                {displayName}
+              </Text>
+              <Text style={styles.ratingDate}>
+                {timeLabel}
               </Text>
             </View>
-          )}
-          <View style={styles.userDetails}>
-            <Text style={styles.userName}>
-              {item.user.name || 'Người dùng ẩn danh'}
-            </Text>
-            <Text style={styles.ratingDate}>
-              {formatDate(item.createdAt)}
-            </Text>
+          </View>
+          <View style={styles.ratingValue}>
+            <StarRating
+              rating={item.star_rating}
+              readonly={true}
+              size={16}
+              showRating={false}
+              showText={false}
+              starColor="#FFD700"
+            />
           </View>
         </View>
-        <View style={styles.ratingValue}>
-          <StarRating
-            rating={item.star_rating}
-            readonly={true}
-            size={16}
-            showRating={false}
-            showText={false}
-            starColor="#FFD700"
-          />
-        </View>
+        {item.comment && (
+          <Text style={styles.ratingComment}>
+            {item.comment}
+          </Text>
+        )}
       </View>
-      {item.comment && (
-        <Text style={styles.ratingComment}>
-          {item.comment}
-        </Text>
-      )}
-    </View>
-  );
+    );
+  };
 
   const renderStarDistribution = () => (
     <View style={styles.distributionContainer}>
