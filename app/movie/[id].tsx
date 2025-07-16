@@ -921,102 +921,140 @@ if (!movieDetail) return;
     const userInteractions = movieDetail.userInteractions;
     const hasLiked = Boolean(userInteractions?.hasLiked);
     const isFavorite = Boolean(userInteractions?.isFavorite);
-    const year = movieDetail.production_time ? new Date(movieDetail.production_time).getFullYear() : 'N/A';
-    const studioOrDirector = movieDetail.producer || 'Studio';
-    const rating = movieDetail.rating ? movieDetail.rating.toFixed(1) : '9.6';
-    const duration = movieDetail.duration ? formatDuration(movieDetail.duration) : '';
-    const type = movieDetail.movie_type || 'Phim lẻ';
-    const desc = movieDetail.description || '';
 
     return (
-      <View style={styles.movieInfoContainer}>
-        {/* Header với Poster và Info */}
-        <View style={styles.movieHeaderContainer}>
-          <View style={styles.posterContainer}>
-            <Image 
-              source={{ uri: movieDetail.poster_path }} 
-              style={styles.moviePoster}
-              resizeMode="cover"
-            />
-          </View>
-          <View style={styles.movieInfoContentNew}>
-            <Text style={styles.movieTitleBig}>
-              {movieDetail.movie_title}
-            </Text>
-            <Text style={styles.movieDirectorHighlight}>
-              {studioOrDirector}
-            </Text>
-            <View style={styles.metaRowTop}>
-              <Text style={styles.yearInDetail}>{year}</Text>
-              <Text style={styles.dot}>•</Text>
-              <Text style={styles.rating}>⭐ {rating}/10</Text>
-              {duration ? <><Text style={styles.dot}>•</Text><Text style={styles.duration}>{duration}</Text></> : null}
-              <Text style={styles.dot}>•</Text>
-              <View style={styles.typeBadge}><Text style={styles.typeText}>{type}</Text></View>
+      
+        <View style={styles.movieInfoContainer}>
+          {/* Header with Poster and Info */}
+          <View style={styles.movieHeaderContainer}>
+            {/* Movie Poster */}
+            <View style={styles.posterContainer}>
+              <Image 
+                source={{ uri: movieDetail.poster_path }} 
+                style={styles.moviePoster}
+                resizeMode="cover"
+              />
+            </View>
+            
+            {/* Enhanced Movie Info */}
+            <View style={styles.movieInfoContentNew}>
+              <Text style={styles.movieTitleBig}>
+                {movieDetail.movie_title}
+              </Text>
+              <Text style={styles.movieDirectorHighlight}>
+                {movieDetail.producer || 'Studio'}
+              </Text>
+              <View style={styles.metaRowTop}>
+                <Text style={styles.yearInDetail}>
+                  {movieDetail.production_time ? new Date(movieDetail.production_time).getFullYear() : '2024'}
+                </Text>
+                <Text style={styles.dot}>•</Text>
+                <View style={styles.ratingContainer}>
+                  <Ionicons name="star" size={16} color="#ffc107" />
+                  <Text style={styles.rating}>{movieDetail.rating ? movieDetail.rating.toFixed(1) : '9.6'}/10</Text>
+                </View>
+                {movieDetail.duration && (
+                  <>
+                    <Text style={styles.dot}>•</Text>
+                    <Text style={styles.duration}>{formatDuration(movieDetail.duration)}</Text>
+                  </>
+                )}
+                <Text style={styles.dot}>•</Text>
+                <View style={styles.typeBadge}>
+                  <Text style={styles.typeText}>{movieDetail.movie_type || 'Phim lẻ'}</Text>
+                </View>
+              </View>
             </View>
           </View>
-        </View>
 
-        {/* detailBox gọn, không tràn */}
-        <View style={styles.detailBox}>
-          <Text
-            style={styles.descText}
-            numberOfLines={isDescriptionExpanded ? undefined : 3}
-          >
-            {desc}
-          </Text>
-          <View style={styles.yearRow}>
-            <View />
-            <TouchableOpacity onPress={() => setIsDescriptionExpanded(!isDescriptionExpanded)}>
-              <Text style={styles.seeMoreBtn}>{isDescriptionExpanded ? 'Thu gọn' : 'Xem thêm'}</Text>
-            </TouchableOpacity>
+          {/* Enhanced Description Box with Better UI */}
+          <View style={styles.detailBox}>
+            <Text
+              style={styles.descText}
+              numberOfLines={isDescriptionExpanded ? undefined : 3}
+            >
+              {movieDetail.description || 'Không có nội dung phim.'}
+            </Text>
+            {movieDetail.description && movieDetail.description.length > 150 && (
+              <View style={styles.yearRow}>
+                <View />
+                <TouchableOpacity onPress={() => setIsDescriptionExpanded(!isDescriptionExpanded)}>
+                  <Text style={styles.seeMoreBtn}>
+                    {isDescriptionExpanded ? 'Thu gọn' : 'Xem thêm'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
-        {/* metaRowExpandedCenter không còn dùng ở đây */}
-        </View>
 
-        {/* Action Buttons với icon vector chất lượng cao */}
-        <View style={styles.actionRowContainer}>
-          {/* View Count */}
-          <View style={styles.actionItemWithCount}>
-            <Ionicons name="eye-outline" size={24} color="#ffffff" />
-            <Text style={styles.actionCount}>{movieDetail.viewCount || 70}</Text>
-          </View>
-          {/* Like Button with Count - Icon ❤️ */}
-          <TouchableOpacity
-            style={[
-              styles.actionItemWithCount,
-              !auth.isLoggedIn && styles.disabledAction
-            ]}
-            onPress={handleLikePress}
-          >
-            <Ionicons
-              name={hasLiked ? "heart" : "heart-outline"}
-              size={24}
-              color={hasLiked ? "#ff6b6b" : "#ffffff"}
-            />
-            <Text style={styles.actionCount}>{movieDetail.likeCount || 67}</Text>
-          </TouchableOpacity>
-          {/* Favorite Button - Icon 🔖 */}
-          <TouchableOpacity
-            style={[
-              styles.actionItemWithCount,
-              !auth.isLoggedIn && styles.disabledAction
-            ]}
-            onPress={handleFavoritePress}
-          >
-            <Ionicons
-              name={isFavorite ? "bookmark" : "bookmark-outline"}
-              size={24}
-              color={isFavorite ? "#ffc107" : "#ffffff"}
-            />
-            <Text style={styles.actionText}>Xem sau</Text>
-          </TouchableOpacity>
-          {/* Share Button - Icon 📤 */}
-          <TouchableOpacity style={styles.actionItemWithCount} onPress={handleSharePress}>
-            <Ionicons name="share-social-outline" size={24} color="#ffffff" />
-            <Text style={styles.actionText}>Chia sẻ</Text>
-          </TouchableOpacity>
-        </View>
+                    {/* Action Buttons với icon vector chất lượng cao */}
+
+          {/* Action Buttons với icon vector chất lượng cao */}
+          
+            <View style={styles.actionRowContainer}>
+              {/* View Count */}
+              <View style={styles.actionItemWithCount}>
+                <Ionicons name="eye-outline" size={24} color="#ffffff" />
+                <Text style={styles.actionCount}>{movieDetail.viewCount || 70}</Text>
+              </View>
+
+              {/* Like Button with Count - Icon ❤️ */}
+                  <TouchableOpacity
+                    style={[
+                      styles.actionItemWithCount,
+                      !auth.isLoggedIn && styles.disabledAction
+                    ]}
+                    onPress={handleLikePress}
+              >
+                <Ionicons
+name={hasLiked ? "heart" : "heart-outline"} 
+                  size={24} 
+                  color={hasLiked ? "#ff6b6b" : "#ffffff"} 
+                />
+                    <Text style={styles.actionCount}>{movieDetail.likeCount || 67}</Text>
+                  </TouchableOpacity>
+              
+
+              {/* Favorite Button - Icon 🔖 */}
+                  <TouchableOpacity
+                    style={[
+                      styles.actionItemWithCount,
+                      !auth.isLoggedIn && styles.disabledAction
+                    ]}
+                    onPress={handleFavoritePress}
+              >
+                <Ionicons 
+                  name={isFavorite ? "bookmark" : "bookmark-outline"} 
+                  size={24} 
+                  color={isFavorite ? "#ffc107" : "#ffffff"} 
+                />
+                    <Text style={styles.actionText}>Xem sau</Text>
+                  </TouchableOpacity>
+
+
+
+              {/* Share Button - Icon 📤 */}
+              <TouchableOpacity style={styles.actionItemWithCount} onPress={handleSharePress}>
+                <Ionicons name="share-social-outline" size={24} color="#ffffff" />
+                <Text style={styles.actionText}>Chia sẻ</Text>
+              </TouchableOpacity>
+              </View>
+
+          {/* Free Movie Watch Button */}
+          {movieDetail && movieDetail.is_free && !hasClickedWatchButton && (
+            <View style={styles.freeMovieContainer}>
+              <TouchableOpacity 
+                style={styles.freeWatchButton}
+                onPress={() => {
+                  setHasClickedWatchButton(true);
+                  setShowVideoPlayer(true);
+                }}
+              >
+                <Ionicons name="play-circle" size={24} color="#ffffff" />
+                <Text style={styles.freeWatchText}>Xem miễn phí</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* Rental Status Banner */}
           {movieDetail && !movieDetail.is_free && !hasClickedWatchButton && (
@@ -1064,59 +1102,19 @@ if (!movieDetail) return;
                     style={styles.rentButton}
                     onPress={handleRentPress}
             >
-              <Ionicons name="play-circle" size={24} color="#ffffff" />
-              <Text style={styles.freeWatchText}>Xem miễn phí</Text>
+                    <Text style={styles.rentButtonText}>Thuê ngay</Text>
             </TouchableOpacity>
-          </View>
-        )}
-        {/* Rental Status Banner */}
-        {movieDetail && !movieDetail.is_free && !hasClickedWatchButton && (
-          <View style={styles.rentalContainer}>
-            {hasRentalAccess && currentRental ? (
-              <View style={styles.rentalAccessBanner}>
-                <View style={styles.rentalAccessInfo}>
-                  <Text style={styles.rentalAccessTitle}> Đã thuê phim</Text>
-                  {/* Debug info */}
-                  <Text style={styles.rentalAccessSubtitle}>
-                    Gói: {currentRental.rentalType === '48h' ? 'Thuê 48 giờ' : 'Thuê 30 ngày'}
-                  </Text>
-                  {remainingTime && (
-                    <Text style={styles.rentalTimeRemaining}>
-                      Còn lại: {rentalService.formatRemainingTime(remainingTime).formatted}
-                    </Text>
-                  )}
-                </View>
-                <TouchableOpacity 
-                  style={styles.watchNowButton}
-                  onPress={() => {
-                    setHasClickedWatchButton(true);
-                    setShowVideoPlayer(true);
-                  }}
-                >
-                  <Text style={styles.watchNowText}>Xem ngay</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View style={styles.rentalPrompt}>
-                <View style={styles.rentalPromptInfo}>
-                  <Text style={styles.rentalPromptTitle}>Thuê phim để xem</Text>
-                  <Text style={styles.rentalPromptSubtitle}>
-                    Từ {rentalService.formatPrice(Math.round((movieDetail.price || 0) * 0.3))}
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.rentButton}
-                  onPress={handleRentPress}
-                >
-                  <Text style={styles.rentButtonText}>Thuê ngay</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-        )}
-      </View>
+        </View>
+              )}
+            </View>
+          )}
+          
+        </View>
+      
     );
   };
+
+
 
   const renderEpisodes = () => {
     // Don't render if it's not a series
@@ -1332,7 +1330,13 @@ if (!movieDetail) return;
           
             <View style={styles.centerContainer}>
               <Text style={styles.errorText}>Movie not found</Text>
-              <TouchableOpacity style={styles.retryButton} onPress={() => router.back()}>
+              <TouchableOpacity style={styles.retryButton} onPress={() => {
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace('/(tabs)');
+                }
+              }}>
                 <Text style={styles.retryButtonText}>Go Back</Text>
               </TouchableOpacity>
             </View>
@@ -1354,7 +1358,15 @@ if (!movieDetail) return;
       <View style={styles.customHeader}>
         <TouchableOpacity 
           style={styles.backButton}
-          onPress={() => router.back()}
+          onPress={() => {
+            // Check if we can go back, otherwise navigate to home
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              console.log('🔙 [MovieDetail] Cannot go back, navigating to home');
+              router.replace('/(tabs)');
+            }
+          }}
         >
           <Ionicons name="chevron-back" size={24} color="#fff" />
         </TouchableOpacity>
@@ -1686,7 +1698,7 @@ if (!movieDetail) return;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0a0a0a',
+    backgroundColor: '#000',
   },
   keyboardAvoidingView: {
     flex: 1,
@@ -1705,79 +1717,62 @@ const styles = StyleSheet.create({
   customHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: 'rgba(0,0,0,0.95)',
-    borderBottomWidth: 1,
-    borderBottomColor: '#1a1a1a',
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    backgroundColor: '#000',
+
   },
   backButton: {
-    width: 44,
-    height: 44,
+    width: 40,
+    height: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 22,
   },
   headerTitle: {
     flex: 1,
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: 'bold',
     color: '#fff',
     textAlign: 'center',
-    marginHorizontal: 15,
+    marginHorizontal: 10,
   },
   headerSpacer: {
-    width: 44, // Same width as back button for centering
+    width: 40, // Same width as back button for centering
   },
   
   // Movie Info Styles - New clean layout
   movieInfoContainer: {
-    padding: 24,
-    backgroundColor: '#0a0a0a',
+    padding: 20,
+    backgroundColor: '#000',
   },
   
   // Movie Header with Poster
   movieHeaderContainer: {
     flexDirection: 'row',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   posterContainer: {
-    marginRight: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.44,
-    shadowRadius: 10.32,
-    elevation: 16,
+    marginRight: 15,
   },
   moviePoster: {
-    width: 130,
-    height: 195,
-    borderRadius: 16,
-    backgroundColor: '#1a1a1a',
-  },
+    width: 120,
+    height: 180,
+    borderRadius: 12,
+    backgroundColor: '#333',
+},
   movieInfoContent: {
     flex: 1,
     justifyContent: 'flex-start',
-    paddingLeft: 4,
   },
   movieTypeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
-    gap: 8,
+    marginBottom: 10,
   },
   movieTypeText: {
     fontSize: 14,
     color: '#ff6b6b',
-    fontWeight: '700',
-    backgroundColor: 'rgba(255,107,107,0.1)',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
+    fontWeight: 'bold',
   },
   movieDuration: {
     fontSize: 14,
@@ -1785,49 +1780,142 @@ const styles = StyleSheet.create({
   },
   
   movieTitle: {
-    fontSize: 24,
-    fontWeight: '800',
+    fontSize: 22,
+    fontWeight: 'bold',
     color: '#fff',
-    marginBottom: 10,
-    lineHeight: 28,
-    letterSpacing: -0.5,
+    marginBottom: 8,
+    lineHeight: 26,
   },
   movieMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
     flexWrap: 'wrap',
-    gap: 8,
   },
   movieYear: {
-    fontSize: 15,
-    color: '#bbb',
-    fontWeight: '500',
+    fontSize: 14,
+    color: '#aaa',
   },
   movieDot: {
-    fontSize: 15,
-    color: '#666',
+    fontSize: 14,
+    color: '#aaa',
+    marginHorizontal: 6,
   },
   movieStudio: {
-    fontSize: 15,
-    color: '#bbb',
-    fontWeight: '500',
+    fontSize: 14,
+    color: '#aaa',
   },
   movieRating: {
-    fontSize: 15,
+    fontSize: 14,
     color: '#ffc107',
-    fontWeight: '700',
-    backgroundColor: 'rgba(255,193,7,0.1)',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
+    fontWeight: 'bold',
   },
   movieDescription: {
     fontSize: 16,
     color: '#ccc',
     lineHeight: 24,
     marginBottom: 20,
+  },
+
+  // Enhanced Description Box Styles
+  detailBox: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 14,
+    padding: 18,
+    marginTop: 16,
+    marginBottom: 16,
+    marginHorizontal: 0,
+  },
+  descText: {
+    color: '#eee',
+    fontSize: 15,
+    lineHeight: 22,
+    textAlign: 'left',
+  },
+  yearRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+    marginTop: 8,
+  },
+  seeMoreBtn: {
+    fontSize: 14,
+    color: '#ff6b6b',
+    fontWeight: '600',
+  },
+
+  // Enhanced Movie Info Styles
+  movieInfoContentNew: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    alignItems: 'flex-end',
+    paddingRight: 4,
+  },
+  movieTitleBig: {
+    fontSize: 26,
+    fontWeight: '900',
+    color: '#fff',
+    marginBottom: 4,
+    lineHeight: 32,
+    letterSpacing: -0.5,
+  },
+  movieDirectorHighlight: {
+    fontSize: 13,
+    color: '#bbb',
     fontWeight: '400',
+    marginBottom: 2,
+    marginTop: 2,
+    flexShrink: 1,
+  },
+  metaRowTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 2,
+    marginBottom: 2,
+  },
+  yearInDetail: {
+    fontSize: 15,
+    color: '#bbb',
+    fontWeight: '500',
+  },
+  dot: {
+    fontSize: 14,
+    color: '#666',
+    marginHorizontal: 4,
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,193,7,0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    gap: 4,
+  },
+  rating: {
+    fontSize: 14,
+    color: '#ffc107',
+    fontWeight: '700',
+  },
+  duration: {
+    fontSize: 14,
+    color: '#aaa',
+    fontWeight: '500',
+  },
+  typeBadge: {
+    backgroundColor: '#ff6b6b',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginLeft: 8,
+  },
+  typeText: {
+    fontSize: 12,
+    color: '#fff',
+    fontWeight: 'bold',
   },
   
   // Action Buttons with Count - New horizontal layout
@@ -1835,18 +1923,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    paddingVertical: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#1a1a1a',
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    borderRadius: 16,
-    marginTop: 8,
+    paddingVertical: 15,
+    borderTopWidth: 0.5,
+    borderTopColor: '#333',
   },
   actionItemWithCount: {
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 70,
-    paddingVertical: 8,
+    minWidth: 60,
   },
   actionIcon: {
     fontSize: 20,
@@ -1855,14 +1939,11 @@ const styles = StyleSheet.create({
   actionCount: {
     fontSize: 14,
     color: '#fff',
-    fontWeight: '700',
-    marginTop: 4,
+    fontWeight: 'bold',
   },
   actionText: {
     fontSize: 12,
-    color: '#bbb',
-    fontWeight: '500',
-    marginTop: 4,
+    color: '#fff',
   },
   likedIcon: {
     color: '#ff6b6b',
@@ -1876,33 +1957,31 @@ const styles = StyleSheet.create({
   
   // Tab System Styles
   tabContainer: {
-    backgroundColor: '#0a0a0a',
-    marginTop: 8,
+    backgroundColor: '#000',
   },
   tabHeaderContainer: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: '#1a1a1a',
-    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderBottomColor: '#333',
   },
   tabHeader: {
     flex: 1,
-    paddingVertical: 18,
+    paddingVertical: 15,
     paddingHorizontal: 20,
     alignItems: 'center',
   },
   activeTabHeader: {
-    borderBottomWidth: 3,
+    borderBottomWidth: 2,
     borderBottomColor: '#ff6b6b',
   },
   tabHeaderText: {
     fontSize: 16,
     color: '#aaa',
-    fontWeight: '600',
+    fontWeight: '500',
   },
   activeTabHeaderText: {
-    color: '#ff0000', // đỏ rực
-    fontWeight: '700',
+    color: '#ff6b6b',
+    fontWeight: 'bold',
   },
   tabContent: {
     minHeight: 200,
@@ -1944,7 +2023,7 @@ const styles = StyleSheet.create({
   },
   commentSubmitButton: {
     backgroundColor: '#ff6b6b',
-    borderRadius: 20,
+borderRadius: 20,
     paddingHorizontal: 20,
     paddingVertical: 10,
     minWidth: 60,
@@ -2065,11 +2144,10 @@ const styles = StyleSheet.create({
   
   // Content Sections
   sectionTitle: {
-    fontSize: 22,
-    fontWeight: '800',
+    fontSize: 20,
+    fontWeight: 'bold',
     color: '#fff',
-    marginBottom: 18,
-    letterSpacing: -0.5,
+    marginBottom: 15,
   },
   
   // Empty Comments
@@ -2083,31 +2161,13 @@ const styles = StyleSheet.create({
   
   // Description
   descriptionContainer: {
-    marginTop: 16,
-  },
-  descriptionWrapper: {
-    flexDirection: 'column',
+    padding: 20,
   },
   descriptionText: {
     fontSize: 16,
     color: '#ccc',
     lineHeight: 24,
     marginBottom: 15,
-  },
-  expandButton: {
-    marginTop: 8,
-    alignSelf: 'flex-start',
-  },
-  expandButtonText: {
-    fontSize: 14,
-    color: '#ff6b6b',
-    fontWeight: '600',
-  },
-  emptyDescriptionText: {
-    fontSize: 16,
-    color: '#ccc',
-    lineHeight: 24,
-    fontStyle: 'italic',
   },
   genresContainer: {
     flexDirection: 'row',
@@ -2128,75 +2188,62 @@ const styles = StyleSheet.create({
   
   // Episodes
   episodesContainer: {
-    padding: 24,
+    padding: 20,
   },
   episodeItem: {
     flexDirection: 'row',
-    alignItems: 'center',
-    padding: 18,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 12,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+alignItems: 'center',
+    padding: 15,
+    backgroundColor: '#222',
+    borderRadius: 8,
+    marginBottom: 10,
   },
   episodeNumber: {
-    fontSize: 15,
+    fontSize: 14,
     color: '#ff6b6b',
-    fontWeight: '700',
-    minWidth: 45,
-    backgroundColor: 'rgba(255,107,107,0.1)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    textAlign: 'center',
+    fontWeight: 'bold',
+    minWidth: 40,
   },
   episodeTitle: {
     flex: 1,
     fontSize: 16,
     color: '#fff',
-    marginLeft: 12,
-    fontWeight: '500',
+    marginLeft: 10,
   },
   episodeDuration: {
     fontSize: 14,
     color: '#aaa',
-    fontWeight: '500',
   },
   
   // Comments
   commentsContainer: {
-    padding: 24,
+    padding: 20,
   },
   commentItem: {
-    padding: 18,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 12,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    padding: 15,
+    backgroundColor: '#222',
+    borderRadius: 8,
+    marginBottom: 10,
   },
   commentUser: {
-    fontSize: 15,
+    fontSize: 14,
     color: '#ff6b6b',
-    fontWeight: '700',
-    marginBottom: 6,
+    fontWeight: 'bold',
+    marginBottom: 5,
   },
   commentText: {
     fontSize: 16,
     color: '#fff',
-    marginBottom: 6,
-    lineHeight: 22,
+    marginBottom: 5,
   },
   commentDate: {
     fontSize: 12,
-    color: '#888',
-    fontWeight: '500',
+    color: '#aaa',
   },
   
   // Related Movies
   relatedContainer: {
-    padding: 24,
+    padding: 20,
   },
   relatedMovieItem: {
     width: 120,
@@ -2278,52 +2325,43 @@ const styles = StyleSheet.create({
 
   // Fixed Comment Input (Bottom)
   fixedCommentInputContainer: {
-    backgroundColor: 'rgba(0,0,0,0.95)',
+    backgroundColor: '#000',
     borderTopWidth: 1,
-    borderTopColor: '#1a1a1a',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    paddingBottom: Platform.OS === 'ios' ? 25 : 15,
+    borderTopColor: '#333',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    paddingBottom: Platform.OS === 'ios' ? 20 : 10,
   },
   commentInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
+    // marginBottom: 1,
   },
   fixedCommentInput: {
     flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: '#333',
     color: '#fff',
-    borderRadius: 24,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    marginRight: 12,
+    borderRadius: 20,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    marginRight: 10,
     fontSize: 16,
     maxHeight: 100,
     textAlignVertical: 'top',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
   },
   fixedCommentSubmitButton: {
     backgroundColor: '#ff6b6b',
-    borderRadius: 24,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    justifyContent: 'center',
+    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+justifyContent: 'center',
     alignItems: 'center',
-    minWidth: 70,
-    shadowColor: '#ff6b6b',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    minWidth: 60,
   },
   fixedCommentSubmitText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: 'bold',
   },
   fixedCharacterCount: {
     fontSize: 12,
@@ -2332,6 +2370,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
+
+  
   // Video Player Container
   videoPlayerContainer: {
     margin: 0, // Loại bỏ margin để video full width
@@ -2389,13 +2429,11 @@ const styles = StyleSheet.create({
 
   // === RENTAL STYLES ===
   rentalContainer: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    margin: 24,
-    marginTop: 16,
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: '#1a1a1a',
+    margin: 20,
+    marginTop: 15,
+    borderRadius: 12,
+    padding: 16,
   },
   rentalAccessBanner: {
     flexDirection: 'row',
@@ -2406,40 +2444,31 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   rentalAccessTitle: {
-    fontSize: 17,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: 'bold',
     color: '#4CAF50',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   rentalAccessSubtitle: {
-    fontSize: 15,
-    color: '#bbb',
-    marginBottom: 4,
-    fontWeight: '500',
+    fontSize: 14,
+    color: '#aaa',
+    marginBottom: 2,
   },
   rentalTimeRemaining: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#FFA500',
-    fontWeight: '600',
+    fontWeight: '500',
   },
   watchNowButton: {
     backgroundColor: '#D11030',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-    shadowColor: '#D11030',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
   },
   watchNowText: {
     color: '#fff',
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
   rentalPrompt: {
     flexDirection: 'row',
@@ -2450,68 +2479,50 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   rentalPromptTitle: {
-    fontSize: 17,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: 'bold',
     color: '#fff',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   rentalPromptSubtitle: {
-    fontSize: 15,
+    fontSize: 14,
     color: '#4CAF50',
     fontWeight: '600',
   },
   rentButton: {
-    backgroundColor: '#ff0000', // đỏ rực
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-    shadowColor: '#FF6B6B',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    backgroundColor: '#FF6B6B',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
   },
   rentButtonText: {
     color: '#fff',
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
   
   // === FREE MOVIE STYLES ===
   freeMovieContainer: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    margin: 24,
-    marginTop: 16,
-    borderRadius: 16,
-    padding: 20,
+    backgroundColor: '#000',
+    margin: 20,
+    marginTop: 15,
+    borderRadius: 12,
+    padding: 16,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
   },
   freeWatchButton: {
-    backgroundColor: '#D11030',
+backgroundColor: '#D11030',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 28,
-    paddingVertical: 14,
-    borderRadius: 12,
-    gap: 10,
-    shadowColor: '#D11030',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
   },
   freeWatchText: {
     color: '#fff',
-    fontSize: 17,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   
   // Debug styles
@@ -2523,33 +2534,32 @@ const styles = StyleSheet.create({
 
   // === EMPTY EPISODES STYLES ===
   emptyEpisodesContainer: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    padding: 24,
-    margin: 20,
-    borderRadius: 16,
+    backgroundColor: '#1a1a1a',
+    padding: 20,
+    margin: 16,
+    borderRadius: 12,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: '#333',
   },
   emptyEpisodesText: {
     color: '#fff',
-    fontSize: 17,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 8,
   },
   emptyEpisodesSubtext: {
-    color: '#bbb',
-    fontSize: 15,
+    color: '#aaa',
+    fontSize: 14,
     textAlign: 'center',
-    lineHeight: 22,
-    fontWeight: '500',
+    lineHeight: 20,
   },
 
   // === DISABLED EPISODE STYLES ===
   episodeItemDisabled: {
     opacity: 0.5,
-    backgroundColor: 'rgba(255,255,255,0.02)',
+    backgroundColor: '#1a1a1a',
   },
   episodeTitleDisabled: {
     color: '#666',
@@ -2557,188 +2567,17 @@ const styles = StyleSheet.create({
   episodeStatus: {
     color: '#FFA500',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '500',
     marginTop: 4,
     textAlign: 'center',
-    backgroundColor: 'rgba(255,165,0,0.1)',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
   },
   episodeStatusLocked: {
     color: '#FF6B6B',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '500',
     marginTop: 4,
     textAlign: 'center',
-    backgroundColor: 'rgba(255,107,107,0.1)',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  metaText: {
-    fontSize: 14,
-    color: '#bbb',
-    fontWeight: '500',
-  },
-  dot: {
-    fontSize: 14,
-    color: '#666',
-    marginHorizontal: 4,
-  },
-  rating: {
-    fontSize: 14,
-    color: '#ffc107',
-    fontWeight: '700',
-    backgroundColor: 'rgba(255,193,7,0.1)',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  duration: {
-    fontSize: 14,
-    color: '#aaa',
-    fontWeight: '500',
-  },
-  typeBadge: {
-    backgroundColor: '#ff6b6b',
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginLeft: 8,
-  },
-  typeText: {
-    fontSize: 12,
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  descCollapsed: {
-    marginTop: 8,
-  },
-  descExpanded: {
-    marginTop: 16,
-  },
-  seeMoreBtn: {
-    fontSize: 14,
-    color: '#ff6b6b',
-    fontWeight: '600',
-  },
-  metaRowExpanded: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: 24,
-    marginTop: 16,
-  },
-  movieInfoContentNew: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    alignItems: 'flex-end',
-    paddingRight: 4,
-  },
-  movieDirector: {
-    fontSize: 14,
-    color: '#bbb',
-    fontWeight: '500',
-  },
-  detailBox: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 14,
-    padding: 18,
-    marginTop: 16,
-    marginBottom: 16,
-    marginHorizontal: 0,
-  },
-  descText: {
-    color: '#eee',
-    fontSize: 15,
-    lineHeight: 22,
-    textAlign: 'left',
-  },
-  movieTitleSmall: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#fff',
-    marginBottom: 5,
-    lineHeight: 20,
-    letterSpacing: -0.5,
-  },
-  movieDirectorSmall: {
-    fontSize: 15,
-    color: '#bbb',
-    fontWeight: '500',
-    marginBottom: 5,
-  },
-  yearInDetail: {
-    fontSize: 15,
-    color: '#bbb',
-    fontWeight: '500',
-    marginBottom: 5,
-  },
-  headerTopBox: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  movieTitleHighlight: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#fff',
-    marginBottom: 4,
-    lineHeight: 22,
-    letterSpacing: -0.5,
-    flexShrink: 1,
-  },
-  movieDirectorHighlight: {
-    fontSize: 13,
-    color: '#bbb',
-    fontWeight: '400',
-    marginBottom: 2,
-    marginTop: 2,
-    flexShrink: 1,
-  },
-  metaRowExpandedCenter: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 24,
-    marginTop: 16,
-  },
-  infoBoxStyled: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 16,
-    padding: 12,
-    marginLeft: 16,
-    maxWidth: 220,      // <-- chỉnh số này để tăng/giảm chiều rộng tối đa
-    flexShrink: 1,
-    justifyContent: 'center',
-  },
-  yearRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  movieTitleBig: {
-    fontSize: 26,
-    fontWeight: '900',
-    color: '#fff',
-    marginBottom: 4,
-    lineHeight: 32,
-    letterSpacing: -0.5,
-  },
-  metaRowTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 2,
-    marginBottom: 2,
   },
 });
+
+

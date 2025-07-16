@@ -15,7 +15,7 @@ import {
 } from '../types/rental';
 
 // Direct Render URL for rental API
-const BASE_URL = 'https://backend-app-lou3.onrender.com/api/rentals';
+const BASE_URL = 'http://192.168.5.24:3003/api/rentals';
 
 class RentalService {
   private get baseURL() {

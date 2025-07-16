@@ -1,21 +1,23 @@
 import * as Sharing from 'expo-sharing';
 
-// Local IP configuration for development
-const API_BASE_URL = 'http://192.168.5.47:3003';
+// //Local IP configuration for development
+const API_BASE_URL = 'http://172.20.10.8:3003';
+// Production configuration for Render deployment
+// const API_BASE_URL = 'https://backend-app-lou3.onrender.com';
 
-export interface ShareResult {
+export interface ShareResult {  
   success: boolean;
   error?: string;
 }
 
-/**
+/**     
  * Generate share URL for movie
  */
 const getShareUrl = (movieId: string): string => {
   return `${API_BASE_URL}/movie/${movieId}`;
 };
 
-/**
+/**     
  * Generate API URL
  */
 const getApiUrl = (endpoint: string): string => {

@@ -6,7 +6,7 @@
 
 import { MovieDetailApiResponse, MovieDetail } from '../types/movieDetail';
 
-const API_BASE_URL = 'https://backend-app-lou3.onrender.com';
+const API_BASE_URL = 'http://192.168.5.24:3003';
 
 /**
  * 🔧 Utility function to transform API response to UI format
