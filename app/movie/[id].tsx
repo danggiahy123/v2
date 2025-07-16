@@ -1471,8 +1471,8 @@ if (!movieDetail) return;
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
       >
-        {/* Auth Status - Hidden in production like FPT Play */}
-        {/* {renderAuthStatus()} */}
+    
+       
         
         {/* 🎬 VIDEO PLAYER SECTION - Conditional based on movie type and rental status */}
         {showVideoPlayer && (currentEpisode || (!currentEpisode && defaultEpisode)) && (
