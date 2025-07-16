@@ -234,7 +234,7 @@ const RatingModal: React.FC<RatingModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    backgroundColor: 'rgba(33, 33, 33, 0.53)',
     justifyContent: 'flex-end',
   },
   modalContainer: {
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
     maxHeight: height * 0.85,
     paddingBottom: 20,
     borderWidth: 1,
-    borderColor: '#D11030',
+  
   },
   header: {
     flexDirection: 'row',
@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
   ratingText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#D11030',
+    color: '#ffff',
   },
   commentSection: {
     paddingHorizontal: 20,
@@ -351,8 +351,7 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     backgroundColor: '#222',
-    borderWidth: 1,
-    borderColor: '#D11030',
+ 
   },
   cancelButtonText: {
     fontSize: 16,
