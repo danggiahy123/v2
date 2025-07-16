@@ -651,8 +651,8 @@ const styles = StyleSheet.create({
     paddingTop: 15,
   },
   trendingItem: {
-    width: 320, // tăng từ 240
-    height: 200, // tăng từ 155
+    width: 360, // giống NBA
+    height: 200, // giống NBA
     marginRight: 16,
     position: 'relative',
   },
@@ -679,15 +679,15 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   trendingPosterContainer: {
-    width: 320, // tăng từ 240
-    height: 180, // tăng từ 135
+    width: 360, // giống NBA
+    height: 200, // giống NBA
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: '#1a1a1a',
   },
   trendingPoster: {
-    width: 320, // tăng từ '100%'
-    height: 180, // tăng từ '100%'
+    width: 360, // giống NBA
+    height: 200, // giống NBA
     borderRadius: 12,
   },
   trendingPaidBadge: {

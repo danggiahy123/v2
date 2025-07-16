@@ -304,12 +304,12 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#D11030',
+    backgroundColor: '#ffff',
     borderRadius: 4,
   },
   starCount: {
     fontSize: 12,
-    color: '#FFD700',
+    color: '#ffff',
     width: 20,
     textAlign: 'right',
   },
@@ -363,12 +363,12 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   ratingsList: {
-    maxHeight: 400, // Limit height to prevent too long list
+    maxHeight: 400,
+   
   },
   ratingItem: {
     paddingVertical: 16,
-    // borderBottomWidth: 1,
-    // borderBottomColor: '#222',
+
   },
   ratingHeader: {
     flexDirection: 'row',
@@ -399,8 +399,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   userName: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 15,
+    fontWeight: 'bold',
     color: '#fff',
   },
   ratingDate: {
