@@ -22,7 +22,7 @@ import { clearError, clearMessage, updateProfile } from '../../store/slices/auth
 import Notification from '../../components/ui/Notification'; 
 
 export default function AccountInfoScreen() {
-  const { user, userId, loading, error, message } = useAppSelector((state) => state.auth);
+  const { user, userId, loading, error, message, isLoggedIn } = useAppSelector((state) => state.auth);
   const dispatch = useAppDispatch();
   const router = useRouter();
 
@@ -38,6 +38,32 @@ export default function AccountInfoScreen() {
     message: '',
     type: 'success' as 'success' | 'error'
   });
+
+  // Kiểm tra đăng nhập
+  if (!isLoggedIn) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="chevron-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Chỉnh sửa hồ sơ</Text>
+          <View style={styles.placeholder} />
+        </View>
+        
+        <View style={styles.emptyContainer}>
+          <Ionicons name="person-circle-outline" size={64} color="#666" style={{ marginBottom: 16 }} />
+          <Text style={styles.emptyText}>Bạn cần đăng nhập để chỉnh sửa hồ sơ</Text>
+          <TouchableOpacity 
+            style={styles.loginButton} 
+            onPress={() => router.push('/(auth)/login')}
+          >
+            <Text style={styles.loginButtonText}>Đăng nhập</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
 
   useEffect(() => {
@@ -633,6 +659,19 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     color: '#999',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  loginButton: {
+    backgroundColor: '#D11030',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  loginButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   modalOverlay: {
     position: 'absolute',

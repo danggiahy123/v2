@@ -11,11 +11,13 @@ import {
     View,
     Image,
 } from 'react-native';
-import { useAppSelector } from '../../store/hooks';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import { logout } from '../../store/slices/authSlice';
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { user } = useAppSelector((state) => state.auth);
+  const { user, isLoggedIn } = useAppSelector((state) => state.auth);
+  const dispatch = useAppDispatch();
 
   const handleAccountInfo = () => {
    
@@ -25,6 +27,10 @@ export default function SettingsScreen() {
   const handleNotifications = () => {
  
     Alert.alert('Thông báo', 'Tính năng đang phát triển');
+  };
+
+  const handleDeviceManagement = () => {
+    Alert.alert('Quản lý thiết bị', 'Tính năng đang phát triển');
   };
 
   const handleFavoriteMovies = () => {
@@ -45,6 +51,21 @@ export default function SettingsScreen() {
     router.back();
   };
 
+  const handleLogout = async () => {
+    try {
+      const result = await dispatch(logout());
+      if (logout.fulfilled.match(result)) {
+        router.replace('/(auth)/flash' as any);
+      }
+    } catch (err) {
+      console.error('Logout error:', err);
+    }
+  };
+
+  const handleLogin = () => {
+    router.push('/(auth)/login' as any);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -57,14 +78,25 @@ export default function SettingsScreen() {
 
       {/* Avatar và tên user */}
       <View style={styles.userCard}>
-        {user?.avatar ? (
-          <Image source={{ uri: user.avatar }} style={styles.avatar} />
+        {isLoggedIn ? (
+          <>
+            {user?.avatar ? (
+              <Image source={{ uri: user.avatar }} style={styles.avatar} />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <Text style={styles.avatarText}>{user?.full_name?.charAt(0).toUpperCase() || '?'}</Text>
+              </View>
+            )}
+            <Text style={styles.userName}>{user?.full_name || 'Người dùng'}</Text>
+          </>
         ) : (
-          <View style={styles.avatarPlaceholder}>
-            <Text style={styles.avatarText}>{user?.full_name?.charAt(0).toUpperCase() || '?'}</Text>
-          </View>
+          <>
+            <View style={styles.avatarPlaceholder}>
+              <Ionicons name="person" size={32} color="#666" />
+            </View>
+            <Text style={styles.userName}>Khách</Text>
+          </>
         )}
-        <Text style={styles.userName}>{user?.full_name || 'Người dùng'}</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -96,6 +128,24 @@ export default function SettingsScreen() {
             <Text style={styles.menuItemText}>Quản lý thiết bị</Text>
           
           </TouchableOpacity>
+
+          {isLoggedIn ? (
+            <TouchableOpacity
+              style={[styles.menuItem, styles.logoutButton]}
+              onPress={handleLogout}
+            >
+              <Ionicons name="log-out-outline" size={24} color="#D11030" style={styles.menuIcon} />
+              <Text style={styles.logoutButtonText}>Đăng xuất</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[styles.menuItem, styles.loginButton]}
+              onPress={handleLogin}
+            >
+              <Ionicons name="log-in-outline" size={24} color="#4CAF50" style={styles.menuIcon} />
+              <Text style={styles.loginButtonText}>Đăng nhập</Text>
+            </TouchableOpacity>
+          )}
 
         </View>
       </ScrollView>
@@ -184,5 +234,25 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     marginTop: 2,
+  },
+  logoutButton: {
+    backgroundColor: 'rgba(209,16,48,0.08)',
+    borderWidth: 1,
+    borderColor: '#D11030',
+  },
+  logoutButtonText: {
+    color: '#D11030',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  loginButton: {
+    backgroundColor: 'rgba(76,175,80,0.08)',
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+  },
+  loginButtonText: {
+    color: '#4CAF50',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 }); 

@@ -20,11 +20,14 @@ import { rentalService } from '../../services/rentalService';
 import { RentalInfo } from '../../types/rental';
 import { Notification, RegisteredMovieSearchModal } from '../../components/ui';
 import { clearRentalCache } from '../../hooks/useRentalStatus';
+import { useAuthGuard } from '../../hooks';
+import { LoginRequiredModal } from '../../components/ui';
 
 export default function SubscriptionsScreen() {
   const router = useRouter();
   const auth = useAppSelector(state => state.auth);
   const userId = auth.userId;
+  const { isLoggedIn, showLoginModal, hideLoginModal, loginModalVisible, currentFeatureName } = useAuthGuard();
 
   const [rentals, setRentals] = useState<RentalInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -208,7 +211,8 @@ export default function SubscriptionsScreen() {
     </View>
   );
 
-  if (!userId) {
+  // Kiểm tra đăng nhập
+  if (!isLoggedIn) {
     return (
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor="#000" />
@@ -222,7 +226,23 @@ export default function SubscriptionsScreen() {
           <Text style={styles.headerTitle}>Phim đăng ký</Text>
           <View style={styles.headerRight} />
         </View>
-
+        
+        <View style={styles.loadingContainer}>
+          <Ionicons name="card-outline" size={64} color="#666" style={{ marginBottom: 16 }} />
+          <Text style={styles.loadingText}>Bạn cần đăng nhập để xem lịch sử thuê phim</Text>
+          <TouchableOpacity 
+            style={styles.loginButton} 
+            onPress={() => showLoginModal('Xem lịch sử thuê phim')}
+          >
+            <Text style={styles.loginButtonText}>Đăng nhập</Text>
+          </TouchableOpacity>
+        </View>
+        
+        <LoginRequiredModal
+          visible={loginModalVisible}
+          onClose={hideLoginModal}
+          featureName={currentFeatureName || undefined}
+        />
       </SafeAreaView>
     );
   }
@@ -546,5 +566,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 8,
+  },
+  loginButton: {
+    backgroundColor: '#D11030',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginTop: 20,
+  },
+  loginButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

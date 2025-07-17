@@ -17,7 +17,7 @@ export default function Index() {
         if (result.payload) {
           console.log('✅ Auth restored for user:', result.payload.user.full_name);
         } else {
-          console.log('🔑 No auth data found, showing login');
+          console.log('🔑 No auth data found, user can browse without login');
         }
       }
       
@@ -31,14 +31,11 @@ export default function Index() {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
         <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={{ marginTop: 16, color: '#666' }}>Đang kiểm tra đăng nhập...</Text>
+        <Text style={{ marginTop: 16, color: '#666' }}>Đang khởi tạo ứng dụng...</Text>
       </View>
     );
   }
 
-  if (!isLoggedIn || !userId) {
-    return <Redirect href="/(auth)/login" />;
-  }
-
-  return <Redirect href="/(tabs)" />;
+  // Tất cả người dùng đều vào flash trước khi vào app
+  return <Redirect href="/(auth)/flash" />;
 } 

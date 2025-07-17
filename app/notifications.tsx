@@ -17,9 +17,10 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useAuthGuard } from '../hooks';
+import { LoginRequiredModal } from '../components/ui';
 // import { BlurView } from 'expo-blur'; // Optional blur effect
-import { useNotifications } from '../hooks/useNotifications';
-import { NotificationItem } from '../services/notificationService';
+import { useNotifications, NotificationItem } from '../hooks/useNotifications';
 
 const { width, height } = Dimensions.get('window');
 
@@ -66,16 +67,16 @@ const NotificationItemComponent = React.memo(({
         }
       ]}
     >
-      <TouchableOpacity
-        style={[
-          styles.notificationItem,
-          !item.isRead && styles.unreadNotification,
-        ]}
-        onPress={() => onPress(item)}
-        activeOpacity={0.7}
-      >
-        {/* Glow effect for unread */}
-        {!item.isRead && (
+              <TouchableOpacity
+          style={[
+            styles.notificationItem,
+            !item.read && styles.unreadNotification,
+          ]}
+          onPress={() => onPress(item)}
+          activeOpacity={0.7}
+        >
+          {/* Glow effect for unread */}
+          {!item.read && (
           <LinearGradient
             colors={['rgba(229, 9, 20, 0.1)', 'transparent']}
             style={styles.glowEffect}
@@ -131,7 +132,7 @@ const NotificationItemComponent = React.memo(({
             {item.message}
           </Text>
 
-          {!item.isRead && (
+          {!item.read && (
             <View style={styles.unreadIndicator} />
           )}
         </View>
@@ -147,6 +148,7 @@ const NotificationItemComponent = React.memo(({
 
 export default function NotificationsScreen() {
   const router = useRouter();
+  const { isLoggedIn, showLoginModal, hideLoginModal, loginModalVisible, currentFeatureName } = useAuthGuard();
   const { 
     notifications, 
     unreadCount, 
@@ -284,7 +286,7 @@ export default function NotificationsScreen() {
   };
 
   const filteredNotifications = notifications.filter(notif => 
-    filter === 'all' || (filter === 'unread' && !notif.isRead)
+    filter === 'all' || (filter === 'unread' && !notif.read)
   );
 
   const renderNotificationItem = ({ item, index }: { item: NotificationItem; index: number }) => (
@@ -298,11 +300,114 @@ export default function NotificationsScreen() {
     />
   );
 
+  // Kiểm tra đăng nhập
+  if (!isLoggedIn) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#000" />
+        
+        {/* Black Background */}
+        <View style={styles.background} />
+
+        {/* Header for not logged in state */}
+        <View style={styles.header}>
+          <View style={styles.headerGradient}>
+            <View style={styles.headerContainer}>
+              <View style={styles.headerTopRow}>
+                <TouchableOpacity 
+                  style={styles.modernBackButton}
+                  onPress={handleBack}
+                  activeOpacity={0.6}
+                >
+                  <View style={styles.backButtonInner}>
+                    <Ionicons name="chevron-back" size={27} color="#fff" />
+                  </View>
+                </TouchableOpacity>
+                
+                <View style={styles.headerCenterSection}>
+                  <View style={styles.titleRow}>
+                    <Text style={styles.modernHeaderTitle}>Thông báo</Text>
+                  </View>
+                  <Text style={styles.headerSubtitle}>
+                    Đăng nhập để xem thông báo
+                  </Text>
+                </View>
+
+                <View style={styles.modernActionButton}>
+                  <View style={[styles.actionButtonInner, { backgroundColor: 'rgba(255, 255, 255, 0.1)', borderColor: 'rgba(255, 255, 255, 0.2)' }]}>
+                    <Ionicons name="notifications-off" size={20} color="#fff" />
+                  </View>
+                </View>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* Content */}
+        <View style={[styles.loadingContainer, { flex: 1, justifyContent: 'center' }]}>
+          <Ionicons name="notifications-off" size={64} color="#666" style={{ marginBottom: 16 }} />
+          <Text style={styles.loadingText}>Bạn cần đăng nhập để xem thông báo</Text>
+          <TouchableOpacity 
+            style={styles.loginButton} 
+            onPress={() => showLoginModal('Xem thông báo')}
+          >
+            <Text style={styles.loginButtonText}>Đăng nhập</Text>
+          </TouchableOpacity>
+        </View>
+        
+        <LoginRequiredModal
+          visible={loginModalVisible}
+          onClose={hideLoginModal}
+          featureName={currentFeatureName || undefined}
+        />
+      </SafeAreaView>
+    );
+  }
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor="#000" />
-        <View style={styles.loadingContainer}>
+        
+        {/* Black Background */}
+        <View style={styles.background} />
+
+        {/* Header for loading state */}
+        <View style={styles.header}>
+          <View style={styles.headerGradient}>
+            <View style={styles.headerContainer}>
+              <View style={styles.headerTopRow}>
+                <TouchableOpacity 
+                  style={styles.modernBackButton}
+                  onPress={handleBack}
+                  activeOpacity={0.6}
+                >
+                  <View style={styles.backButtonInner}>
+                    <Ionicons name="chevron-back" size={27} color="#fff" />
+                  </View>
+                </TouchableOpacity>
+                
+                <View style={styles.headerCenterSection}>
+                  <View style={styles.titleRow}>
+                    <Text style={styles.modernHeaderTitle}>Thông báo</Text>
+                  </View>
+                  <Text style={styles.headerSubtitle}>
+                    Đang tải...
+                  </Text>
+                </View>
+
+                <View style={styles.modernActionButton}>
+                  <View style={[styles.actionButtonInner, { backgroundColor: 'rgba(255, 255, 255, 0.1)', borderColor: 'rgba(255, 255, 255, 0.2)' }]}>
+                    <Ionicons name="hourglass" size={20} color="#fff" />
+                  </View>
+                </View>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* Content */}
+        <View style={[styles.loadingContainer, { flex: 1, justifyContent: 'center' }]}>
           <ActivityIndicator size="large" color="#E50914" />
           <Text style={styles.loadingText}>Đang tải thông báo...</Text>
         </View>
@@ -529,11 +634,11 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-   
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-  
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   headerCenterSection: {
     flex: 1,
@@ -790,5 +895,17 @@ const styles = StyleSheet.create({
   notificationRight: {
     marginLeft: 12,
     opacity: 0.6,
+  },
+  loginButton: {
+    backgroundColor: '#D11030',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginTop: 20,
+  },
+  loginButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 }); 

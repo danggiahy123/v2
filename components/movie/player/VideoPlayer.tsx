@@ -9,7 +9,7 @@ const { width: screenWidth } = Dimensions.get('window');
 
 interface VideoPlayerProps {
   episode: Episode;
-  userId: string;
+  userId?: string;
   movieId: string;
   movieType?: string;
   showTitle?: boolean;
@@ -266,8 +266,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const saveProgress = async (currentTime: number, watchPercentage: number, duration: number) => {
     try {
       // Validate required data
-      if (!userId) {
-        throw new Error('User ID is required');
+      if (!userId || userId === 'anonymous' || userId === 'null') {
+        console.log('⚠️ [VideoPlayer] Skipping progress save for anonymous user');
+        return; // Silently skip for anonymous users
       }
 
       // Get the episode ID

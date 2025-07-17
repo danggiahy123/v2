@@ -13,11 +13,14 @@ import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import { clearError, clearMessage, getProfile } from '../../../store/slices/authSlice';
 import { Ionicons } from '@expo/vector-icons';
 import Notification from '../../../components/ui/Notification';
+import { useAuthGuard } from '../../../hooks';
+import { LoginRequiredModal } from '../../../components/ui';
 
 export default function ProfileScreen() {
   const { user, userId, loading, error, message } = useAppSelector((state) => state.auth);
   const dispatch = useAppDispatch();
   const router = useRouter();
+  const { isLoggedIn, showLoginModal, hideLoginModal, loginModalVisible, currentFeatureName } = useAuthGuard();
 
   const [notificationVisible, setNotificationVisible] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
@@ -62,6 +65,37 @@ export default function ProfileScreen() {
   const handleCloseNotification = () => {
     setNotificationVisible(false);
   };
+
+  // Kiểm tra đăng nhập
+  if (!isLoggedIn) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.topBar}>
+          <TouchableOpacity onPress={() => router.replace('/(tabs)/explore')} style={styles.backButton}>
+            <Ionicons name="chevron-back" size={24} color="white" />
+          </TouchableOpacity>
+          <Text style={styles.topBarTitle}>Hồ sơ</Text>
+        </View>
+        
+        <View style={styles.emptyContainer}>
+          <Ionicons name="person-circle-outline" size={64} color="#666" style={{ marginBottom: 16 }} />
+          <Text style={styles.emptyText}>Bạn cần đăng nhập để xem hồ sơ cá nhân</Text>
+          <TouchableOpacity 
+            style={styles.loginButton} 
+            onPress={() => showLoginModal('Xem hồ sơ cá nhân')}
+          >
+            <Text style={styles.loginButtonText}>Đăng nhập</Text>
+          </TouchableOpacity>
+        </View>
+        
+        <LoginRequiredModal
+          visible={loginModalVisible}
+          onClose={hideLoginModal}
+          featureName={currentFeatureName || undefined}
+        />
+      </View>
+    );
+  }
 
   if (!user) {
     return (
@@ -311,5 +345,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#ffffff',
     flex: 1,
+  },
+  loginButton: {
+    backgroundColor: '#D11030',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginTop: 20,
+  },
+  loginButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
