@@ -27,6 +27,69 @@ interface PlaybackStatus {
   error?: string;
 }
 
+// 🔧 FIX: Error Boundary Component for Video Player
+class VideoPlayerErrorBoundary extends React.Component<
+  { children: React.ReactNode; episode: Episode },
+  { hasError: boolean; error?: Error }
+> {
+  constructor(props: { children: React.ReactNode; episode: Episode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    console.error('❌ [VideoPlayerErrorBoundary] Caught error:', error);
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('❌ [VideoPlayerErrorBoundary] Error details:', {
+      error: error.message,
+      stack: error.stack,
+      errorInfo
+    });
+  }
+
+  componentDidUpdate(prevProps: { children: React.ReactNode; episode: Episode }) {
+    // Reset error state when episode changes
+    if (prevProps.episode._id !== this.props.episode._id) {
+      this.setState({ hasError: false, error: undefined });
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={styles.wrapper}>
+          <View style={styles.container}>
+            <View style={styles.errorOverlay}>
+              <Ionicons name="warning" size={48} color="#ff6b6b" />
+              <Text style={styles.errorText}>Lỗi trình phát video</Text>
+              <Text style={styles.errorSubText}>
+                Đã xảy ra lỗi khi chuyển tập phim. Vui lòng thử lại.
+              </Text>
+              <TouchableOpacity 
+                style={styles.retryButton}
+                onPress={() => this.setState({ hasError: false, error: undefined })}
+              >
+                <Ionicons name="refresh" size={20} color="#fff" />
+                <Text style={styles.retryButtonText}>Thử lại</Text>
+              </TouchableOpacity>
+              {__DEV__ && this.state.error && (
+                <Text style={styles.debugText}>
+                  {this.state.error.message}
+                </Text>
+              )}
+            </View>
+          </View>
+        </View>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 // Helper function to validate episode data
 const validateEpisode = (episode: Episode): { isValid: boolean; missingFields: string[] } => {
   const missingFields = REQUIRED_EPISODE_FIELDS.filter(field => !episode[field]);
@@ -92,15 +155,49 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [currentEpisodeId, setCurrentEpisodeId] = useState(episode._id);
   const [hasNotifiedCompletion, setHasNotifiedCompletion] = useState(false);
   const [hasSetResumeTime, setHasSetResumeTime] = useState(false);
+  const [isPlayerReady, setIsPlayerReady] = useState(false);
+  const [isDestroying, setIsDestroying] = useState(false);
   
-  // Reset states when episode changes
+  // 🔧 FIX: Track player state to prevent native object access issues
+  const playerStateRef = useRef({
+    isInitialized: false,
+    isDestroyed: false,
+    currentEpisodeId: episode._id,
+    lastUrl: null as string | null
+  });
+
+  // 🔧 FIX: Safe player operations with error handling
+  const safePlayerOperation = useCallback((operation: (player: any) => void, fallback?: () => void) => {
+    try {
+      if (playerRef.current && !playerStateRef.current.isDestroyed) {
+        // Additional safety check for native object validity
+        if (playerRef.current && typeof playerRef.current.pause === 'function') {
+          operation(playerRef.current);
+        } else {
+          console.warn('⚠️ [VideoPlayer] Player object is invalid, skipping operation');
+          if (fallback) fallback();
+        }
+      } else if (fallback) {
+        fallback();
+      }
+    } catch (err) {
+      console.warn('⚠️ [VideoPlayer] Safe player operation failed:', err);
+      if (fallback) fallback();
+    }
+  }, []);
+
+  // 🔧 FIX: Clean player state when episode changes
   useEffect(() => {
     if (episode._id !== currentEpisodeId) {
-      console.log('🔄 [VideoPlayer] Episode changed, resetting player:', {
+      console.log('🔄 [VideoPlayer] Episode changed, cleaning up player:', {
         oldEpisodeId: currentEpisodeId,
         newEpisodeId: episode._id,
         newTitle: episode.episode_title
       });
+
+      // Mark as destroying to prevent operations on invalid player
+      setIsDestroying(true);
+      playerStateRef.current.isDestroyed = true;
 
       // Reset states
       setIsLoading(true);
@@ -111,60 +208,96 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       setCurrentEpisodeId(episode._id);
       setHasNotifiedCompletion(false);
       setHasSetResumeTime(false);
+      setIsPlayerReady(false);
 
-      // Stop current playback
-      if (playerRef.current) {
-        playerRef.current.pause();
-        
-        // Small delay before loading new video to ensure clean state
-        setTimeout(() => {
-          if (playerRef.current && videoUrlMemo) {
-            console.log('🎬 [VideoPlayer] Loading new episode:', episode.episode_title);
-            playerRef.current.replace(videoUrlMemo);
-            
-            // 🔧 FIX: Set resume time ONLY once and track it
-            if (resumeFromTime && resumeFromTime > 0 && !hasSetResumeTime) {
-              console.log('⏯️ [VideoPlayer] Setting resume time:', resumeFromTime);
-              playerRef.current.currentTime = resumeFromTime;
-              setHasSetResumeTime(true);
+      // Safe cleanup of current player
+      safePlayerOperation(
+        (player) => {
+          try {
+            if (player && typeof player.pause === 'function') {
+              player.pause();
             }
-            
-            // Start playback
-            playerRef.current.play();
+          } catch (err) {
+            console.warn('⚠️ [VideoPlayer] Cleanup pause failed:', err);
           }
-        }, 100);
-      }
-    }
-  }, [episode._id, videoUrlMemo, resumeFromTime, hasSetResumeTime]);
+        }
+      );
 
-  // Initialize video player
-  const player = useVideoPlayer(videoUrlMemo || '', (player) => {
-    console.log('⚡ [VideoPlayer] Player initialized for:', episode.episode_title);
-    player.volume = 1.0;
-    player.muted = false;
-    
-    // 🔧 FIX: Set resume time ONLY once during initialization
-    if (resumeFromTime && resumeFromTime > 0 && !hasSetResumeTime) {
-      console.log('⏯️ [VideoPlayer] Setting initial resume time:', resumeFromTime);
-      player.currentTime = resumeFromTime;
-      setHasSetResumeTime(true);
+      // Reset player state
+      playerStateRef.current = {
+        isInitialized: false,
+        isDestroyed: false,
+        currentEpisodeId: episode._id,
+        lastUrl: null
+      };
+
+      // Small delay to ensure clean state before initializing new player
+      const cleanupTimer = setTimeout(() => {
+        setIsDestroying(false);
+        console.log('✅ [VideoPlayer] Player cleanup completed, ready for new episode');
+      }, 200);
+
+      return () => clearTimeout(cleanupTimer);
     }
-    player.play();
+  }, [episode._id, currentEpisodeId, safePlayerOperation]);
+
+  // 🔧 FIX: Initialize video player with proper error handling
+  const player = useVideoPlayer(videoUrlMemo || '', (player) => {
+    if (isDestroying || episode._id !== currentEpisodeId) {
+      console.log('⚠️ [VideoPlayer] Player initialization skipped - component is destroying or episode changed');
+      return;
+    }
+
+    console.log('⚡ [VideoPlayer] Player initialized for:', episode.episode_title);
+    
+    try {
+      player.volume = 1.0;
+      player.muted = false;
+      
+      // 🔧 FIX: Set resume time ONLY once during initialization
+      if (resumeFromTime && resumeFromTime > 0 && !hasSetResumeTime) {
+        console.log('⏯️ [VideoPlayer] Setting initial resume time:', resumeFromTime);
+        player.currentTime = resumeFromTime;
+        setHasSetResumeTime(true);
+      }
+      
+      player.play();
+      
+      // Update player state
+      playerStateRef.current.isInitialized = true;
+      playerStateRef.current.lastUrl = videoUrlMemo;
+      setIsPlayerReady(true);
+      
+    } catch (err) {
+      console.error('❌ [VideoPlayer] Player initialization error:', err);
+      setError('Không thể khởi tạo trình phát video');
+      setIsLoading(false);
+    }
   });
 
   // Store player reference
   const playerRef = useRef(player);
 
-  // Update player when URL changes
+  // 🔧 FIX: Update player when URL changes with proper error handling
   useEffect(() => {
-    if (!videoUrlMemo) return;
+    if (!videoUrlMemo || isDestroying) return;
 
     try {
       const currentPlayer = playerRef.current;
-      if (currentPlayer) {
+      if (currentPlayer && !playerStateRef.current.isDestroyed) {
         console.log('🔄 [VideoPlayer] Updating player URL for:', episode.episode_title);
-        currentPlayer.pause();
-        currentPlayer.replace(videoUrlMemo);
+        
+        // Safe pause
+        safePlayerOperation(
+          (player) => player.pause(),
+          () => console.log('⚠️ [VideoPlayer] Could not pause player during URL update')
+        );
+        
+        // Safe replace
+        safePlayerOperation(
+          (player) => player.replace(videoUrlMemo),
+          () => console.log('⚠️ [VideoPlayer] Could not replace player URL')
+        );
         
         // Reset state
         setIsLoading(true);
@@ -174,13 +307,23 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
         // Start playback after a short delay
         setTimeout(() => {
-          // 🔧 FIX: Only set resume time if not already set
-          if (resumeFromTime && resumeFromTime > 0 && !hasSetResumeTime) {
-            console.log('⏯️ [VideoPlayer] Setting resume time on URL update:', resumeFromTime);
-            currentPlayer.currentTime = resumeFromTime;
-            setHasSetResumeTime(true);
+          if (!isDestroying && episode._id === currentEpisodeId) {
+            // 🔧 FIX: Only set resume time if not already set
+            if (resumeFromTime && resumeFromTime > 0 && !hasSetResumeTime) {
+              console.log('⏯️ [VideoPlayer] Setting resume time on URL update:', resumeFromTime);
+              safePlayerOperation(
+                (player) => player.currentTime = resumeFromTime,
+                () => console.log('⚠️ [VideoPlayer] Could not set resume time')
+              );
+              setHasSetResumeTime(true);
+            }
+            
+            // Safe play
+            safePlayerOperation(
+              (player) => player.play(),
+              () => console.log('⚠️ [VideoPlayer] Could not start playback')
+            );
           }
-          currentPlayer.play();
         }, 100);
       }
     } catch (err) {
@@ -188,41 +331,49 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       setError('Không thể cập nhật trình phát video');
       setIsLoading(false);
     }
-  }, [videoUrlMemo, resumeFromTime, hasSetResumeTime]);
+  }, [videoUrlMemo, resumeFromTime, hasSetResumeTime, isDestroying, currentEpisodeId, safePlayerOperation]);
 
-  // Cleanup on unmount
+  // 🔧 FIX: Enhanced cleanup on unmount
   useEffect(() => {
     return () => {
-      try {
-        const currentPlayer = playerRef.current;
-        if (currentPlayer) {
-          console.log('🧹 [VideoPlayer] Cleaning up player');
-          // Chỉ pause nếu player còn hợp lệ và không bị lỗi
-          if (currentPlayer.status !== 'error' && typeof currentPlayer.pause === 'function') {
-            currentPlayer.pause();
+      console.log('🧹 [VideoPlayer] Component unmounting, cleaning up player');
+      setIsDestroying(true);
+      playerStateRef.current.isDestroyed = true;
+      
+      safePlayerOperation(
+        (player) => {
+          try {
+            if (player.status !== 'error' && typeof player.pause === 'function') {
+              player.pause();
+            }
+          } catch (err) {
+            console.log('⚠️ [VideoPlayer] Cleanup pause error (ignored):', err);
           }
         }
-      } catch (err) {
-        console.log('⚠️ [VideoPlayer] Cleanup error (ignored):', err);
-        // Silently handle cleanup errors - không crash app
-      }
+      );
     };
-  }, []);
+  }, [safePlayerOperation]);
 
-  // Handle player status changes
+  // 🔧 FIX: Handle player status changes with error boundary
   useEffect(() => {
     const currentPlayer = playerRef.current;
-    if (!currentPlayer) return;
+    if (!currentPlayer || isDestroying) return;
 
-    if (currentPlayer.status === 'error') {
-      console.error('❌ [VideoPlayer] Player error - Status:', currentPlayer.status);
-      setError('Video playback error');
-      setIsLoading(false);
+    try {
+      if (currentPlayer.status === 'error') {
+        console.error('❌ [VideoPlayer] Player error - Status:', currentPlayer.status);
+        setError('Video playback error');
+        setIsLoading(false);
+      }
+    } catch (err) {
+      console.warn('⚠️ [VideoPlayer] Error checking player status:', err);
     }
-  }, [player.status]);
+  }, [player.status, isDestroying]);
 
   // Handle playback status update
   const handlePlaybackStatusUpdate = useCallback((currentTime: number, duration: number, isPlaying: boolean) => {
+    if (isDestroying) return;
+
     const currentPlayer = playerRef.current;
     if (!currentPlayer) return;
 
@@ -260,7 +411,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       saveProgress(currentTimeSec, watchPercentage, durationSec);
       setLastSavedProgress(currentTimeSec);
     }
-  }, [lastSavedProgress, hasNotifiedCompletion]);
+  }, [lastSavedProgress, hasNotifiedCompletion, isDestroying]);
 
   // Save progress to backend
   const saveProgress = async (currentTime: number, watchPercentage: number, duration: number) => {
@@ -327,6 +478,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   // Update progress periodically
   useEffect(() => {
+    if (isDestroying) return;
+
     let isMounted = true;
     let lastValidTime = 0;
     let hasStartedPlaying = false;
@@ -334,9 +487,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     // Delay để đảm bảo player đã load xong
     const delayId = setTimeout(() => {
       const intervalId = setInterval(() => {
+        if (!isMounted || isDestroying) {
+          clearInterval(intervalId);
+          return;
+        }
+
         const currentPlayer = playerRef.current;
         if (
-          !isMounted ||
           !currentPlayer ||
           typeof currentPlayer.currentTime !== 'number' ||
           typeof currentPlayer.duration !== 'number' ||
@@ -388,18 +545,22 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       isMounted = false;
       clearTimeout(delayId);
     };
-  }, [handlePlaybackStatusUpdate, videoUrlMemo, episode._id]);
+  }, [handlePlaybackStatusUpdate, videoUrlMemo, episode._id, isDestroying]);
 
   // Add new effect to handle loading state based on player status
   useEffect(() => {
-    if (!player) return;
+    if (!player || isDestroying) return;
 
     const handlePlayingState = () => {
-      if (player.playing) {
-        setIsPlaying(true);
-        setIsLoading(false);
-      } else {
-        setIsPlaying(false);
+      try {
+        if (player.playing) {
+          setIsPlaying(true);
+          setIsLoading(false);
+        } else {
+          setIsPlaying(false);
+        }
+      } catch (err) {
+        console.warn('⚠️ [VideoPlayer] Error checking playing state:', err);
       }
     };
 
@@ -410,7 +571,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     const intervalId = setInterval(handlePlayingState, 200);
 
     return () => clearInterval(intervalId);
-  }, [player]);
+  }, [player, isDestroying]);
 
   // Validate episode data
   const { isValid, missingFields } = validateEpisode(episode);
@@ -458,85 +619,93 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     userId,
     movieType,
     hasVideoUrl: !!videoUrlMemo,
-    initTime: Date.now()
+    initTime: Date.now(),
+    isDestroying,
+    isPlayerReady
   });
   
   const currentPlayer = playerRef.current;
 
   return (
-    <View style={styles.wrapper}>
-      {/* Video Container */}
-      <View style={styles.container}>
-        {currentPlayer && (
-          <VideoView
-            style={styles.video}
-            player={currentPlayer}
-            allowsFullscreen
-            allowsPictureInPicture
-            contentFit="contain"
-            nativeControls
-          />
-        )}
-        
-        {/* Loading Overlay - Only show when loading and not playing */}
-        {(isLoading && !isPlaying) && (
-          <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="large" color="#E50914" />
-            <Text style={styles.loadingText}>Đang tải video...</Text>
-          </View>
-        )}
-
-        {/* Buffering Overlay */}
-        {!isLoading && !error && currentPlayer?.status === 'loading' && (
-          <View style={styles.bufferingOverlay}>
-            <View style={styles.bufferingIndicator}>
+    <VideoPlayerErrorBoundary episode={episode}>
+      <View style={styles.wrapper}>
+        {/* Video Container */}
+        <View style={styles.container}>
+          {currentPlayer && !isDestroying && (
+            <VideoView
+              style={styles.video}
+              player={currentPlayer}
+              allowsFullscreen
+              allowsPictureInPicture
+              contentFit="contain"
+              nativeControls
+            />
+          )}
+          
+          {/* Loading Overlay - Only show when loading and not playing */}
+          {(isLoading && !isPlaying) && (
+            <View style={styles.loadingOverlay}>
               <ActivityIndicator size="large" color="#E50914" />
-              <Text style={styles.bufferingText}>Đang tải...</Text>
+              <Text style={styles.loadingText}>Đang tải video...</Text>
             </View>
-          </View>
-        )}
+          )}
 
-        {/* Error Overlay */}
-        {error && (
-          <View style={styles.errorOverlay}>
-            <Ionicons name="warning" size={48} color="#ff6b6b" />
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity 
-              style={styles.retryButton}
-              onPress={() => {
-                setError(null);
-                setIsLoading(true);
-                const player = playerRef.current;
-                if (player && videoUrlMemo) {
-                  player.pause();
-                  player.replace(videoUrlMemo);
-                }
-              }}
-            >
-              <Ionicons name="refresh" size={20} color="#fff" />
-              <Text style={styles.retryButtonText}>Thử lại</Text>
-            </TouchableOpacity>
+          {/* Buffering Overlay */}
+          {!isLoading && !error && currentPlayer?.status === 'loading' && (
+            <View style={styles.bufferingOverlay}>
+              <View style={styles.bufferingIndicator}>
+                <ActivityIndicator size="large" color="#E50914" />
+                <Text style={styles.bufferingText}>Đang tải...</Text>
+              </View>
+            </View>
+          )}
+
+          {/* Error Overlay */}
+          {error && (
+            <View style={styles.errorOverlay}>
+              <Ionicons name="warning" size={48} color="#ff6b6b" />
+              <Text style={styles.errorText}>{error}</Text>
+              <TouchableOpacity 
+                style={styles.retryButton}
+                onPress={() => {
+                  setError(null);
+                  setIsLoading(true);
+                  safePlayerOperation(
+                    (player) => {
+                      if (videoUrlMemo) {
+                        player.pause();
+                        player.replace(videoUrlMemo);
+                      }
+                    },
+                    () => console.log('⚠️ [VideoPlayer] Could not retry playback')
+                  );
+                }}
+              >
+                <Ionicons name="refresh" size={20} color="#fff" />
+                <Text style={styles.retryButtonText}>Thử lại</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+        
+        {/* Episode Title Below Video - Clean UI like Netflix */}
+        {showTitle && (
+          <View style={styles.titleContainer}>
+            <Text style={styles.videoTitle}>
+              {movieType === 'Phim lẻ' 
+                ? episode.episode_title // Chỉ hiện tên phim cho phim lẻ
+                : `Tập ${episode.episode_number}: ${episode.episode_title}` // Hiện đầy đủ cho phim bộ
+              }
+            </Text>
+            {currentPlayer?.duration && (
+              <Text style={styles.videoDuration}>
+                {Math.floor(currentPlayer.duration / 60)} phút
+              </Text>
+            )}
           </View>
         )}
       </View>
-      
-      {/* Episode Title Below Video - Clean UI like Netflix */}
-      {showTitle && (
-        <View style={styles.titleContainer}>
-          <Text style={styles.videoTitle}>
-            {movieType === 'Phim lẻ' 
-              ? episode.episode_title // Chỉ hiện tên phim cho phim lẻ
-              : `Tập ${episode.episode_number}: ${episode.episode_title}` // Hiện đầy đủ cho phim bộ
-            }
-          </Text>
-          {currentPlayer?.duration && (
-            <Text style={styles.videoDuration}>
-              {Math.floor(currentPlayer.duration / 60)} phút
-            </Text>
-          )}
-        </View>
-      )}
-    </View>
+    </VideoPlayerErrorBoundary>
   );
 };
 
@@ -710,4 +879,19 @@ export default React.memo(VideoPlayer, (prevProps, nextProps) => {
     prevProps.showTitle === nextProps.showTitle &&
     prevProps.resumeFromTime === nextProps.resumeFromTime
   );
-}); 
+});
+
+// 🔧 FIX: Create a wrapper component that forces remount on episode change
+export const VideoPlayerWrapper: React.FC<VideoPlayerProps> = (props) => {
+  // Use episode ID as key to force remount when episode changes
+  const key = `${props.episode._id}-${props.movieId}`;
+  
+  return (
+    <VideoPlayerErrorBoundary episode={props.episode}>
+      <VideoPlayer
+        key={key}
+        {...props}
+      />
+    </VideoPlayerErrorBoundary>
+  );
+}; 

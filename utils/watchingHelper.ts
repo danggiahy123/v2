@@ -33,6 +33,119 @@ export interface ResumeWatchingResult {
 }
 
 /**
+ * 🎯 Debug function để kiểm tra episode switching logic
+ */
+export const debugEpisodeSwitching = (
+  episode: Episode,
+  watchingProgress: any
+): {
+  isSameEpisode: boolean;
+  shouldResume: boolean;
+  resumeTime: number;
+  debugInfo: any;
+} => {
+  const isSameEpisode = 
+    watchingProgress?.episodeId === episode._id ||
+    watchingProgress?.episodeId === episode._id?.toString() ||
+    episode._id === watchingProgress?.episodeId?.toString();
+  
+  const shouldResume = isSameEpisode && watchingProgress?.currentTime && watchingProgress.currentTime > 0;
+  const resumeTime = shouldResume ? watchingProgress.currentTime : 0;
+  
+  const debugInfo = {
+    episodeId: episode._id,
+    episodeNumber: episode.episode_number,
+    watchingProgressEpisodeId: watchingProgress?.episodeId,
+    watchingProgressCurrentTime: watchingProgress?.currentTime,
+    isSameEpisode,
+    shouldResume,
+    resumeTime
+  };
+  
+  console.log('🔍 [debugEpisodeSwitching]', debugInfo);
+  
+  return {
+    isSameEpisode,
+    shouldResume,
+    resumeTime,
+    debugInfo
+  };
+};
+
+/**
+ * 🎯 Lọc continue watching data cho phim bộ
+ * Chỉ giữ lại episode cuối cùng đã xem cho mỗi phim bộ
+ */
+export const filterContinueWatchingForSeries = (continueWatchingData: ContinueWatchingItem[]): ContinueWatchingItem[] => {
+  const seriesMap = new Map<string, ContinueWatchingItem>();
+  
+  console.log('🎬 [filterContinueWatchingForSeries] Input data:', {
+    totalItems: continueWatchingData.length,
+    items: continueWatchingData.map(item => ({
+      movieId: item.movieId,
+      title: item.title,
+      movieType: item.movieType,
+      episodeNumber: item.episodeNumber,
+      episodeId: item.episodeId
+    }))
+  });
+  
+  continueWatchingData.forEach(item => {
+    if (item.movieType === 'Phim bộ') {
+      const existingItem = seriesMap.get(item.movieId);
+      
+      // Logic: Giữ lại episode có số tập lớn nhất (episode cuối cùng đã xem)
+      if (!existingItem) {
+        // Chưa có item cho phim này
+        seriesMap.set(item.movieId, item);
+        console.log('✅ [filterContinueWatchingForSeries] Added first item for series:', {
+          movieId: item.movieId,
+          title: item.title,
+          episodeNumber: item.episodeNumber
+        });
+      } else if (item.episodeNumber && existingItem.episodeNumber && item.episodeNumber > existingItem.episodeNumber) {
+        // Item hiện tại có episode number lớn hơn (episode mới hơn)
+        seriesMap.set(item.movieId, item);
+        console.log('🔄 [filterContinueWatchingForSeries] Replaced with newer episode:', {
+          movieId: item.movieId,
+          title: item.title,
+          oldEpisode: existingItem.episodeNumber,
+          newEpisode: item.episodeNumber
+        });
+      } else {
+        console.log('⏭️ [filterContinueWatchingForSeries] Skipped older episode:', {
+          movieId: item.movieId,
+          title: item.title,
+          existingEpisode: existingItem.episodeNumber,
+          currentEpisode: item.episodeNumber
+        });
+      }
+    } else {
+      // Phim lẻ giữ nguyên
+      seriesMap.set(item.movieId, item);
+      console.log('🎬 [filterContinueWatchingForSeries] Added single movie:', {
+        movieId: item.movieId,
+        title: item.title,
+        movieType: item.movieType
+      });
+    }
+  });
+  
+  const result = Array.from(seriesMap.values());
+  console.log('✅ [filterContinueWatchingForSeries] Filtered result:', {
+    totalItems: result.length,
+    items: result.map(item => ({
+      movieId: item.movieId,
+      title: item.title,
+      movieType: item.movieType,
+      episodeNumber: item.episodeNumber
+    }))
+  });
+  
+  return result;
+};
+
+/**
  * 🎯 Xác định episode và thời gian để resume watching
  */
 export const getResumeWatchingInfo = ({
