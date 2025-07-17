@@ -30,8 +30,6 @@ export default function SubscriptionsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<'all' | 'active' | 'expired'>('all');
-  const [showCancelModal, setShowCancelModal] = useState(false);
-  const [selectedRental, setSelectedRental] = useState<RentalInfo | null>(null);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [notification, setNotification] = useState<{
     visible: boolean;
@@ -89,45 +87,11 @@ export default function SubscriptionsScreen() {
     setRefreshing(false);
   };
 
-  const handleCancelRental = async (rental: RentalInfo) => {
-    if (!userId) return;
-
-    const canCancel = rentalService.canCancelRental(rental);
-    if (!canCancel) {
-      showNotification('Chỉ có thể hủy rental trong vòng 24h đầu', 'error');
-      return;
-    }
-
-    setSelectedRental(rental);
-    setShowCancelModal(true);
-  };
-
-  const handleConfirmCancel = async () => {
-    if (!userId || !selectedRental) return;
-
-    try {
-      await rentalService.cancelRental(selectedRental._id, { userId });
-      setShowCancelModal(false);
-      
-      // Clear rental cache for this specific movie
-      if (userId && selectedRental.movieId._id) {
-        clearRentalCache(userId, selectedRental.movieId._id);
-      }
-      
-      setSelectedRental(null);
-      showNotification('Đã hủy đăng ký phim thành công', 'success');
-      loadRentalsCallback();
-    } catch {
-      showNotification('Không thể hủy đăng ký phim', 'error');
-    }
-  };
-
   const renderRentalItem = (rental: RentalInfo) => {
+    if (rental.status === 'cancelled') return null;
     const timeInfo = rental.status === 'active' && rental.endTime
       ? rentalService.formatRemainingTime(new Date(rental.endTime).getTime() - Date.now())
       : null;
-
-    const canCancel = rental.status === 'active' && rentalService.canCancelRental(rental);
 
     return (
       <TouchableOpacity
@@ -149,23 +113,19 @@ export default function SubscriptionsScreen() {
               <Text style={styles.movieTitle} numberOfLines={2}>
                 {rental.movieId.movie_title}
               </Text>
-              {canCancel && (
-                <TouchableOpacity
-                  style={styles.cancelButton}
-                  onPress={() => handleCancelRental(rental)}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <Ionicons name="close" size={16} color="#FF4757" />
-                </TouchableOpacity>
-              )}
             </View>
             
             {/* Status and Time */}
             <View style={styles.statusTimeRow}>
               <View style={[styles.statusChip, styles[`chip_${rental.status}`]]}>
                 <Text style={styles.statusLabel}>
-                  {rental.status === 'active' ? 'Đang thuê' : 
-                   rental.status === 'expired' ? 'Hết hạn' : 'Đã hủy'}
+                  {rental.status === 'active'
+                    ? 'Đang thuê'
+                    : rental.status === 'expired'
+                    ? 'Hết hạn'
+                    : rental.status === 'pending' || rental.status === 'paid'
+                    ? 'Chưa kích hoạt'
+                    : ''}
                 </Text>
               </View>
               
@@ -312,40 +272,10 @@ export default function SubscriptionsScreen() {
           renderEmptyState()
         ) : (
           <View style={styles.rentalsList}>
-            {rentals.map(renderRentalItem)}
+            {rentals.map(renderRentalItem).filter(Boolean)}
           </View>
         )}
       </ScrollView>
-
-      {/* Cancel Modal */}
-      {showCancelModal && (
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Xác nhận hủy đăng ký</Text>
-            
-            <Text style={styles.modalMessage}>
-              Bạn có chắc muốn hủy đăng ký phim này? Hành động này không thể hoàn tác.
-            </Text>
-            
-            <TouchableOpacity 
-              style={[styles.modalButton, styles.modalConfirmButton]}
-              onPress={handleConfirmCancel}
-            >
-              <Text style={[styles.modalButtonText, styles.modalConfirmText]}>Xác nhận hủy</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.modalButton, styles.modalCancelButton]}
-              onPress={() => {
-                setShowCancelModal(false);
-                setSelectedRental(null);
-              }}
-            >
-              <Text style={[styles.modalButtonText, styles.modalCancelText]}>Đóng</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
 
       {/* Search Modal */}
       {userId && (
@@ -493,6 +423,12 @@ const styles = StyleSheet.create({
   indicator_cancelled: {
     backgroundColor: '#FF4757',
   },
+  indicator_pending: {
+    backgroundColor: '#FFC107',
+  },
+  indicator_paid: {
+    backgroundColor: '#2196F3',
+  },
   movieInfo: {
     flex: 1,
     justifyContent: 'space-between',
@@ -509,15 +445,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     flex: 1,
     lineHeight: 24,
-  },
-  cancelButton: {
-
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255, 71, 87, 0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   statusTimeRow: {
     flexDirection: 'row',
@@ -538,6 +465,12 @@ const styles = StyleSheet.create({
   },
   chip_cancelled: {
     backgroundColor: 'rgba(255, 71, 87, 0.2)',
+  },
+  chip_pending: {
+    backgroundColor: 'rgba(255, 193, 7, 0.2)',
+  },
+  chip_paid: {
+    backgroundColor: 'rgba(33, 150, 243, 0.2)',
   },
   statusLabel: {
     fontSize: 12,
@@ -613,60 +546,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 8,
-  },
-  modalOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: '#1f1f1f',
-    borderRadius: 16,
-    padding: 24,
-    width: '85%',
-    maxWidth: 340,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  modalMessage: {
-    fontSize: 16,
-    color: '#aaa',
-    textAlign: 'center',
-    marginBottom: 24,
-    lineHeight: 22,
-  },
-  modalButton: {
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  modalConfirmButton: {
-    backgroundColor: '#D11030',
-  },
-  modalCancelButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: '#333',
-  },
-  modalButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  modalConfirmText: {
-    color: '#fff',
-  },
-  modalCancelText: {
-    color: '#888',
   },
 });

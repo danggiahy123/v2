@@ -45,7 +45,7 @@ const GenreDetailScreen = () => {
       
       const response = await genreService.getGenreMovies(id);
       if (response.status === 'success') {
-        setGenre(response.data.genre);
+    
         setMovies(response.data.movies);
       }
     } catch (err) {

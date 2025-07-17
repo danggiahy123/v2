@@ -160,6 +160,8 @@ return `${hours}h ${remainingMinutes}min`;
   // 🎬 NEW ENHANCED FEATURES STATE - Video always visible
   const [showVideoPlayer, setShowVideoPlayer] = useState(false);
   const [currentEpisode, setCurrentEpisode] = useState<Episode | null>(null);
+  // Thêm state resumeFromTime để lưu thời gian tiếp tục xem
+  const [resumeFromTime, setResumeFromTime] = useState<number | undefined>(undefined);
 
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
@@ -941,30 +943,30 @@ if (!movieDetail) return;
   // 🎬 Handle Watch Now button with activation
   const handleWatchNow = async () => {
     try {
-      // If needs activation, call activate API first
+      // Nếu cần kích hoạt rental thì xử lý như cũ
       if ((needsActivation as any) && userId && movieDetail && movieDetail._id) {
         console.log('🎬 [DEBUG] Activating rental before playing video');
-        
         await rentalService.activateRental(userId, movieDetail._id);
-        
-        // Wait for rental status to refresh to reflect activation
-        console.log('🎬 [DEBUG] Refreshing rental status after activation');
-        await new Promise<void>((resolve) => {
-          forceRefreshRental();
-          // Also refresh movie detail to get updated video URI
-          refresh();
-          // Give some time for the refresh to complete
-          setTimeout(resolve, 1500);
-        });
-        
+        // Refresh rental status và movie detail
+        forceRefreshRental();
+        refresh();
+        await new Promise<void>((resolve) => setTimeout(resolve, 1500));
         showNotificationMessage('Kích hoạt thành công! Bắt đầu xem phim.', 'success');
       }
-      
-      // Start playing video
-      console.log('🎬 [DEBUG] Starting video player');
+      // Lấy tiến trình đã lưu nếu có
+      const watchingProgress = movieDetail?.userInteractions?.watchingProgress;
+      const savedTime = watchingProgress?.currentTime;
+      const watchPercentage = watchingProgress?.watchPercentage;
+      let resumeTime: number | undefined = undefined;
+      if (savedTime && savedTime > 0 && (!watchPercentage || watchPercentage < 90) && savedTime <= 7200) {
+        const episodeDuration = movieDetail?.duration || movieDetail?.episodes?.[0]?.duration;
+        if (!episodeDuration || savedTime < episodeDuration - 10) {
+          resumeTime = savedTime;
+        }
+      }
+      setResumeFromTime(resumeTime);
       setHasClickedWatchButton(true);
       setShowVideoPlayer(true);
-      
     } catch (error) {
       console.error('❌ [DEBUG] Error activating rental:', error);
       showNotificationMessage('Không thể kích hoạt rental. Vui lòng thử lại.', 'error');
@@ -1128,12 +1130,39 @@ if (!movieDetail) return;
             <TouchableOpacity
               style={styles.freeWatchButton}
               onPress={() => {
+                // Lấy tiến trình đã lưu nếu có
+                const watchingProgress = movieDetail?.userInteractions?.watchingProgress;
+                const savedTime = watchingProgress?.currentTime;
+                const watchPercentage = watchingProgress?.watchPercentage;
+                let resumeTime: number | undefined = undefined;
+                if (savedTime && savedTime > 0 && (!watchPercentage || watchPercentage < 90) && savedTime <= 7200) {
+                  const savedDuration = watchingProgress?.duration;
+                  const episodeDuration = movieDetail?.duration || movieDetail?.episodes?.[0]?.duration;
+                  const actualDuration = savedDuration || episodeDuration;
+                  if (!actualDuration || savedTime < actualDuration - 10) {
+                    resumeTime = savedTime;
+                  }
+                }
+                setResumeFromTime(resumeTime);
                 setHasClickedWatchButton(true);
                 setShowVideoPlayer(true);
               }}
             >
               <Ionicons name="play-circle" size={24} color="#ffffff" />
-              <Text style={styles.freeWatchText}>Xem miễn phí</Text>
+              <Text style={styles.freeWatchText}>
+                {(() => {
+                  const watchingProgress = movieDetail?.userInteractions?.watchingProgress;
+                  const savedTime = watchingProgress?.currentTime;
+                  const watchPercentage = watchingProgress?.watchPercentage;
+                  if (savedTime && savedTime > 0 && (!watchPercentage || watchPercentage < 90) && savedTime <= 7200) {
+                    // Hiển thị thời gian tiếp tục xem
+                    const minutes = Math.floor(savedTime / 60);
+                    const seconds = Math.floor(savedTime % 60);
+                    return `Tiếp tục xem từ ${minutes}:${seconds.toString().padStart(2, '0')}`;
+                  }
+                  return 'Xem miễn phí';
+                })()}
+              </Text>
             </TouchableOpacity>
           </View>
         )}
@@ -1571,7 +1600,7 @@ if (!movieDetail) return;
                   movieType={movieDetail?.movie_type}
                   movieId={id}
                   showTitle={false}
-                  resumeFromTime={(() => {
+                  resumeFromTime={resumeFromTime !== undefined ? resumeFromTime : (() => {
                     // 🔧 FIX: Handle resume time correctly for auto-play vs manual play
 // Case 1: Auto-play from Continue Watching - use resume info from getResumeWatchingInfo
                     if (autoPlay === 'true' && fromContinueWatching === 'true') {
@@ -1596,12 +1625,36 @@ if (!movieDetail) return;
                     const watchPercentage = watchingProgress?.watchPercentage;
                     
                     // Validate saved time
-                    if (!savedTime || savedTime <= 0) return undefined;
-                    if (watchPercentage && watchPercentage >= 90) return undefined;
-                    if (savedTime > 7200) return undefined;
+                    if (!savedTime || savedTime <= 0) {
+                      console.log('⚠️ [AUTO-RESUME] No saved time or invalid time');
+                      return undefined;
+                    }
+                    if (watchPercentage && watchPercentage >= 90) {
+                      console.log('⚠️ [AUTO-RESUME] Already watched 90%+, skipping');
+                      return undefined;
+                    }
+                    if (savedTime > 7200) {
+                      console.log('⚠️ [AUTO-RESUME] Saved time too large (>2h), skipping');
+                      return undefined;
+                    }
                     
+                    // Lấy duration từ tiến trình đã lưu (chính xác hơn)
+                    const savedDuration = watchingProgress?.duration;
                     const episodeDuration = episodeToPlay?.duration;
-                    if (episodeDuration && savedTime >= episodeDuration - 10) {
+                    const actualDuration = savedDuration || episodeDuration;
+                    
+                    console.log('🎯 [AUTO-RESUME] Checking resume time:', {
+                      savedTime,
+                      savedDuration,
+                      episodeDuration,
+                      actualDuration,
+                      watchPercentage,
+                      isTooClose: actualDuration ? savedTime >= actualDuration - 10 : false,
+                      willResume: true
+                    });
+                    
+                    // Chỉ skip nếu thực sự gần cuối (còn < 10 giây)
+                    if (actualDuration && savedTime >= actualDuration - 10) {
                       console.log('⚠️ [AUTO-RESUME] Resume time too close to episode end, skipping');
                       return undefined;
                     }
