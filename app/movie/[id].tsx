@@ -1082,7 +1082,7 @@ if (!movieDetail) return;
           {/* View Count */}
           <View style={styles.actionItemWithCount}>
             <Ionicons name="eye-outline" size={24} color="#ffffff" />
-            <Text style={styles.actionCount}>{movieDetail.viewCount || 70}</Text>
+            <Text style={styles.actionCount}>{movieDetail.viewCount ?? 0}</Text>
           </View>
 
           {/* Like Button with Count - Icon ❤️ */}

@@ -2,7 +2,7 @@
  * NOTIFICATION COMPONENT - Minimal & Modern Toast Notification
  */
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Modal, Animated, Dimensions, useColorScheme, Platform, PanResponder } from 'react-native';
+import { View, Text, StyleSheet, Animated, Dimensions, useColorScheme, Platform, PanResponder } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 
@@ -173,59 +173,61 @@ const Notification: React.FC<NotificationProps> = ({
 
   const typeStyle = getTypeStyles();
 
+  // Thay Modal bằng View overlay
+  if (!visible) return null;
+
   return (
-    <Modal animationType="none" transparent={true} visible={visible} onRequestClose={handleClose}>
-      <Animated.View
+    <Animated.View
+      pointerEvents="box-none"
+      style={[
+        styles.overlay,
+        {
+          opacity: opacityAnim,
+          transform: [
+            { translateY: translateAnim },
+            { scale: scaleAnim }
+          ],
+        },
+      ]}
+    >
+      <Animated.View 
+        {...panResponder.panHandlers}
         style={[
-          styles.overlay,
-          {
-            opacity: opacityAnim,
-            transform: [
-              { translateY: translateAnim },
-              { scale: scaleAnim }
-            ],
-          },
+          styles.container, 
+          { 
+            backgroundColor: typeStyle.bg,
+            opacity: 0.9,
+            transform: [{ translateY: swipeAnim }]
+          }
         ]}
       >
-        <Animated.View 
-          {...panResponder.panHandlers}
-          style={[
-            styles.container, 
-            { 
-              backgroundColor: typeStyle.bg,
-              opacity: 0.9,
-              transform: [{ translateY: swipeAnim }]
-            }
-          ]}
-        >
-          <View style={styles.content}>
-            <Ionicons 
-              name={typeStyle.icon}
-              size={16} 
-              color={typeStyle.color}
-              style={styles.icon} 
-            />
-            <Text style={styles.message} numberOfLines={1}>
-              {message}
-            </Text>
-          </View>
+        <View style={styles.content}>
+          <Ionicons 
+            name={typeStyle.icon}
+            size={16} 
+            color={typeStyle.color}
+            style={styles.icon} 
+          />
+          <Text style={styles.message} numberOfLines={1}>
+            {message}
+          </Text>
+        </View>
 
-          {type === 'sync' && progress !== undefined && (
-            <Animated.View 
-              style={[
-                styles.progressBar,
-                { 
-                  width: Animated.multiply(
-                    progress, 
-                    Animated.divide(width - 32, 100)
-                  )
-                }
-              ]} 
-            />
-          )}
-        </Animated.View>
+        {type === 'sync' && progress !== undefined && (
+          <Animated.View 
+            style={[
+              styles.progressBar,
+              { 
+                width: Animated.multiply(
+                  progress, 
+                  Animated.divide(width - 32, 100)
+                )
+              }
+            ]} 
+          />
+        )}
       </Animated.View>
-    </Modal>
+    </Animated.View>
   );
 };
 
