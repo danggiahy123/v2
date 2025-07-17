@@ -129,16 +129,27 @@ export default function HomeScreen() {
     React.useCallback(() => {
       if (userId) {
         console.log('🎬 [Home] Screen focused, refreshing continue watching data');
-        // Only refresh continue watching, not full home data
+        // Force refresh continue watching data to get latest episode progress
         const refreshContinueWatching = async () => {
           try {
-            const continueRes = await movieService.getContinueWatching(userId, 6);
+            console.log('🔄 [Home] Fetching latest continue watching data...');
+            const continueRes = await movieService.getContinueWatching(userId, 10); // Tăng limit để có đủ data
             if (continueRes?.status === 'success' && continueRes.data) {
-              console.log('🎬 [Home] Continue watching refreshed:', continueRes.data.data);
+              console.log('✅ [Home] Continue watching refreshed:', {
+                totalItems: continueRes.data.data?.length,
+                items: continueRes.data.data?.map((item: any) => ({
+                  movieId: item.movieId,
+                  title: item.title,
+                  episodeNumber: item.episodeNumber,
+                  movieType: item.movieType
+                }))
+              });
               setContinueWatching(continueRes.data.data || []);
+            } else {
+              console.log('⚠️ [Home] Continue watching response invalid:', continueRes);
             }
           } catch (error) {
-            console.error('Error refreshing continue watching:', error);
+            console.error('❌ [Home] Error refreshing continue watching:', error);
           }
         };
         refreshContinueWatching();
@@ -200,19 +211,27 @@ export default function HomeScreen() {
       if (userId) {
         try {
           console.log('🎬 [Home] Loading continue watching for userId:', userId);
-          const continueRes = await movieService.getContinueWatching(userId, 6);
+          const continueRes = await movieService.getContinueWatching(userId, 10); // Tăng limit
           console.log('🎬 [Home] Continue watching response:', {
             status: continueRes?.status,
             dataType: typeof continueRes?.data,
             hasData: !!continueRes?.data?.data,
-            dataLength: continueRes?.data?.data?.length
+            dataLength: continueRes?.data?.data?.length,
+            items: continueRes?.data?.data?.map((item: any) => ({
+              movieId: item.movieId,
+              title: item.title,
+              episodeNumber: item.episodeNumber,
+              movieType: item.movieType
+            }))
           });
           if (continueRes?.status === 'success' && continueRes.data) {
-            console.log('🎬 [Home] Continue watching data updated:', continueRes.data.data);
+            console.log('✅ [Home] Continue watching data loaded successfully');
             setContinueWatching(continueRes.data.data || []);
+          } else {
+            console.log('⚠️ [Home] Continue watching response invalid:', continueRes);
           }
         } catch (error) {
-          console.error('Error loading continue watching:', error);
+          console.error('❌ [Home] Error loading continue watching:', error);
         }
       } else {
         console.log('⚠️ [Home] No userId found, skipping continue watching');

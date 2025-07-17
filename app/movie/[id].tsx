@@ -34,7 +34,7 @@ import { useLocalSearchParams, router, useRouter } from 'expo-router';
 import { useMovieDetail } from '../../hooks/useMovieDetail';
 import { Episode, REQUIRED_EPISODE_FIELDS } from '../../types/episode';
 import { useAppSelector } from '../../store/hooks'; //check auth
-import VideoPlayer from '../../components/movie/player/VideoPlayer';
+import VideoPlayer, { VideoPlayerWrapper } from '../../components/movie/player/VideoPlayer';
 import { RentalOptionsModal } from '../../components/rental/RentalOptionsModal';
 import { useRentalStatus } from '../../hooks/useRentalStatus';
 import { rentalService } from '../../services/rentalService';
@@ -42,7 +42,7 @@ import { shareMovie } from '../../services/shareService';
 
 import { Notification, LoginRequiredModal } from '../../components/ui';
 import { SkeletonLoader } from '../../components/ui/AnimatedElements';
-import { getResumeWatchingInfo, getResumeButtonText, shouldShowContinueBadge } from '../../utils/watchingHelper';
+import { getResumeWatchingInfo, getResumeButtonText, shouldShowContinueBadge, debugEpisodeSwitching } from '../../utils/watchingHelper';
 import { useFocusEffect } from '@react-navigation/native';
 import { RelatedMovies } from '../../components/movie';
 import { useAuthGuard } from '../../hooks';
@@ -763,7 +763,38 @@ const isValidVideoUrl = (url: string): boolean => {
 
     console.log('✅ [DEBUG] Episode validation passed, setting up video player');
     
+    // 🔧 FIX: Reset resume time when switching episodes
+    // Chỉ giữ resume time nếu episode này có watching progress
+    const watchingProgress = movieDetail?.userInteractions?.watchingProgress;
+    let newResumeTime: number | undefined = undefined;
+    
+    console.log('🎬 [DEBUG] Episode switching logic:', {
+      clickedEpisodeId: episode._id,
+      clickedEpisodeNumber: episode.episode_number,
+      watchingProgressEpisodeId: watchingProgress?.episodeId,
+      watchingProgressCurrentTime: watchingProgress?.currentTime,
+      isSameEpisode: watchingProgress?.episodeId === episode._id,
+      isSameEpisodeEnhanced: watchingProgress?.episodeId === episode._id || watchingProgress?.episodeId === episode._id?.toString() || episode._id === watchingProgress?.episodeId?.toString()
+    });
+    
+    // 🔧 ENHANCED: Use debug function to check episode switching logic
+    const debugResult = debugEpisodeSwitching(episode, watchingProgress);
+    const { isSameEpisode, shouldResume, resumeTime } = debugResult;
+    
+    if (shouldResume) {
+      // Nếu đây là episode đang được resume, giữ thời gian
+      newResumeTime = resumeTime;
+      console.log('🎬 [DEBUG] Keeping resume time for current episode:', newResumeTime);
+    } else {
+      // Nếu đổi sang episode khác, bắt đầu từ đầu
+      newResumeTime = 0; // Explicitly set to 0
+      console.log('🎬 [DEBUG] Starting new episode from beginning (0:00)');
+    }
+    
+    console.log('🎬 [DEBUG] Final resume time:', newResumeTime);
+    
     setCurrentEpisode(episode);
+    setResumeFromTime(newResumeTime);
     setShowVideoPlayer(true);
     
     showNotificationMessage(`Đang phát: ${episode.episode_title}`, 'success');
@@ -894,6 +925,8 @@ hasMovieDetail: !!movieDetail,
   const handleRelatedMoviePress = (movieId: string) => {
     router.push(`/movie/${movieId}`);
   };
+
+
 
   const handleSharePress = async () => {
     try {
@@ -1599,7 +1632,7 @@ if (!movieDetail) return;
               }
 
               return canShowVideo && showVideoPlayer && episodeToPlay ? (
-                <VideoPlayer
+                <VideoPlayerWrapper
                   episode={episodeToPlay}
                   userId={userId || undefined}
                   movieType={movieDetail?.movie_type}
@@ -1696,6 +1729,9 @@ if (!movieDetail) return;
         
                           {/* 📽️ MOVIE INFO - Di chuyển xuống dưới video */}
           {renderMovieInfo()}
+          
+
+          
                   {renderEpisodes()}
          
          {/* 📋 TAB SYSTEM - Liên quan và Bình luận */}

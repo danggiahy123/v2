@@ -46,8 +46,6 @@ export const ContinueWatchingCard: React.FC<ContinueWatchingCardProps> = ({
 }) => {
   const cardHeight = (width * 9) / 16; // 16:9 aspect ratio
 
-  // Removed duplicate formatRemainingTime function - now using from watchingHelper
-
   const getEpisodeInfo = (): string => {
     // Show episode info if episodeNumber exists
     if (item.episodeNumber) {

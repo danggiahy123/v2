@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ContinueWatchingCard, { ContinueWatchingItem } from './ContinueWatchingCard';
+import { filterContinueWatchingForSeries } from '../../utils/watchingHelper';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -28,8 +29,11 @@ export const ContinueWatchingSection: React.FC<ContinueWatchingSectionProps> = (
   loading = false,
   error = null,
 }) => {
+  // Lọc data để chỉ hiển thị episode cuối cùng cho phim bộ
+  const filteredData = data ? filterContinueWatchingForSeries(data) : [];
+  
   // Don't render if no data and not loading
-  if (!loading && (!data || data.length === 0)) {
+  if (!loading && (!filteredData || filteredData.length === 0)) {
     return null;
   }
 
@@ -113,7 +117,7 @@ export const ContinueWatchingSection: React.FC<ContinueWatchingSectionProps> = (
 
       {/* Continue Watching List */}
       <FlatList
-        data={data}
+        data={filteredData}
         horizontal
         keyExtractor={(item) => {
           // If item has episodeId, use it to create unique key
