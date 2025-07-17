@@ -195,15 +195,16 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     return () => {
       try {
         const currentPlayer = playerRef.current;
-        if (currentPlayer && currentPlayer.status !== 'error') {
+        if (currentPlayer) {
           console.log('🧹 [VideoPlayer] Cleaning up player');
-          currentPlayer.pause();
-          // Let the garbage collector handle cleanup
-          // instead of manually nulling the ref
+          // Chỉ pause nếu player còn hợp lệ và không bị lỗi
+          if (currentPlayer.status !== 'error' && typeof currentPlayer.pause === 'function') {
+            currentPlayer.pause();
+          }
         }
       } catch (err) {
-        console.log('⚠️ [VideoPlayer] Cleanup error:', err);
-        // Silently handle cleanup errors
+        console.log('⚠️ [VideoPlayer] Cleanup error (ignored):', err);
+        // Silently handle cleanup errors - không crash app
       }
     };
   }, []);
@@ -229,19 +230,33 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     const currentTimeSec = Math.floor(currentTime / 1000);
     const durationSec = Math.floor(duration / 1000);
 
-    if (!currentTimeSec || !durationSec) {
-      console.log('⚠️ [VideoPlayer] Missing time values:', { currentTimeSec, durationSec });
+    // Chặn gọi saveProgress khi thiếu dữ liệu hoặc dữ liệu không hợp lệ
+    if (
+      !currentTimeSec || !durationSec ||
+      isNaN(currentTimeSec) || isNaN(durationSec) ||
+      currentTimeSec <= 0 || durationSec <= 0
+    ) {
+      console.log('⚠️ [VideoPlayer] Missing or invalid time values:', { currentTimeSec, durationSec });
       return;
     }
 
     const watchPercentage = Math.floor((currentTimeSec / durationSec) * 100);
     
+    // Lưu tiến trình ngay khi có thay đổi lớn (seek) hoặc theo điều kiện cũ
     if (
       (!isPlaying && currentTimeSec > 0 && currentTimeSec !== lastSavedProgress) || // Paused
       (currentTimeSec % 10 === 0 && currentTimeSec !== lastSavedProgress) || // Every 10 seconds
       (currentTimeSec >= durationSec - 1 && currentTimeSec !== lastSavedProgress) || // Video ended
-      (Math.abs(currentTimeSec - lastSavedProgress) > 5) // Seeking
+      (Math.abs(currentTimeSec - lastSavedProgress) > 5) || // Seeking (thay đổi lớn)
+      (currentTimeSec > 0 && lastSavedProgress === 0) // Lần đầu có tiến trình
     ) {
+      console.log('💾 [VideoPlayer] Saving progress due to:', {
+        currentTimeSec,
+        lastSavedProgress,
+        difference: Math.abs(currentTimeSec - lastSavedProgress),
+        reason: Math.abs(currentTimeSec - lastSavedProgress) > 5 ? 'SEEK' : 'NORMAL'
+      });
+      
       saveProgress(currentTimeSec, watchPercentage, durationSec);
       setLastSavedProgress(currentTimeSec);
     }
@@ -263,6 +278,16 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
       const completed = watchPercentage >= 90;
       
+      // Log chi tiết trước khi gọi API
+      console.log('[DEBUG][VideoPlayer] Gọi API lưu tiến trình:', {
+        episodeId,
+        currentTime,
+        duration,
+        userId,
+        completed,
+        watchPercentage
+      });
+
       // Save progress
       await userInteractionService.updateWatchingProgress(
         episodeId,
@@ -272,7 +297,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         completed
       );
       
-      console.log(`✅ [VideoPlayer] Progress saved successfully: ${watchPercentage}%`);
+      console.log(`✅ [VideoPlayer] Progress saved successfully: ${watchPercentage}%`, {
+        episodeId,
+        currentTime,
+        duration,
+        userId,
+        completed
+      });
 
       // Call callbacks if provided
       if (onProgressUpdate) {
@@ -286,25 +317,78 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         onEpisodeComplete();
       }
     } catch (error) {
-      console.error('❌ [VideoPlayer] Failed to save progress:', error);
+      if (error instanceof Error) {
+        console.error('❌ [VideoPlayer] Failed to save progress:', error.message);
+      } else {
+        console.error('❌ [VideoPlayer] Failed to save progress:', error);
+      }
     }
   };
 
   // Update progress periodically
   useEffect(() => {
-    const currentPlayer = playerRef.current;
-    if (!currentPlayer) return;
+    let isMounted = true;
+    let lastValidTime = 0;
+    let hasStartedPlaying = false;
+    
+    // Delay để đảm bảo player đã load xong
+    const delayId = setTimeout(() => {
+      const intervalId = setInterval(() => {
+        const currentPlayer = playerRef.current;
+        if (
+          !isMounted ||
+          !currentPlayer ||
+          typeof currentPlayer.currentTime !== 'number' ||
+          typeof currentPlayer.duration !== 'number' ||
+          typeof currentPlayer.playing !== 'boolean' ||
+          currentPlayer.currentTime <= 0 ||
+          currentPlayer.duration <= 0 ||
+          !currentPlayer.playing // chỉ lấy khi đang phát
+        ) {
+          return;
+        }
+        
+        // Đánh dấu đã bắt đầu playing
+        if (!hasStartedPlaying && currentPlayer.playing && currentPlayer.currentTime > 0) {
+          hasStartedPlaying = true;
+          console.log('🎬 [VideoPlayer] Player started playing, beginning progress tracking');
+        }
+        
+        // Chỉ lưu tiến trình sau khi đã bắt đầu playing
+        if (hasStartedPlaying) {
+          try {
+            // Chỉ gọi khi currentTime thực sự thay đổi và hợp lệ
+            if (currentPlayer.currentTime !== lastValidTime && currentPlayer.currentTime > 0) {
+              console.log('⏯️ [VideoPlayer] Saving progress:', {
+                currentTime: currentPlayer.currentTime,
+                duration: currentPlayer.duration,
+                percentage: Math.floor((currentPlayer.currentTime / currentPlayer.duration) * 100)
+              });
+              
+              handlePlaybackStatusUpdate(
+                currentPlayer.currentTime * 1000,
+                currentPlayer.duration * 1000,
+                currentPlayer.playing
+              );
+              lastValidTime = currentPlayer.currentTime;
+            }
+          } catch (err) {
+            console.warn('⚠️ [VideoPlayer] Error in progress update interval:', err);
+          }
+        }
+      }, 1000);
 
-    const intervalId = setInterval(() => {
-      handlePlaybackStatusUpdate(
-        currentPlayer.currentTime * 1000,
-        currentPlayer.duration * 1000,
-        currentPlayer.playing
-      );
-    }, 1000);
+      return () => {
+        isMounted = false;
+        clearInterval(intervalId);
+      };
+    }, 2000); // Delay 2 giây để player load xong
 
-    return () => clearInterval(intervalId);
-  }, [handlePlaybackStatusUpdate]);
+    return () => {
+      isMounted = false;
+      clearTimeout(delayId);
+    };
+  }, [handlePlaybackStatusUpdate, videoUrlMemo, episode._id]);
 
   // Add new effect to handle loading state based on player status
   useEffect(() => {

@@ -31,7 +31,7 @@ interface RegisteredMovieSearchModalProps {
 // Enhanced interface để include rental info
 interface EnhancedRegisteredMovie extends RegisteredMovie {
   rentalInfo?: RentalInfo;
-  rentalStatus?: 'active' | 'expired' | 'cancelled';
+  rentalStatus?: 'active' | 'expired' | 'cancelled'|'pending' | 'paid';
   rentalType?: '48h' | '30d';
   remainingTime?: string;
 }
@@ -45,6 +45,7 @@ const RegisteredMovieSearchModal: React.FC<RegisteredMovieSearchModalProps> = ({
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [movies, setMovies] = useState<EnhancedRegisteredMovie[]>([]);
+  const [filteredMovies, setFilteredMovies] = useState<EnhancedRegisteredMovie[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [allRentals, setAllRentals] = useState<RentalInfo[]>([]);
 
@@ -69,33 +70,60 @@ const RegisteredMovieSearchModal: React.FC<RegisteredMovieSearchModalProps> = ({
       // Reset search state khi mở modal
       setSearchQuery('');
       setMovies([]);
+      setFilteredMovies([]);
       setIsLoading(false);
     }
   }, [visible, userId, loadRentalHistory]);
 
-  // Debounced search function
-  const searchMovies = useCallback(async (query: string) => {
+  // Load tất cả phim đã đăng ký khi mở modal
+  const loadAllRegisteredMovies = useCallback(async () => {
     if (!userId) return;
     
-    // Chỉ search khi có từ khóa
-    if (!query.trim()) {
-      setMovies([]);
-      setIsLoading(false);
-      return;
-    }
-
     setIsLoading(true);
     try {
-      console.log('🔍 [RegisteredMovieSearch] Searching with query:', query);
+      console.log('🔍 [RegisteredMovieSearch] Loading all registered movies');
       
       const response = await registeredMovieService.searchRegisteredMovies({
         userId,
-        q: query.trim()
+        q: '' // Không có query để lấy tất cả
       });
 
       if (response.status === 'success') {
+        // Debug: Log tất cả movies từ API
+        console.log('🔍 [RegisteredMovieSearch] Raw API response:', response.data);
+        console.log('🔍 [RegisteredMovieSearch] Raw movies count:', response.data.length);
+        
+        // Log chi tiết từng movie để kiểm tra duplicate
+        response.data.forEach((movie, index) => {
+          console.log(`🔍 [RegisteredMovieSearch] Movie ${index}:`, {
+            id: movie._id,
+            title: movie.movie_title,
+            type: movie.movie_type
+          });
+        });
+        
+        // Loại bỏ duplicate movies dựa trên movie._id
+        const uniqueMovies = response.data.filter((movie, index, self) => {
+          const firstIndex = self.findIndex(m => m._id === movie._id);
+          const isDuplicate = index !== firstIndex;
+          
+          if (isDuplicate) {
+            console.log('🚫 [RegisteredMovieSearch] Removing duplicate:', {
+              id: movie._id,
+              title: movie.movie_title,
+              originalIndex: firstIndex,
+              duplicateIndex: index
+            });
+          }
+          
+          return index === firstIndex;
+        });
+        
+        console.log('🔍 [RegisteredMovieSearch] Original movies:', response.data.length);
+        console.log('🔍 [RegisteredMovieSearch] Unique movies:', uniqueMovies.length);
+        
         // Enhance movies với rental info
-        const enhancedMovies: EnhancedRegisteredMovie[] = response.data.map(movie => {
+        const enhancedMovies: EnhancedRegisteredMovie[] = uniqueMovies.map(movie => {
           // Tìm rental info từ rental history
           const rental = allRentals.find(r => r.movieId._id === movie._id);
           
@@ -126,29 +154,62 @@ const RegisteredMovieSearchModal: React.FC<RegisteredMovieSearchModalProps> = ({
           };
         });
 
-        setMovies(enhancedMovies);
-        console.log('✅ [RegisteredMovieSearch] Found movies:', enhancedMovies.length);
+        // Đảm bảo không có duplicate trong final result
+        const finalMovies = enhancedMovies.filter((movie, index, self) => 
+          index === self.findIndex(m => m._id === movie._id)
+        );
+        
+        // Loại bỏ những phim đã hủy
+        const activeMovies = finalMovies.filter(movie => 
+          movie.rentalStatus !== 'cancelled'
+        );
+        
+        console.log('✅ [RegisteredMovieSearch] Final unique movies:', finalMovies.length);
+        console.log('✅ [RegisteredMovieSearch] Active movies (excluding cancelled):', activeMovies.length);
+        
+        setMovies(activeMovies);
+        setFilteredMovies(activeMovies); // Ban đầu hiển thị tất cả
       }
     } catch (error) {
-      console.error('❌ [RegisteredMovieSearch] Search error:', error);
+      console.error('❌ [RegisteredMovieSearch] Error loading all movies:', error);
       setMovies([]);
+      setFilteredMovies([]);
     } finally {
       setIsLoading(false);
     }
   }, [userId, allRentals]);
 
-  // Debounce effect - chỉ search khi có từ khóa
+  // Load tất cả phim khi rental history đã sẵn sàng
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (searchQuery.trim()) {
-        searchMovies(searchQuery);
-      } else {
-        setMovies([]); // Clear movies khi không có từ khóa
-      }
-    }, 300);
+    if (visible && userId && allRentals.length > 0) {
+      loadAllRegisteredMovies();
+    }
+  }, [visible, userId, allRentals, loadAllRegisteredMovies]);
 
-    return () => clearTimeout(timeoutId);
-  }, [searchQuery, searchMovies]);
+  // Filter movies dựa trên search query
+  useEffect(() => {
+    console.log('🔍 [RegisteredMovieSearch] Filtering movies:', {
+      searchQuery,
+      totalMovies: movies.length,
+      queryLength: searchQuery.length
+    });
+    
+    if (!searchQuery.trim()) {
+      setFilteredMovies(movies); // Hiển thị tất cả khi không có query
+      console.log('🔍 [RegisteredMovieSearch] Showing all movies:', movies.length);
+    } else {
+      const filtered = movies.filter(movie => 
+        movie.movie_title.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setFilteredMovies(filtered);
+      console.log('🔍 [RegisteredMovieSearch] Filtered movies:', {
+        query: searchQuery,
+        total: movies.length,
+        filtered: filtered.length,
+        results: filtered.map(m => m.movie_title)
+      });
+    }
+  }, [searchQuery, movies]);
 
   const handleMoviePress = (movie: EnhancedRegisteredMovie) => {
     onClose();
@@ -252,13 +313,25 @@ const RegisteredMovieSearchModal: React.FC<RegisteredMovieSearchModalProps> = ({
   const renderEmptyState = () => {
     if (isLoading) return null;
     
-    if (!searchQuery.trim()) {
+    if (!searchQuery.trim() && movies.length === 0) {
+      return (
+        <View style={styles.emptyState}>
+          <Ionicons name="film-outline" size={64} color="#666" />
+          <Text style={styles.emptyTitle}>Chưa có phim đăng ký</Text>
+          <Text style={styles.emptySubtitle}>
+            Bạn chưa thuê phim nào. Hãy thuê phim để xem ở đây
+          </Text>
+        </View>
+      );
+    }
+
+    if (searchQuery.trim() && filteredMovies.length === 0) {
       return (
         <View style={styles.emptyState}>
           <Ionicons name="search-outline" size={64} color="#666" />
-          <Text style={styles.emptyTitle}>Tìm kiếm phim đăng ký</Text>
+          <Text style={styles.emptyTitle}>Không tìm thấy phim</Text>
           <Text style={styles.emptySubtitle}>
-            Nhập tên phim để tìm kiếm trong danh sách đã thuê
+            Không có phim nào khớp với từ khóa "{searchQuery}"
           </Text>
         </View>
       );
@@ -266,10 +339,10 @@ const RegisteredMovieSearchModal: React.FC<RegisteredMovieSearchModalProps> = ({
 
     return (
       <View style={styles.emptyState}>
-        <Ionicons name="film-outline" size={64} color="#666" />
-        <Text style={styles.emptyTitle}>Không tìm thấy phim</Text>
+        <Ionicons name="search-outline" size={64} color="#666" />
+        <Text style={styles.emptyTitle}>Tìm kiếm phim đăng ký</Text>
         <Text style={styles.emptySubtitle}>
-          Không có phim nào khớp với từ khóa "{searchQuery}"
+          Nhập tên phim để tìm kiếm trong danh sách đã thuê
         </Text>
       </View>
     );
@@ -323,11 +396,11 @@ const RegisteredMovieSearchModal: React.FC<RegisteredMovieSearchModalProps> = ({
               <ActivityIndicator size="large" color="#D11030" />
               <Text style={styles.loadingText}>Đang tìm kiếm...</Text>
             </View>
-          ) : movies.length > 0 ? (
+          ) : filteredMovies.length > 0 ? (
             <FlatList
-              data={movies}
+              data={filteredMovies}
               renderItem={renderMovie}
-              keyExtractor={(item, index) => `${item._id}-${index}`}
+              keyExtractor={(item) => item._id}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.listContainer}
             />
