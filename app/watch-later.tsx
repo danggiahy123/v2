@@ -27,6 +27,8 @@ import {
 
 import { useAppSelector } from '../store/hooks';
 import { userInteractionService } from '../services/userInteractionService';
+import { useAuthGuard } from '../hooks';
+import { LoginRequiredModal } from '../components/ui';
 
 interface WatchLaterMovie {
   _id: string;
@@ -46,6 +48,7 @@ interface WatchLaterMovie {
 export default function WatchLaterScreen() {
   const router = useRouter();
   const { userId } = useAppSelector((state) => state.auth);
+  const { isLoggedIn, showLoginModal, hideLoginModal, loginModalVisible, currentFeatureName } = useAuthGuard();
   
   const [movies, setMovies] = useState<WatchLaterMovie[]>([]);
   const [loading, setLoading] = useState(true);
@@ -228,6 +231,41 @@ await loadWatchLaterMovies();
     </View>
   );
 
+  // Kiểm tra đăng nhập
+  if (!isLoggedIn) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Ionicons name="chevron-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Phim xem sau</Text>
+          <View style={styles.headerRight} />
+        </View>
+        
+        <View style={styles.loadingContainer}>
+          <Ionicons name="bookmark-outline" size={64} color="#666" style={{ marginBottom: 16 }} />
+          <Text style={styles.loadingText}>Bạn cần đăng nhập để xem danh sách phim xem sau</Text>
+          <TouchableOpacity 
+            style={styles.loginButton} 
+            onPress={() => showLoginModal('Xem danh sách phim xem sau')}
+          >
+            <Text style={styles.loginButtonText}>Đăng nhập</Text>
+          </TouchableOpacity>
+        </View>
+        
+        <LoginRequiredModal
+          visible={loginModalVisible}
+          onClose={hideLoginModal}
+          featureName={currentFeatureName || undefined}
+        />
+      </SafeAreaView>
+    );
+  }
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -236,7 +274,7 @@ await loadWatchLaterMovies();
             style={styles.backButton}
             onPress={() => router.back()}
           >
-            <Ionicons name="arrow-back" size={24} color="#fff" />
+            <Ionicons name="chevron-back" size={24} color="#fff" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Phim xem sau</Text>
           <View style={styles.headerRight} />
@@ -433,6 +471,18 @@ fontWeight: '600',
   placeholderText: {
     color: '#666',
     fontSize: 12,
+    fontWeight: '600',
+  },
+  loginButton: {
+    backgroundColor: '#D11030',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginTop: 20,
+  },
+  loginButtonText: {
+    color: '#fff',
+    fontSize: 16,
     fontWeight: '600',
   },
 });

@@ -237,8 +237,9 @@ export const useMovieDetail = (
     watchPercentage: number,
     duration: number
   ) => {
-    if (!userId) {
-      throw new Error('User ID is required');
+    if (!userId || userId === 'anonymous' || userId === 'null') {
+      console.log('⚠️ [useMovieDetail] Skipping progress update for anonymous user');
+      return; // Silently skip for anonymous users
     }
 
     try {

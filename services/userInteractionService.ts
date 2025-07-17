@@ -240,8 +240,9 @@ export const userInteractionService = {
       if (!episodeId) {
         throw new Error('Episode ID is required');
       }
-      if (!userId) {
-        throw new Error('User ID is required');
+      if (!userId || userId === 'anonymous' || userId === 'null') {
+        console.log('⚠️ [UserInteractionService] Skipping progress update for anonymous user');
+        throw new Error('User must be logged in to save progress');
       }
 
       // Convert currentTime to integer

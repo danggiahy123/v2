@@ -10,6 +10,7 @@
  * - TabHeader: Specialized header cho tab screens (absolute positioning với animation)
  * - MovieDescriptionPreview: Hiển thị nội dung phim rút gọn với nút "xem thêm"
  * - MovieDescriptionInline: Hiển thị nội dung phim rút gọn và mở rộng inline
+ * - LoginRequiredModal: Modal hiển thị khi user chưa đăng nhập muốn dùng tính năng cần auth
  * 
  * ARCHITECTURE:
  * Barrel pattern giúp:
@@ -21,6 +22,7 @@
 
 export { default as AnimatedElements } from './AnimatedElements';
 export { default as DebugHighlight } from './DebugHighlight';
+export { default as LoginRequiredModal } from './LoginRequiredModal';
 export { default as MovieDescriptionInline } from './MovieDescriptionInline';
 export { default as MovieDescriptionPreview } from './MovieDescriptionPreview';
 export { default as Notification } from './Notification';

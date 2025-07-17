@@ -26,10 +26,11 @@ import { userInteractionService } from '../../services/userInteractionService';
 import { useAppSelector } from '../../store/hooks';
 import { BannerMovie, ContinueWatchingItem, GridMovie } from '../../types/movie';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { TabHeader, SearchModal, ViewAllModal } from '../../components/ui';
+import { TabHeader, SearchModal, ViewAllModal, LoginRequiredModal } from '../../components/ui';
 import { ContinueWatchingSection } from '../../components/home';
 import GenreGrid from '../../components/genre/GenreGrid';
 import { shouldShowPaidBadge, enrichMoviesWithPriceInfo } from '../../utils/moviePriceHelper';
+import { useAuthGuard } from '../../hooks';
 // import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
@@ -50,6 +51,7 @@ export default function HomeScreen() {
   const authState = useAppSelector((state) => state.auth);
   const { userId } = authState || { userId: null };
   const router = useRouter();
+  const { isLoggedIn, showLoginModal, hideLoginModal, loginModalVisible, currentFeatureName } = useAuthGuard();
   const scrollY = useRef(new Animated.Value(0)).current;
   const lastScrollY = useRef(0);
   const headerOpacity = useRef(new Animated.Value(1)).current;
@@ -76,6 +78,7 @@ export default function HomeScreen() {
   const [homeGenreViewAllVisible, setHomeGenreViewAllVisible] = useState(false);
   const [homeGenreCustomMovies, setHomeGenreCustomMovies] = useState<GridMovie[]>([]);
   const [homeGenreLoading, setHomeGenreLoading] = useState(false);
+  const [showLogoutNotification, setShowLogoutNotification] = useState(false);
   
   // Banner interaction states
   const [bannerFavorites, setBannerFavorites] = useState<{[key: string]: boolean}>({});
@@ -106,6 +109,16 @@ export default function HomeScreen() {
     // Load sports movies
     loadSportsMovies();
   }, [userId]); // loadHomeData is defined below, will be memoized in future optimization
+
+  // Check if user just logged out and show notification
+  useEffect(() => {
+    if (!isLoggedIn && authState.message === 'Đăng xuất thành công') {
+      setShowLogoutNotification(true);
+      setTimeout(() => {
+        setShowLogoutNotification(false);
+      }, 3000);
+    }
+  }, [isLoggedIn, authState.message]);
 
   // Refresh continue watching data when screen is focused (user comes back from movie detail)
   useFocusEffect(
@@ -379,7 +392,8 @@ export default function HomeScreen() {
   };
 
   const handleBannerFavoritePress = async (movieId: string) => {
-    if (!userId) {
+    if (!isLoggedIn) {
+      showLoginModal('Lưu phim yêu thích');
       return;
     }
 
@@ -390,7 +404,7 @@ export default function HomeScreen() {
       // Optimistically update UI
       setBannerFavorites(prev => ({ ...prev, [movieId]: newFavoriteStatus }));
 
-      const result = await userInteractionService.toggleFavorite(movieId, newFavoriteStatus, userId);
+      const result = await userInteractionService.toggleFavorite(movieId, newFavoriteStatus, userId!);
       
       if (result.status !== 'success') {
         // Revert on failure
@@ -405,7 +419,8 @@ export default function HomeScreen() {
   };
 
   const handleBannerLikePress = async (movieId: string) => {
-    if (!userId) {
+    if (!isLoggedIn) {
+      showLoginModal('Thích phim');
       return;
     }
 
@@ -416,7 +431,7 @@ export default function HomeScreen() {
       // Optimistically update UI
       setBannerLikes(prev => ({ ...prev, [movieId]: newLikeStatus }));
 
-      const result = await userInteractionService.toggleLike(movieId, newLikeStatus, userId);
+      const result = await userInteractionService.toggleLike(movieId, newLikeStatus, userId!);
       
       if (result.status !== 'success') {
         // Revert on failure
@@ -1108,7 +1123,7 @@ export default function HomeScreen() {
         >
           {renderBanner()}
 
-          {renderContinueWatching()}
+          {isLoggedIn && renderContinueWatching()}
           {renderMovieGrid(recommendedMovies, 'Đề xuất cho bạn', 'recommended')}
           {/* Action Genre Section */}
           {actionGenre && actionGenreMovies.length > 0 && (
@@ -1192,6 +1207,21 @@ export default function HomeScreen() {
           <View style={styles.loadingOverlay}>
             <ActivityIndicator size="large" color="#fff" />
             <Text style={styles.loadingText}>Đang tải phim...</Text>
+          </View>
+        )}
+        
+        {/* Login Required Modal */}
+        <LoginRequiredModal
+          visible={loginModalVisible}
+          onClose={hideLoginModal}
+          featureName={currentFeatureName || undefined}
+        />
+
+        {/* Logout Notification */}
+        {showLogoutNotification && (
+          <View style={styles.logoutNotification}>
+            <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
+            <Text style={styles.logoutNotificationText}>Đã đăng xuất thành công</Text>
           </View>
         )}
       </View>
@@ -2304,5 +2334,30 @@ const styles = StyleSheet.create({
     right: 0,
     height: 4,
     backgroundColor: '#FF6B35',
+  },
+  logoutNotification: {
+    position: 'absolute',
+    top: 100,
+    left: 20,
+    right: 20,
+    backgroundColor: 'rgba(76, 175, 80, 0.9)',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  logoutNotificationText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
   },
 });

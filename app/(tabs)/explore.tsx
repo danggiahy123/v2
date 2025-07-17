@@ -29,7 +29,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 export default function ExploreScreen() {
   // REDUX STATE - Lấy thông tin user từ auth state
-  const { user } = useAppSelector((state) => state.auth);
+  const { user, isLoggedIn } = useAppSelector((state) => state.auth);
   const dispatch = useAppDispatch();
   const router = useRouter();
 
@@ -97,8 +97,8 @@ export default function ExploreScreen() {
     try {
       const result = await dispatch(logout()); // Gọi logout action
       if (logout.fulfilled.match(result)) {
-        // Đăng xuất thành công - chuyển về login screen
-        router.replace('/(auth)/login' as any);
+        // Đăng xuất thành công - chuyển về flash screen
+        router.replace('/(auth)/flash' as any);
       } else if (logout.rejected.match(result)) {
 // Đăng xuất thất bại - hiển thị error
         setNotificationMessage('Không thể đăng xuất. Vui lòng thử lại.');
@@ -116,6 +116,11 @@ export default function ExploreScreen() {
     setIsLogoutModalVisible(false);
   };
 
+  // Handler cho nút đăng nhập
+  const handleLogin = () => {
+    router.push('/(auth)/login' as any);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Settings icon at top right */}
@@ -125,23 +130,37 @@ export default function ExploreScreen() {
         {/* User Card */}
         <View style={styles.card}>
           <View style={styles.userHeader}>
-            <TouchableOpacity onPress={() => router.push('/(tabs)/profile')} style={{flexDirection: 'row', alignItems: 'center', flex: 1}} activeOpacity={0.8}>
-              <View style={styles.userAvatarContainer}>
-                {user?.avatar ? (
-                  <LinearGradient colors={['#D11030', '#dd2476']} style={styles.avatarGlow}>
-                    <Image source={{ uri: user.avatar }} style={styles.userAvatar} resizeMode="cover" />
-                  </LinearGradient>
-                ) : (
+            {isLoggedIn ? (
+              <TouchableOpacity onPress={() => router.push('/(tabs)/profile')} style={{flexDirection: 'row', alignItems: 'center', flex: 1}} activeOpacity={0.8}>
+                <View style={styles.userAvatarContainer}>
+                  {user?.avatar ? (
+                    <LinearGradient colors={['#D11030', '#dd2476']} style={styles.avatarGlow}>
+                      <Image source={{ uri: user.avatar }} style={styles.userAvatar} resizeMode="cover" />
+                    </LinearGradient>
+                  ) : (
+                    <View style={[styles.userAvatarPlaceholder, styles.avatarGlow]}>
+                      <Ionicons name="person" size={32} color="#bbb" />
+                    </View>
+                  )}
+                </View>
+                <View>
+                  <Text style={styles.userText}>{user?.full_name || 'Người dùng'}</Text>
+                  <Text style={styles.userEmail}>{user?.email}</Text>
+                </View>
+              </TouchableOpacity>
+            ) : (
+              <View style={{flexDirection: 'row', alignItems: 'center', flex: 1}}>
+                <View style={styles.userAvatarContainer}>
                   <View style={[styles.userAvatarPlaceholder, styles.avatarGlow]}>
-                    <Ionicons name="person" size={32} color="#bbb" />
+                    <Ionicons name="person" size={32} color="#666" />
                   </View>
-                )}
+                </View>
+                <View>
+                  <Text style={styles.userText}>Khách</Text>
+                  <Text style={styles.userEmail}>Chưa đăng nhập</Text>
+                </View>
               </View>
-              <View>
-                <Text style={styles.userText}>{user?.full_name || 'Người dùng'}</Text>
-                <Text style={styles.userEmail}>{user?.email}</Text>
-              </View>
-            </TouchableOpacity>
+            )}
           </View>
         </View>
 
@@ -195,16 +214,28 @@ export default function ExploreScreen() {
             <Ionicons name="phone-portrait-outline" size={26} color="#9b59b6" style={styles.menuIcon} />
             <Text style={styles.menuItemText}>Quản lý thiết bị</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.menuItem, styles.logoutButton]} onPress={handleLogout} activeOpacity={0.8}>
-            <Ionicons name="log-out-outline" size={26} color="#D11030" style={styles.menuIcon} />
-            <Text style={styles.menuItemTextLogout}>Đăng xuất</Text>
-          </TouchableOpacity>
+          {isLoggedIn ? (
+            <TouchableOpacity style={[styles.menuItem, styles.logoutButton]} onPress={handleLogout} activeOpacity={0.8}>
+              <Ionicons name="log-out-outline" size={26} color="#D11030" style={styles.menuIcon} />
+              <Text style={styles.menuItemTextLogout}>Đăng xuất</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={[styles.menuItem, styles.loginButton]} onPress={handleLogin} activeOpacity={0.8}>
+              <Ionicons name="log-in-outline" size={26} color="#4CAF50" style={styles.menuIcon} />
+              <Text style={styles.menuItemTextLogin}>Đăng nhập</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
-        {user && (
+        {isLoggedIn && user ? (
           <View style={styles.footer}>
             <Text style={styles.footerText}>Đăng nhập với: {user.full_name}</Text>
             <Text style={styles.footerSubText}>{user.email}</Text>
+          </View>
+        ) : (
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Bạn chưa đăng nhập</Text>
+            <Text style={styles.footerSubText}>Đăng nhập để truy cập đầy đủ tính năng</Text>
           </View>
         )}
       </ScrollView>
@@ -355,6 +386,20 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(209,16,48,0.08)',
     borderWidth: 1,
     borderColor: '#D11030',
+  },
+  loginButton: {
+    marginTop: 6,
+    justifyContent: 'center',
+    backgroundColor: 'rgba(76,175,80,0.08)',
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+  },
+  menuItemTextLogin: {
+    color: '#4CAF50',
+    fontSize: 16,
+    flex: 1,
+    fontWeight: 'bold',
+    fontFamily: 'System',
   },
   footer: {
     padding: 12,

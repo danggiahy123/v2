@@ -2,10 +2,12 @@ import React, { useEffect, useRef } from 'react';
 import { View, Image, StyleSheet, Dimensions, Animated, Text } from 'react-native';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useAppSelector } from '../../store/hooks';
 
 const { width, height } = Dimensions.get('window');
 
 export default function FlashScreen() {
+  const { isLoggedIn } = useAppSelector((state) => state.auth);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const loadingAnim = useRef(new Animated.Value(0)).current;
@@ -35,10 +37,10 @@ export default function FlashScreen() {
       })
     ).start();
 
-    // Chuyển hướng sau 7 giây
+    // Chuyển hướng sau 3 giây - tất cả đều vào trang chủ
     const timer = setTimeout(() => {
-      router.replace('/(auth)/login');
-    }, 7000);
+      router.replace('/(tabs)' as any);
+    }, 3000);
 
     return () => clearTimeout(timer);
   }, []);

@@ -4,11 +4,13 @@ import { notificationService } from '../services/notificationService';
 export interface NotificationItem {
   id: string;
   title: string;
-  body: string;
-  timestamp: Date;
+  message: string;
+  timestamp: string;
   read: boolean;
-  type?: string;
-  data?: any;
+  type: string;
+  imageUrl?: string;
+  actionType?: string;
+  actionData?: any;
 }
 
 export function useNotifications() {
@@ -50,7 +52,7 @@ export function useNotifications() {
     const newNotification: NotificationItem = {
       ...notification,
       id: Date.now().toString(),
-      timestamp: new Date(),
+      timestamp: new Date().toISOString(),
       read: false
     };
     
@@ -61,7 +63,7 @@ export function useNotifications() {
   const simulateNewNotification = () => {
     addNotification({
       title: '🎬 Test Notification',
-      body: 'This is a test notification!',
+      message: 'This is a test notification!',
       type: 'TEST',
       read: false
     });

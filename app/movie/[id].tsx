@@ -40,11 +40,12 @@ import { useRentalStatus } from '../../hooks/useRentalStatus';
 import { rentalService } from '../../services/rentalService';
 import { shareMovie } from '../../services/shareService';
 
-import { Notification } from '../../components/ui';
+import { Notification, LoginRequiredModal } from '../../components/ui';
 import { SkeletonLoader } from '../../components/ui/AnimatedElements';
 import { getResumeWatchingInfo, getResumeButtonText, shouldShowContinueBadge } from '../../utils/watchingHelper';
 import { useFocusEffect } from '@react-navigation/native';
 import { RelatedMovies } from '../../components/movie';
+import { useAuthGuard } from '../../hooks';
 // Rating system imports (NEW)
 import { RatingModal, RatingDisplay, StarRating } from '../../components/rating';
 import { addStarRating, getUserStarRating, getMovieStarRatings, type RatingStats, type UserRating, type RatingItem } from '../../services/ratingService';
@@ -116,6 +117,7 @@ return `${hours}h ${remainingMinutes}min`;
   // Authentication logic still works - user gets login prompts when needed
   const auth = useAppSelector(state => state.auth);
   const userId = auth.isLoggedIn && auth.userId ? auth.userId : undefined;
+  const { isLoggedIn, showLoginModal, hideLoginModal, loginModalVisible, currentFeatureName } = useAuthGuard();
   
   console.log('🔐 [MovieDetail] Auth state:', {
     isLoggedIn: auth.isLoggedIn,
@@ -305,8 +307,8 @@ return `${hours}h ${remainingMinutes}min`;
   };
   
   const handleRatePress = () => {
-    if (!userId) {
-      showNotificationMessage('Vui lòng đăng nhập để đánh giá phim', 'error');
+    if (!isLoggedIn) {
+      showLoginModal('Đánh giá phim');
       return;
     }
     setShowRatingModal(true);
@@ -798,9 +800,8 @@ hasMovieDetail: !!movieDetail,
       hasUserInteractions: !!movieDetail?.userInteractions
     });
 
-    // User is always logged in due to app flow
-    if (!auth.isLoggedIn) {
-      console.log('❌ [DEBUG] User not logged in - this should not happen');
+    if (!isLoggedIn) {
+      showLoginModal('Thích phim');
       return;
     }
 
@@ -832,9 +833,8 @@ hasMovieDetail: !!movieDetail,
   };
 
   const handleFavoritePress = async () => {
-    // User is always logged in due to app flow
-    if (!auth.isLoggedIn) {
-      console.log('❌ [DEBUG] User not logged in - this should not happen');
+    if (!isLoggedIn) {
+      showLoginModal('Lưu phim yêu thích');
       return;
     }
 
@@ -860,6 +860,11 @@ hasMovieDetail: !!movieDetail,
 
 
   const handleCommentSubmit = async () => {
+    if (!isLoggedIn) {
+      showLoginModal('Bình luận phim');
+      return;
+    }
+    
     if (!commentText.trim()) return;
     
     try {
@@ -913,8 +918,8 @@ if (!movieDetail) return;
       return;
     }
 
-    if (!userId) {
-      showNotificationMessage('Vui lòng đăng nhập để thuê phim', 'error');
+    if (!isLoggedIn) {
+      showLoginModal('Thuê phim');
       return;
     }
 
@@ -1596,7 +1601,7 @@ if (!movieDetail) return;
               return canShowVideo && showVideoPlayer && episodeToPlay ? (
                 <VideoPlayer
                   episode={episodeToPlay}
-                  userId={userId || 'anonymous'}
+                  userId={userId || undefined}
                   movieType={movieDetail?.movie_type}
                   movieId={id}
                   showTitle={false}
@@ -1858,6 +1863,11 @@ if (!movieDetail) return;
           onSubmit={handleRatingSubmit}
         />
       )}
+      <LoginRequiredModal
+        visible={loginModalVisible}
+        onClose={hideLoginModal}
+        featureName={currentFeatureName || undefined}
+      />
     </SafeAreaView>
   );
 }
