@@ -357,6 +357,9 @@ const authSlice = createSlice({
           state.user = action.payload.user;
           state.phone = action.payload.user.phone;
           state.isLoggedIn = true;
+        } else {
+          // Clear any leftover logout message when user is not logged in
+          state.message = null;
         }
       })
       .addCase(restoreAuthState.rejected, (state, action) => {
@@ -379,6 +382,7 @@ const authSlice = createSlice({
         state.isLoggedIn = false;
         state.error = null;
         state.message = 'Đăng xuất thành công';
+        console.log('🚪 Logout successful, message set');
       })
       .addCase(logout.rejected, (state, action) => {
         state.loading = false;

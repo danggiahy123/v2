@@ -23,7 +23,8 @@ import { sportsService } from '../../services/sportsService';
 import { genreService } from '../../services/genreService';
 import { shareMovie } from '../../services/shareService';
 import { userInteractionService } from '../../services/userInteractionService';
-import { useAppSelector } from '../../store/hooks';
+import { useAppSelector, useAppDispatch } from '../../store/hooks';
+import { clearMessage } from '../../store/slices/authSlice';
 import { BannerMovie, ContinueWatchingItem, GridMovie } from '../../types/movie';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { TabHeader, SearchModal, ViewAllModal, LoginRequiredModal } from '../../components/ui';
@@ -51,6 +52,7 @@ export default function HomeScreen() {
   const authState = useAppSelector((state) => state.auth);
   const { userId } = authState || { userId: null };
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const { isLoggedIn, showLoginModal, hideLoginModal, loginModalVisible, currentFeatureName } = useAuthGuard();
   const scrollY = useRef(new Animated.Value(0)).current;
   const lastScrollY = useRef(0);
@@ -117,8 +119,10 @@ export default function HomeScreen() {
       setTimeout(() => {
         setShowLogoutNotification(false);
       }, 3000);
+      // Clear the logout message to prevent showing it again
+      dispatch(clearMessage());
     }
-  }, [isLoggedIn, authState.message]);
+  }, [isLoggedIn, authState.message, dispatch]);
 
   // Refresh continue watching data when screen is focused (user comes back from movie detail)
   useFocusEffect(
