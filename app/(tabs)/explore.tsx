@@ -53,7 +53,7 @@ export default function ExploreScreen() {
 
   // Điều hướng đến quản lý thiết bị
   const handleDeviceManagement = () => {
-    Alert.alert('Quản lý thiết bị', 'Tính năng đang phát triển');
+    router.push('/settings/devices');
   };
 
   // Điều hướng đến about page
