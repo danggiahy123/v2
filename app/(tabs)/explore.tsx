@@ -7,11 +7,12 @@
  * - Logout functionality với confirmation modal
  * - Navigation đến các sub-screens
  * - User avatar display
+ * - Notification access
  * LAYOUT: Header + ScrollView với các section menu
  */
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Alert,
   Image,
@@ -26,6 +27,9 @@ import {
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { logout } from '../../store/slices/authSlice';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useNotifications } from '../../hooks/useNotifications';
+import NotificationBadge from '../../components/ui/NotificationBadge';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function ExploreScreen() {
   // REDUX STATE - Lấy thông tin user từ auth state
@@ -36,11 +40,48 @@ export default function ExploreScreen() {
   // LOCAL STATE - Quản lý modal logout
   const [isLogoutModalVisible, setIsLogoutModalVisible] = useState(false); 
   const [notificationMessage, setNotificationMessage] = useState('');
+  const [userId, setUserId] = useState<string | null>(null);
+
+  // NOTIFICATIONS - Get notification state
+  const { unreadCount } = useNotifications(userId || undefined);
+
+  // Get userId from AsyncStorage
+  useEffect(() => {
+    const getUserId = async () => {
+      try {
+        const storedUserId = await AsyncStorage.getItem('userId');
+        if (storedUserId) {
+          setUserId(storedUserId);
+        }
+      } catch (error) {
+        console.error('Error getting userId:', error);
+      }
+    };
+
+    if (isLoggedIn) {
+      getUserId();
+    }
+  }, [isLoggedIn]);
 
   /**
    * NAVIGATION HANDLERS - Các function điều hướng đến screens khác
    */
   
+  // Điều hướng đến notifications
+  const handleNotifications = () => {
+    router.push('/notifications' as any);
+  };
+
+  // Điều hướng đến notification settings
+  const handleNotificationSettings = () => {
+    router.push('/notification-settings' as any);
+  };
+
+  // Điều hướng đến notification debug
+  const handleNotificationDebug = () => {
+    router.push('/notification-debug' as any);
+  };
+
   // Điều hướng đến help center
   const handleHelp = () => {
     router.push('/settings/help');
@@ -162,6 +203,34 @@ export default function ExploreScreen() {
               </View>
             )}
           </View>
+        </View>
+
+        {/* Thông báo Section */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Thông báo</Text>
+          <TouchableOpacity style={styles.menuItem} onPress={handleNotifications} activeOpacity={0.7}>
+            <View style={styles.notificationIconContainer}>
+              <Ionicons name="notifications-outline" size={26} color="#ff6b6b" style={styles.menuIcon} />
+              {unreadCount > 0 && (
+                <NotificationBadge 
+                  count={unreadCount} 
+                  size="small" 
+                  style={styles.notificationBadge}
+                />
+              )}
+            </View>
+            <Text style={styles.menuItemText}>
+              Thông báo {unreadCount > 0 && `(${unreadCount})`}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.menuItem} onPress={handleNotificationSettings} activeOpacity={0.7}>
+            <Ionicons name="settings-outline" size={26} color="#4ecdc4" style={styles.menuIcon} />
+            <Text style={styles.menuItemText}>Cài đặt thông báo</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.menuItem} onPress={handleNotificationDebug} activeOpacity={0.7}>
+            <Ionicons name="bug-outline" size={26} color="#ffa726" style={styles.menuIcon} />
+            <Text style={styles.menuItemText}>Debug Thông báo</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Lịch sử Section */}
@@ -365,6 +434,15 @@ const styles = StyleSheet.create({
   },
   menuIcon: {
     marginRight: 18,
+  },
+  notificationIconContainer: {
+    position: 'relative',
+    marginRight: 18,
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
   },
   menuItemText: {
     color: '#fff',

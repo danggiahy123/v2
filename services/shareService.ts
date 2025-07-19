@@ -1,7 +1,7 @@
 import * as Sharing from 'expo-sharing';
 
 // Local IP configuration for development
-const API_BASE_URL = 'http://192.168.5.85:3003';
+const API_BASE_URL = 'http://192.168.9.83:3003';
 
 export interface ShareResult {
   success: boolean;

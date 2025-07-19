@@ -89,6 +89,23 @@ export function usePushNotifications(userId?: string) {
     },
     markAsRead: () => {
       notificationService.markAsRead();
-    }
+    },
+    // NEW: Backend API methods
+    getNotifications: (filters?: any) => {
+      if (!userId) return Promise.reject('User ID required');
+      return notificationService.getNotifications(userId, filters);
+    },
+    markNotificationAsRead: (notificationId: string) => {
+      if (!userId) return Promise.reject('User ID required');
+      return notificationService.markNotificationAsRead(notificationId, userId);
+    },
+    deleteNotification: (notificationId: string) => {
+      if (!userId) return Promise.reject('User ID required');
+      return notificationService.deleteNotification(notificationId, userId);
+    },
+    getUnreadCountFromBackend: () => {
+      if (!userId) return Promise.reject('User ID required');
+      return notificationService.getUnreadCountFromBackend(userId);
+    },
   };
 } 
