@@ -4,7 +4,7 @@ import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
 // Local IP configuration for Expo Go testing
-const API_BASE_URL = 'https://backend-app-lou3.onrender.com';
+const API_BASE_URL = 'http://192.168.9.83:3003'; // Change to your backend URL if needed
 
 // Configure notification behavior
 Notifications.setNotificationHandler({
@@ -26,6 +26,53 @@ export interface NotificationData {
   seriesTitle?: string;
   moviePoster?: string;
   action?: string;
+}
+
+// Backend notification interface
+export interface BackendNotification {
+  _id: string;
+  title: string;
+  body: string;
+  type: 'manual' | 'auto';
+  event_type: string;
+  deep_link?: string;
+  image_url?: string;
+  created_at: string;
+  updated_at: string;
+  sent_at?: string;
+  priority: 'high' | 'normal' | 'low';
+}
+
+// User notification interface
+export interface UserNotification {
+  _id: string;
+  user_id: string;
+  notification_id: string;
+  is_read: boolean;
+  read_at?: string;
+  created_at: string;
+  notification?: BackendNotification;
+}
+
+// Pagination interface
+export interface PaginationInfo {
+  page: number;
+  limit: number;
+  total: number;
+  total_pages: number;
+  has_next: boolean;
+  has_prev: boolean;
+}
+
+// API response interface
+export interface NotificationResponse {
+  success: boolean;
+  message: string;
+  data: {
+    notifications: UserNotification[];
+    pagination: PaginationInfo;
+    unread_count: number;
+  };
 }
 
 export class NotificationService {
@@ -195,7 +242,7 @@ export class NotificationService {
     if (!this.userId) {
       console.error('User ID not set');
       return false;
-  }
+    }
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/auth/notification-settings`, {
@@ -221,6 +268,157 @@ export class NotificationService {
     } catch (error) {
       console.error('Error updating notification settings:', error);
       return false;
+    }
+  }
+
+  // NEW: Get notifications from backend
+  async getNotifications(userId: string, filters: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    type?: string;
+    date_from?: string;
+    date_to?: string;
+  } = {}): Promise<NotificationResponse> {
+    console.log('🔍 [NotificationService] Fetching notifications from backend...', {
+      userId,
+      filters,
+      apiUrl: `${API_BASE_URL}/api/notifications`
+    });
+
+    try {
+      const params = new URLSearchParams({
+        userId,
+        ...Object.fromEntries(
+          Object.entries(filters).filter(([_, value]) => value !== undefined)
+        )
+      });
+
+      const response = await fetch(`${API_BASE_URL}/api/notifications?${params}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log('✅ [NotificationService] Notifications fetched successfully');
+        
+        // Update local unread count
+        this.setUnreadCount(data.data.unread_count);
+        
+        return data;
+      } else {
+        console.error('❌ [NotificationService] Failed to fetch notifications:', data.message);
+        throw new Error(data.message || 'Failed to fetch notifications');
+      }
+    } catch (error) {
+      console.error('💥 [NotificationService] Network error fetching notifications:', error);
+      throw error;
+    }
+  }
+
+  // NEW: Mark notification as read
+  async markNotificationAsRead(notificationId: string, userId: string): Promise<boolean> {
+    console.log('📖 [NotificationService] Marking notification as read...', {
+      notificationId,
+      userId,
+      apiUrl: `${API_BASE_URL}/api/notifications/${notificationId}/read`
+    });
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/notifications/${notificationId}/read`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log('✅ [NotificationService] Notification marked as read successfully');
+        
+        // Decrement unread count
+        this.setUnreadCount(Math.max(0, this.unreadCount - 1));
+        
+        return true;
+      } else {
+        console.error('❌ [NotificationService] Failed to mark notification as read:', data.message);
+        return false;
+      }
+    } catch (error) {
+      console.error('💥 [NotificationService] Network error marking notification as read:', error);
+      return false;
+    }
+  }
+
+  // NEW: Delete notification
+  async deleteNotification(notificationId: string, userId: string): Promise<boolean> {
+    console.log('🗑️ [NotificationService] Deleting notification...', {
+      notificationId,
+      userId,
+      apiUrl: `${API_BASE_URL}/api/notifications/${notificationId}`
+    });
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/notifications/${notificationId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log('✅ [NotificationService] Notification deleted successfully');
+        return true;
+      } else {
+        console.error('❌ [NotificationService] Failed to delete notification:', data.message);
+        return false;
+      }
+    } catch (error) {
+      console.error('💥 [NotificationService] Network error deleting notification:', error);
+      return false;
+    }
+  }
+
+  // NEW: Get unread count from backend
+  async getUnreadCountFromBackend(userId: string): Promise<number> {
+    console.log('🔢 [NotificationService] Fetching unread count from backend...', {
+      userId,
+      apiUrl: `${API_BASE_URL}/api/notifications/unread-count`
+    });
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/notifications/unread-count?userId=${userId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log('✅ [NotificationService] Unread count fetched successfully:', data.data.count);
+        
+        // Update local unread count
+        this.setUnreadCount(data.data.count);
+        
+        return data.data.count;
+      } else {
+        console.error('❌ [NotificationService] Failed to fetch unread count:', data.message);
+        return 0;
+      }
+    } catch (error) {
+      console.error('💥 [NotificationService] Network error fetching unread count:', error);
+      return 0;
     }
   }
 

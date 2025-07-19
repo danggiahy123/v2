@@ -13,6 +13,7 @@ import {
   Animated,
   FlatList,
   Platform,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -21,6 +22,7 @@ import { useAuthGuard } from '../hooks';
 import { LoginRequiredModal } from '../components/ui';
 // import { BlurView } from 'expo-blur'; // Optional blur effect
 import { useNotifications, NotificationItem } from '../hooks/useNotifications';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get('window');
 
@@ -29,6 +31,7 @@ const NotificationItemComponent = React.memo(({
   item, 
   index, 
   onPress, 
+  onLongPress,
   getTypeColor, 
   getTypeIcon, 
   formatTime 
@@ -36,6 +39,7 @@ const NotificationItemComponent = React.memo(({
   item: NotificationItem;
   index: number;
   onPress: (item: NotificationItem) => void;
+  onLongPress: (item: NotificationItem) => void;
   getTypeColor: (type: string) => [string, string];
   getTypeIcon: (type: string) => string;
   formatTime: (timestamp: string) => string;
@@ -67,16 +71,17 @@ const NotificationItemComponent = React.memo(({
         }
       ]}
     >
-              <TouchableOpacity
-          style={[
-            styles.notificationItem,
-            !item.read && styles.unreadNotification,
-          ]}
-          onPress={() => onPress(item)}
-          activeOpacity={0.7}
-        >
-          {/* Glow effect for unread */}
-          {!item.read && (
+      <TouchableOpacity
+        style={[
+          styles.notificationItem,
+          !item.read && styles.unreadNotification,
+        ]}
+        onPress={() => onPress(item)}
+        onLongPress={() => onLongPress(item)}
+        activeOpacity={0.7}
+      >
+        {/* Glow effect for unread */}
+        {!item.read && (
           <LinearGradient
             colors={['rgba(229, 9, 20, 0.1)', 'transparent']}
             style={styles.glowEffect}
@@ -132,6 +137,13 @@ const NotificationItemComponent = React.memo(({
             {item.message}
           </Text>
 
+          {item.priority === 'high' && (
+            <View style={styles.priorityIndicator}>
+              <Ionicons name="flash" size={12} color="#ff4444" />
+              <Text style={styles.priorityText}>High Priority</Text>
+            </View>
+          )}
+
           {!item.read && (
             <View style={styles.unreadIndicator} />
           )}
@@ -149,16 +161,22 @@ const NotificationItemComponent = React.memo(({
 export default function NotificationsScreen() {
   const router = useRouter();
   const { isLoggedIn, showLoginModal, hideLoginModal, loginModalVisible, currentFeatureName } = useAuthGuard();
+  const [userId, setUserId] = useState<string | null>(null);
+  
   const { 
     notifications, 
     unreadCount, 
     loading, 
-    markAsRead, 
-    markAllAsRead, 
-    simulateNewNotification 
-  } = useNotifications();
+    error,
+    refreshing,
+    pagination,
+    markAsRead,
+    deleteNotification,
+    markAllAsRead,
+    refreshNotifications,
+    loadMoreNotifications,
+  } = useNotifications(userId || undefined);
   
-  const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
   
   // Animations
@@ -166,6 +184,24 @@ export default function NotificationsScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const headerAnim = useRef(new Animated.Value(-100)).current;
   const listAnim = useRef(new Animated.Value(0)).current;
+
+  // Get userId from AsyncStorage
+  useEffect(() => {
+    const getUserId = async () => {
+      try {
+        const storedUserId = await AsyncStorage.getItem('userId');
+        if (storedUserId) {
+          setUserId(storedUserId);
+        }
+      } catch (error) {
+        console.error('Error getting userId:', error);
+      }
+    };
+
+    if (isLoggedIn) {
+      getUserId();
+    }
+  }, [isLoggedIn]);
 
   useEffect(() => {
     // Entry animations
@@ -197,37 +233,65 @@ export default function NotificationsScreen() {
   }, []);
 
   const onRefresh = async () => {
-    setRefreshing(true);
-    // Simulate refresh delay
-    setTimeout(() => {
-      setRefreshing(false);
-      // Add a new notification for demo
-      simulateNewNotification();
-    }, 1000);
+    await refreshNotifications();
   };
 
-  const handleNotificationPress = (notification: NotificationItem) => {
-    markAsRead(notification.id);
+  const handleNotificationPress = async (notification: NotificationItem) => {
+    // Mark as read
+    await markAsRead(notification.id);
     
     // Add haptic feedback
     if (Platform.OS === 'ios') {
       // iOS haptic feedback would go here
     }
     
-    // Navigate based on action type
-    switch (notification.actionType) {
-      case 'movie':
-        if (notification.actionData?.movieId) {
-          router.push(`/movie/${notification.actionData.movieId}`);
-        }
-        break;
-      case 'payment':
-        router.push('/settings/subscriptions');
-        break;
-      case 'settings':
-        router.push('/settings');
-        break;
+    // Navigate based on deep link or action type
+    if (notification.deep_link) {
+      // Handle deep link navigation
+      const deepLink = notification.deep_link;
+      if (deepLink.startsWith('movie/')) {
+        const movieId = deepLink.split('/')[1];
+        router.push(`/movie/${movieId}`);
+      } else if (deepLink.startsWith('series/')) {
+        const seriesId = deepLink.split('/')[1];
+        // Series navigation - sử dụng movie route vì series cũng là movie
+        router.push(`/movie/${seriesId}`);
+      }
+    } else {
+      // Fallback navigation based on action type
+      switch (notification.actionType) {
+        case 'movie':
+          if (notification.actionData?.movieId) {
+            router.push(`/movie/${notification.actionData.movieId}`);
+          }
+          break;
+        case 'payment':
+          router.push('/settings/subscriptions');
+          break;
+        case 'settings':
+          router.push('/settings');
+          break;
+      }
     }
+  };
+
+  const handleNotificationLongPress = (notification: NotificationItem) => {
+    Alert.alert(
+      'Notification Options',
+      `What would you like to do with this notification?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Mark as Read', 
+          onPress: () => markAsRead(notification.id)
+        },
+        { 
+          text: 'Delete', 
+          style: 'destructive',
+          onPress: () => deleteNotification(notification.id)
+        }
+      ]
+    );
   };
 
   const handleBack = () => {
@@ -294,6 +358,7 @@ export default function NotificationsScreen() {
       item={item} 
       index={index} 
       onPress={handleNotificationPress}
+      onLongPress={handleNotificationLongPress}
       getTypeColor={getTypeColor}
       getTypeIcon={getTypeIcon}
       formatTime={formatTime}
@@ -531,9 +596,9 @@ export default function NotificationsScreen() {
                 </Text>
                 <TouchableOpacity 
                   style={styles.addButton}
-                  onPress={simulateNewNotification}
+                  onPress={() => refreshNotifications()}
                 >
-                  <Text style={styles.addButtonText}>Thêm thông báo mới</Text>
+                  <Text style={styles.addButtonText}>Làm mới</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -882,6 +947,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 4,
+  },
+  priorityIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  priorityText: {
+    color: '#ff4444',
+    fontSize: 11,
+    fontWeight: '600',
+    marginLeft: 4,
   },
   unreadIndicator: {
     position: 'absolute',
