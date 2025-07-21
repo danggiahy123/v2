@@ -1323,39 +1323,67 @@ if (!movieDetail) return;
     );
   };
 
+  // ======================
+  // COMMENT SHOW MORE/LESS
+  // ======================
+  const [expandedComments, setExpandedComments] = useState<{ [key: string]: boolean }>({});
+  const toggleExpandComment = (id: string) => {
+    setExpandedComments((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
   const renderComments = () => {
     // 🔥 FIX: Hiển thị TẤT CẢ comments từ recentComments
     const allComments = movieDetail?.recentComments || [];
     
     if (allComments.length === 0) {
       return (
-        
-          <View style={styles.commentsContainer}>
-            <Text style={styles.emptyCommentsText}>Chưa có bình luận nào. Hãy là người đầu tiên bình luận!</Text>
-          </View>
-        
+        <View style={styles.commentsContainer}>
+          <Text style={styles.emptyCommentsText}>Chưa có bình luận nào. Hãy là người đầu tiên bình luận!</Text>
+        </View>
       );
     }
 
     return (
-      
-        <View style={styles.commentsContainer}>
-          <Text style={styles.sectionTitle}>Bình luận ({allComments.length})</Text>
-          {allComments.map((comment: any, index: number) => (
-            <View key={comment._id || index} style={styles.commentItem}>
-                  <Text style={styles.commentUser}>
-                    {comment.user.name && comment.user.name !== 'Unknown User' 
-                      ? comment.user.name 
-                      : comment.user.email?.split('@')[0] || 'User'}
-                  </Text>
-                  <Text style={styles.commentText}>{comment.comment}</Text>
-                  <Text style={styles.commentDate}>
-                    {new Date(comment.createdAt).toLocaleDateString()}
-                  </Text>
-              </View>
-          ))}
-        </View>
-      
+      <View style={styles.commentsContainer}>
+        <Text style={styles.sectionTitle}>Bình luận ({allComments.length})</Text>
+        {allComments.map((comment: any, index: number) => {
+          const commentId = comment._id || String(index);
+          const isExpanded = expandedComments[commentId];
+          // Đếm số dòng bằng cách tạm thời tách dòng (chỉ để xác định có cần show "Xem thêm" không)
+          // Ở đây sẽ dùng số ký tự làm đơn giản, thực tế có thể dùng thư viện đo text nếu cần chính xác hơn
+          const MAX_CHAR = 120; // Ước lượng cho 2 dòng
+          const isLong = comment.comment.length > MAX_CHAR;
+          return (
+            <View key={commentId} style={styles.commentItem}>
+              <Text style={styles.commentUser}>
+                {comment.user.name && comment.user.name !== 'Unknown User' 
+                  ? comment.user.name 
+                  : comment.user.email?.split('@')[0] || 'User'}
+              </Text>
+              <Text
+                style={isExpanded ? styles.commentText : [styles.commentText, styles.commentTextClamp]}
+                numberOfLines={isExpanded ? undefined : 2}
+                ellipsizeMode="tail"
+              >
+                {comment.comment}
+              </Text>
+              {isLong && !isExpanded && (
+                <Text style={styles.showMoreText} onPress={() => toggleExpandComment(commentId)}>
+                  ... Xem thêm
+                </Text>
+              )}
+              {isLong && isExpanded && (
+                <Text style={styles.showMoreText} onPress={() => toggleExpandComment(commentId)}>
+                  Thu gọn
+                </Text>
+              )}
+              <Text style={styles.commentDate}>
+                {new Date(comment.createdAt).toLocaleDateString()}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
     );
   };
 
@@ -2455,6 +2483,16 @@ alignItems: 'center',
     fontSize: 16,
     color: '#fff',
     marginBottom: 5,
+  },
+  commentTextClamp: {
+    maxHeight: 40,
+    overflow: 'hidden',
+  },
+  showMoreText: {
+    color: '#ffff',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginTop: 5,
   },
   commentDate: {
     fontSize: 12,
