@@ -158,6 +158,7 @@ return `${hours}h ${remainingMinutes}min`;
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const commentInputRef = useRef<TextInput>(null);
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   
   // 🎬 NEW ENHANCED FEATURES STATE - Video always visible
   const [showVideoPlayer, setShowVideoPlayer] = useState(false);
@@ -891,33 +892,29 @@ hasMovieDetail: !!movieDetail,
 
 
   const handleCommentSubmit = async () => {
+    if (isSubmittingComment) return;
     if (!isLoggedIn) {
       showLoginModal('Bình luận phim');
       return;
     }
-    
     if (!commentText.trim()) return;
-    
     try {
+      setIsSubmittingComment(true);
       console.log('💬 [Comment] Submitting comment:', commentText.trim());
-      
       // Dismiss keyboard first for better UX
       Keyboard.dismiss();
-      
       // 🚀 THỰC SỰ GỌI API ĐỂ THÊM COMMENT
       await addComment(commentText.trim());
-      
       // Clear input ngay lập tức
       setCommentText('');
-      
       // Hiển thị thông báo thành công
       showNotificationMessage('Đã thêm bình luận thành công!', 'success');
-      
       console.log('✅ [Comment] Comment added successfully, UI will update automatically');
-      
     } catch (error) {
       console.error('❌ [Comment] Submit error:', error);
       showNotificationMessage('Không thể thêm bình luận', 'error');
+    } finally {
+      setIsSubmittingComment(false);
     }
   };
 
@@ -1861,10 +1858,10 @@ if (!movieDetail) return;
 <TouchableOpacity
                            style={[
                 styles.fixedCommentSubmitButton,
-                !commentText.trim() && styles.commentSubmitDisabled
+                (!commentText.trim() || isSubmittingComment) && styles.commentSubmitDisabled
                            ]}
                            onPress={handleCommentSubmit}
-              disabled={!commentText.trim()}
+              disabled={!commentText.trim() || isSubmittingComment}
                          >
                            <Text style={[
                 styles.fixedCommentSubmitText,
