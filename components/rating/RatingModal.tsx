@@ -61,7 +61,7 @@ const RatingModal: React.FC<RatingModalProps> = ({
       setRating(currentUserRating.star_rating);
       setComment(currentUserRating.comment || '');
     } else {
-      setRating(0);
+      setRating(5);
       setComment('');
     }
   }, [currentUserRating, visible]);
