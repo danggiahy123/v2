@@ -25,24 +25,24 @@ export function usePushNotifications(userId?: string) {
         notificationService.incrementUnreadCount();
         
         const data = notificationService.getNotificationData(notification);
-        if (data) {
-          // Show in-app alert for foreground notifications
-          Alert.alert(
-            notification.request.content.title || 'New Notification',
-            data.movieTitle ? `${data.movieTitle} - Khám phá ngay!` : notification.request.content.body || '',
-            [
-              { text: 'Dismiss', style: 'cancel' },
-              { 
-                text: 'View', 
-                onPress: () => {
-                  // Mark as read when user views
-                  notificationService.markAsRead();
-                  deepLinkService.handleNotificationTap(data);
-                }
-              }
-            ]
-          );
-        }
+        // if (data) {
+        //   // Show in-app alert for foreground notifications
+        //   Alert.alert(
+        //     notification.request.content.title || 'New Notification',
+        //     data.movieTitle ? `${data.movieTitle} - Khám phá ngay!` : notification.request.content.body || '',
+        //     [
+        //       { text: 'Dismiss', style: 'cancel' },
+        //       { 
+        //         text: 'View', 
+        //         onPress: () => {
+        //           // Mark as read when user views
+        //           notificationService.markAsRead();
+        //           deepLinkService.handleNotificationTap(data);
+        //         }
+        //       }
+        //     ]
+        //   );
+        // }
       }
     );
 
