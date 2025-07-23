@@ -1351,8 +1351,9 @@ if (!movieDetail) return;
 
   const renderComments = () => {
     // 🔥 FIX: Hiển thị TẤT CẢ comments từ recentComments
+    // Đảm bảo recentComments luôn là mảng, không phải null
     const recent = movieDetail?.recentComments;
-    const allComments: any[] = (Array.isArray(recent) && recent) || [];
+    const allComments: any[] = Array.isArray(recent) ? recent : [];
     // Chuẩn hóa user.full_name cho mỗi comment: chỉ lấy full_name, nếu không có thì 'Ẩn danh'
     const normalizedComments = allComments.map((comment) => ({
       ...comment,
@@ -1364,7 +1365,8 @@ if (!movieDetail) return;
       },
     }));
     
-    if (normalizedComments.length === 0) {
+    // Luôn kiểm tra là mảng trước khi dùng .length
+    if (!Array.isArray(normalizedComments) || normalizedComments.length === 0) {
       return (
         <View style={styles.commentsContainer}>
           <Text style={styles.emptyCommentsText}>Chưa có bình luận nào. Hãy là người đầu tiên bình luận!</Text>
@@ -1381,7 +1383,7 @@ if (!movieDetail) return;
           // Đếm số dòng bằng cách tạm thời tách dòng (chỉ để xác định có cần show "Xem thêm" không)
           // Ở đây sẽ dùng số ký tự làm đơn giản, thực tế có thể dùng thư viện đo text nếu cần chính xác hơn
           const MAX_CHAR = 120; // Ước lượng cho 2 dòng
-          const isLong = comment.comment.length > MAX_CHAR;
+          const isLong = (comment.comment ? comment.comment.length : 0) > MAX_CHAR;
           return (
             <View key={commentId} style={styles.commentItem}>
               <Text style={styles.commentUser}>
@@ -1405,7 +1407,7 @@ if (!movieDetail) return;
                 </Text>
               )}
               <Text style={styles.commentDate}>
-                {new Date(comment.createdAt).toLocaleDateString()}
+                {comment.createdAt ? new Date(comment.createdAt).toLocaleDateString() : ''}
               </Text>
             </View>
           );
