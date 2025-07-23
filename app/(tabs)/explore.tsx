@@ -190,16 +190,20 @@ export default function ExploreScreen() {
                 </View>
               </TouchableOpacity>
             ) : (
-              <View style={{flexDirection: 'row', alignItems: 'center', flex: 1}}>
+              <View style={styles.guestRow}>
                 <View style={styles.userAvatarContainer}>
                   <View style={[styles.userAvatarPlaceholder, styles.avatarGlow]}>
                     <Ionicons name="person" size={32} color="#666" />
                   </View>
                 </View>
-                <View>
+                <View style={{marginLeft: 8, marginRight: 12}}>
                   <Text style={styles.userText}>Khách</Text>
                   <Text style={styles.userEmail}>Chưa đăng nhập</Text>
                 </View>
+                <TouchableOpacity style={styles.loginButtonRow} onPress={handleLogin} activeOpacity={0.85}>
+                  <Ionicons name="log-in-outline" size={20} color="#fff" style={{marginRight: 6}} />
+                  <Text style={styles.loginButtonRowText}>Đăng nhập</Text>
+                </TouchableOpacity>
               </View>
             )}
           </View>
@@ -288,12 +292,7 @@ export default function ExploreScreen() {
               <Ionicons name="log-out-outline" size={26} color="#D11030" style={styles.menuIcon} />
               <Text style={styles.menuItemTextLogout}>Đăng xuất</Text>
             </TouchableOpacity>
-          ) : (
-            <TouchableOpacity style={[styles.menuItem, styles.loginButton]} onPress={handleLogin} activeOpacity={0.8}>
-              <Ionicons name="log-in-outline" size={26} color="#4CAF50" style={styles.menuIcon} />
-              <Text style={styles.menuItemTextLogin}>Đăng nhập</Text>
-            </TouchableOpacity>
-          )}
+          ) : null}
         </View>
 
         {isLoggedIn && user ? (
@@ -566,5 +565,33 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontFamily: 'System',
     textAlign: 'center',
+  },
+  guestRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    paddingVertical: 4,
+  },
+  loginButtonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4CAF50',
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 18,
+    marginLeft: 10,
+    shadowColor: '#4CAF50',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.13,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  loginButtonRowText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: 'bold',
+    fontFamily: 'System',
+    letterSpacing: 0.1,
   },
 });
