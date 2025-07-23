@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_BASE_URL = 'http://192.168.5.54:3003';
+const API_BASE_URL = 'https://backend-app-lou3.onrender.com';
 
 /**
  * Interface cho thống kê rating của phim
