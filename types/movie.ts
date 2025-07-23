@@ -39,6 +39,9 @@ export interface GridMovie {
   is_free?: boolean;              // Có miễn phí không (optional)
   price?: number;                 // Giá thuê (optional)
   price_display?: string;         // Giá hiển thị (optional)
+  viewCount?: number;             // Số lượt xem (optional)
+  likeCount?: number;             // Số lượt thích (optional)
+  hasLiked?: boolean;             // Đã like chưa (optional)
 }
 
 /**

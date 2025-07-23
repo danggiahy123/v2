@@ -13,6 +13,9 @@ interface MoviePriceInfo {
   price: number;
   is_free: boolean;
   price_display: string;
+  viewCount: number;
+  likeCount: number;
+  hasLiked: boolean;
 }
 
 // Cache để tránh gọi API nhiều lần cho cùng 1 phim
@@ -48,7 +51,10 @@ export const getMoviePriceInfo = async (movieId: string): Promise<MoviePriceInfo
       movieId: movieDetail.movieId || movieId,
       price: movieDetail.price || 0,
       is_free: movieDetail.is_free ?? true, // Default true nếu không có info
-      price_display: movieDetail.price_display || 'Miễn phí'
+      price_display: movieDetail.price_display || 'Miễn phí',
+      viewCount: movieDetail.viewCount ?? 0,
+      likeCount: movieDetail.likeCount ?? 0,
+      hasLiked: movieDetail.userInteractions?.hasLiked ?? false,
     };
 
     // Cache kết quả
@@ -117,7 +123,10 @@ export const enrichMoviesWithPriceInfo = async (
             ...movie,
             price: priceInfo.price,
             is_free: priceInfo.is_free,
-            price_display: priceInfo.price_display
+            price_display: priceInfo.price_display,
+            viewCount: priceInfo.viewCount,
+            likeCount: priceInfo.likeCount,
+            hasLiked: priceInfo.hasLiked,
           };
         } else {
           errorCount++;
@@ -126,7 +135,10 @@ export const enrichMoviesWithPriceInfo = async (
             ...movie,
             price: 0,
             is_free: true,
-            price_display: 'Miễn phí'
+            price_display: 'Miễn phí',
+            viewCount: movie.viewCount ?? 0,
+            likeCount: movie.likeCount ?? 0,
+            hasLiked: movie.hasLiked ?? false,
           };
         }
       });

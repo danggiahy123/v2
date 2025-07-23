@@ -50,6 +50,7 @@ import { useAuthGuard } from '../../hooks';
 import { RatingModal, RatingDisplay, StarRating } from '../../components/rating';
 import { addStarRating, getUserStarRating, getMovieStarRatings, type RatingStats, type UserRating, type RatingItem } from '../../services/ratingService';
 // Removed Collapsible import - using inline logic
+import eventBus from '../../utils/eventBus';
 
 
 // Screen width for responsive design - will be used in future updates
@@ -881,7 +882,12 @@ hasMovieDetail: !!movieDetail,
         'success'
       );
       console.log('✅ [DEBUG] Like toggle completed');
-      
+      // Emit event to update lists
+      eventBus.emit('movie-like-changed', {
+        movieId: movieDetail?.movieId,
+        likeCount: (movieDetail?.likeCount || 0) + (newLikeState ? 1 : -1),
+        hasLiked: newLikeState
+      });
       // Like action completed successfully
     } catch (error) {
       console.log('❌ [DEBUG] Like toggle error:', error);

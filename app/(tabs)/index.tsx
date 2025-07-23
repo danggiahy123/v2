@@ -32,6 +32,7 @@ import { ContinueWatchingSection } from '../../components/home';
 import GenreGrid from '../../components/genre/GenreGrid';
 import { shouldShowPaidBadge, enrichMoviesWithPriceInfo } from '../../utils/moviePriceHelper';
 import { useAuthGuard } from '../../hooks';
+import eventBus from '../../utils/eventBus';
 // import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
@@ -661,6 +662,14 @@ export default function HomeScreen() {
   const renderMovieGrid = (movies: GridMovie[], title: string, category?: string) => {
     if (!movies.length) return null;
 
+    // Ensure all movies have viewCount, likeCount, hasLiked
+    const safeMovies = movies.map((m) => ({
+      ...m,
+      viewCount: typeof m.viewCount === 'number' ? m.viewCount : 0,
+      likeCount: typeof m.likeCount === 'number' ? m.likeCount : 0,
+      hasLiked: typeof m.hasLiked === 'boolean' ? m.hasLiked : false,
+    }));
+
     // Check different section types
     const isRecommended = title.toLowerCase().includes('đề xuất');
     const isTrending = title.toLowerCase().includes('thịnh hành');
@@ -678,7 +687,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
           <FlatList
-            data={movies.slice(0, 4)}
+            data={safeMovies.slice(0, 4)}
             horizontal
             showsHorizontalScrollIndicator={false}
             keyExtractor={(item, index) => `${category}-${item.movieId}-${index}`}
@@ -690,7 +699,6 @@ export default function HomeScreen() {
               >
                 <View style={styles.largeMovieContainer}>
                   <Image source={{ uri: item.poster }} style={styles.largeMoviePoster} resizeMode="cover" />
-                  
                   {/* Paid Badge for Recommended */}
                   {shouldShowPaidBadge(item) && (
                     <View style={styles.largePaidBadge}>
@@ -698,7 +706,6 @@ export default function HomeScreen() {
                       <Text style={styles.largePaidText}>Trả phí</Text>
                     </View>
                   )}
-                  
                   <LinearGradient
                     colors={['transparent', 'rgba(0,0,0,0.8)']}
                     style={styles.largeMovieGradient}
@@ -723,7 +730,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
           <FlatList
-            data={movies.slice(0, 6)}
+            data={safeMovies.slice(0, 6)}
             horizontal
             showsHorizontalScrollIndicator={false}
             keyExtractor={(item, index) => `${category}-${item.movieId}-${index}`}
@@ -741,7 +748,6 @@ export default function HomeScreen() {
                 </View>
                 <View style={styles.trendingPosterContainer}>
                   <Image source={{ uri: item.poster }} style={styles.trendingPoster} resizeMode="cover" />
-                  
                   {/* Paid Badge for Trending */}
                   {shouldShowPaidBadge(item) && (
                     <View style={styles.trendingPaidBadge}>
@@ -749,12 +755,17 @@ export default function HomeScreen() {
                       <Text style={styles.trendingPaidText}>Trả phí</Text>
                     </View>
                   )}
-                  
                   <LinearGradient
                     colors={['transparent', 'rgba(0,0,0,0.9)']}
                     style={styles.trendingGradient}
                   >
                     <Text style={styles.trendingTitle} numberOfLines={2}>{item.title}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 4 }}>
+                      <Ionicons name="eye-outline" size={14} color="#fff" style={{ marginRight: 2 }} />
+                      <Text style={{ color: '#fff', fontSize: 12, marginRight: 8 }}>{item.viewCount}</Text>
+                      <Ionicons name={item.hasLiked ? 'heart' : 'heart-outline'} size={14} color={item.hasLiked ? '#ff6b6b' : '#fff'} style={{ marginRight: 2 }} />
+                      <Text style={{ color: '#fff', fontSize: 12 }}>{item.likeCount}</Text>
+                    </View>
                   </LinearGradient>
                 </View>
               </TouchableOpacity>
@@ -774,7 +785,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
           <FlatList
-            data={movies.slice(0, 6)}
+            data={safeMovies.slice(0, 6)}
             horizontal
             showsHorizontalScrollIndicator={false}
             keyExtractor={(item, index) => `${category}-${item.movieId}-${index}`}
@@ -786,7 +797,6 @@ export default function HomeScreen() {
               >
                 <View style={styles.sportsPosterContainer}>
                   <Image source={{ uri: item.poster }} style={styles.sportsPoster} resizeMode="cover" />
-                  
                   {/* Paid Badge for Sports */}
                   {shouldShowPaidBadge(item) && (
                     <View style={styles.sportsPaidBadge}>
@@ -794,7 +804,6 @@ export default function HomeScreen() {
                       <Text style={styles.sportsPaidText}>Trả phí</Text>
                     </View>
                   )}
-                  
                   <View style={styles.sportsOverlay}>
                     <LinearGradient
                       colors={['transparent', '#000']}
@@ -825,7 +834,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
           <FlatList
-            data={movies.slice(0, 6)}
+            data={safeMovies.slice(0, 6)}
             horizontal
             showsHorizontalScrollIndicator={false}
             keyExtractor={(item, index) => `${category}-${item.movieId}-${index}`}
@@ -837,7 +846,6 @@ export default function HomeScreen() {
               >
                 <View style={styles.animeImageContainer}>
                   <Image source={{ uri: item.poster }} style={styles.animePoster} resizeMode="cover" />
-                  
                   {/* Paid Badge for Anime */}
                   {shouldShowPaidBadge(item) && (
                     <View style={styles.animePaidBadge}>
@@ -845,10 +853,15 @@ export default function HomeScreen() {
                       <Text style={styles.animePaidText}>Trả phí</Text>
                     </View>
                   )}
-                  
                   <View style={styles.animeShine} />
                 </View>
                 <Text style={styles.animeTitle} numberOfLines={2}>{item.title}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 2 }}>
+                  <Ionicons name="eye-outline" size={13} color="#fff" style={{ marginRight: 2 }} />
+                  <Text style={{ color: '#fff', fontSize: 11, marginRight: 6 }}>{item.viewCount}</Text>
+                  <Ionicons name={item.hasLiked ? 'heart' : 'heart-outline'} size={13} color={item.hasLiked ? '#ff6b6b' : '#fff'} style={{ marginRight: 2 }} />
+                  <Text style={{ color: '#fff', fontSize: 11 }}>{item.likeCount}</Text>
+                </View>
               </TouchableOpacity>
             )}
           />
@@ -866,7 +879,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
           <FlatList
-            data={movies.slice(0, 6)}
+            data={safeMovies.slice(0, 6)}
             horizontal
             showsHorizontalScrollIndicator={false}
             keyExtractor={(item, index) => `${category}-${item.movieId}-${index}`}
@@ -887,7 +900,6 @@ export default function HomeScreen() {
                   {/* Front Card with Content */}
                   <View style={[styles.vietnameseCard, styles.vietnameseCardFront]}>
                     <Image source={{ uri: item.poster }} style={styles.vietnamesePoster} resizeMode="cover" />
-                    
                     {/* Paid Badge for Vietnamese */}
                     {shouldShowPaidBadge(item) && (
                       <View style={styles.vietnamesePaidBadge}>
@@ -895,7 +907,6 @@ export default function HomeScreen() {
                         <Text style={styles.vietnamesePaidText}>Trả phí</Text>
                       </View>
                     )}
-                    
                     <LinearGradient
                       colors={['transparent', 'rgba(0,0,0,0.9)']}
                       style={styles.vietnameseGradient}
@@ -921,7 +932,7 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
         <FlatList
-          data={movies.slice(0, 6)}
+          data={safeMovies.slice(0, 6)}
           horizontal
           showsHorizontalScrollIndicator={false}
           keyExtractor={(item, index) => `${category}-${item.movieId}-${index}`}
@@ -933,7 +944,6 @@ export default function HomeScreen() {
             >
               <View style={styles.posterContainer}>
                 <Image source={{ uri: item.poster }} style={styles.moviePoster} resizeMode="cover" />
-                
                 {/* Paid Badge */}
                 {shouldShowPaidBadge(item) && (
                   <View style={styles.paidBadge}>
@@ -1250,6 +1260,37 @@ export default function HomeScreen() {
       </View>
     );
   };
+
+  useEffect(() => {
+    const handleLikeChange = ({ movieId, likeCount, hasLiked }: { movieId: string, likeCount: number, hasLiked: boolean }) => {
+      setSections(prevSections =>
+        prevSections.map(section => ({
+          ...section,
+          movies: section.movies.map(movie =>
+            movie.movieId === movieId
+              ? { ...movie, likeCount, hasLiked }
+              : movie
+          ),
+        }))
+      );
+      setRecommendedMovies(prev =>
+        prev.map(movie =>
+          movie.movieId === movieId
+            ? { ...movie, likeCount, hasLiked }
+            : movie
+        )
+      );
+      setActionGenreMovies(prev =>
+        prev.map(movie =>
+          movie.movieId === movieId
+            ? { ...movie, likeCount, hasLiked }
+            : movie
+        )
+      );
+    };
+    eventBus.on('movie-like-changed', handleLikeChange);
+    return () => eventBus.off('movie-like-changed', handleLikeChange);
+  }, []);
 
   return renderContent();
 }
