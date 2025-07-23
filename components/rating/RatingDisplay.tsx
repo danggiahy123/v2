@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   FlatList,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import StarRating from './StarRating';
@@ -192,11 +193,18 @@ const RatingDisplay: React.FC<RatingDisplayProps> = ({
       </View>
 
       {/* Rate Button */}
-      <TouchableOpacity style={styles.rateButton} onPress={onRatePress}>
-       
-        <Text style={styles.rateButtonText}>
-          {currentUserRating ? 'Sửa đánh giá' : 'Đánh giá phim'}
-        </Text>
+      <TouchableOpacity
+        style={[styles.rateButton, loading && styles.disabledButton]}
+        onPress={onRatePress}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color="#fff" size="small" />
+        ) : (
+          <Text style={styles.rateButtonText}>
+            {currentUserRating ? 'Sửa đánh giá' : 'Đánh giá phim'}
+          </Text>
+        )}
       </TouchableOpacity>
 
       {/* Current User Rating */}
@@ -435,6 +443,9 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     marginRight: 12,
     backgroundColor: '#222',
+  },
+  disabledButton: {
+    opacity: 0.7,
   },
 });
 

@@ -286,7 +286,6 @@ return `${hours}h ${remainingMinutes}min`;
       showNotificationMessage('Vui lòng đăng nhập để đánh giá', 'error');
       return;
     }
-    
     try {
       const response = await addStarRating(id, rating, comment);
       setCurrentUserRating({
@@ -298,9 +297,11 @@ return `${hours}h ${remainingMinutes}min`;
       });
       setMovieRatingStats(response.data.movieStats);
       showNotificationMessage('Đánh giá thành công!', 'success');
-      
-      // Refresh ratings list
-      await fetchMovieRatings();
+      // Luôn gọi lại cả 2 API để đảm bảo số sao tổng và đánh giá của bạn luôn đúng
+      await Promise.all([
+        fetchMovieRatings(),
+        fetchUserRating()
+      ]);
     } catch (error: any) {
       console.error('Error submitting rating:', error);
       showNotificationMessage(error.message || 'Có lỗi xảy ra khi đánh giá', 'error');

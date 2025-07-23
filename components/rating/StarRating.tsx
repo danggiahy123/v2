@@ -120,10 +120,16 @@ const StarRating: React.FC<StarRatingProps> = ({
 
   const renderStars = () => {
     const stars = [];
+    // Nếu readonly thì dùng prop rating, còn không thì dùng currentRating
+    const displayRating = readonly ? rating : currentRating;
     for (let i = 0; i < maxStars; i++) {
-      const isFilled = i < Math.floor(currentRating);
-      const isHalfFilled = i === Math.floor(currentRating) && currentRating % 1 !== 0;
-      
+      let isFilled = false;
+      let isHalfFilled = false;
+      if (displayRating >= i + 1) {
+        isFilled = true;
+      } else if (displayRating >= i + 0.5) {
+        isHalfFilled = true;
+      }
       stars.push(
         <Star
           key={i}
