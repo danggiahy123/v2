@@ -1,7 +1,7 @@
 import { ContinueWatchingResponse, HomeApiResponse, GridMovie } from '../types/movie';
 import { enrichMoviesWithPriceInfo } from '../utils/moviePriceHelper';
 
-const API_BASE_URL = 'http://192.168.5.54:3003';
+const API_BASE_URL = 'https://backend-app-lou3.onrender.com';
 
 interface GenericMovieResponse {
   status: string;
