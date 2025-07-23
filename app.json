@@ -11,8 +11,7 @@
     "ios": {
       "supportsTablet": true,
       "associatedDomains": [
-        "applinks:backend-app-lou3.onrender.com",
-        "applinks:192.168.5.85:3003"
+        "applinks:backend-app-lou3.onrender.com"
       ],
       "bundleIdentifier": "com.tech5.movies"
     },
@@ -35,11 +34,6 @@
             {
               "scheme": "https",
               "host": "backend-app-lou3.onrender.com",
-              "pathPattern": "/movie/.*"
-            },
-            {
-              "scheme": "http",
-              "host": "192.168.5.85:3003",
               "pathPattern": "/movie/.*"
             }
           ],
