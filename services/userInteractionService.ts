@@ -16,7 +16,7 @@ import {
   UpdateProgressResponse
 } from '../types/userInteraction';
 
-const API_BASE_URL = 'https://backend-app-lou3.onrender.com';
+const API_BASE_URL = 'http://192.168.5.54:3003';
 
 /**
  * 👤 USER INTERACTION SERVICE

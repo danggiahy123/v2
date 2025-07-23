@@ -27,7 +27,7 @@ interface RatingItem {
   _id: string;
   user: {
     _id: string;
-    name: string;
+    full_name?: string;
     email: string;
     avatar?: string; // Added avatar field
   };
@@ -49,6 +49,8 @@ interface RatingDisplayProps {
     star_rating: number;
     comment: string;
   } | null;
+  canRate?: boolean;
+  rateDisabledReason?: string;
 }
 
 const RatingDisplay: React.FC<RatingDisplayProps> = ({
@@ -59,6 +61,8 @@ const RatingDisplay: React.FC<RatingDisplayProps> = ({
   loading = false,
   hasMore = false,
   currentUserRating,
+  canRate = true,
+  rateDisabledReason = '',
 }) => {
 
   const formatDate = (dateString: string) => {
@@ -86,13 +90,13 @@ const RatingDisplay: React.FC<RatingDisplayProps> = ({
   }
 
   const getStarPercentage = (starCount: number): number => {
-    if (movieStats.totalRatings === 0) return 0;
-    return (movieStats.ratingDistribution[starCount as keyof typeof movieStats.ratingDistribution] / movieStats.totalRatings) * 100;
+    if (safeMovieStats.totalRatings === 0) return 0;
+    return (safeDistribution[starCount as keyof typeof safeDistribution] / safeMovieStats.totalRatings) * 100;
   };
 
   const renderRatingItem = ({ item }: { item: RatingItem }) => {
-    // Lấy phần trước dấu @ của email
-    const displayName = item.user.email ? item.user.email.split('@')[0] : 'Ẩn danh';
+    // Lấy tên hiển thị: ưu tiên full_name, cuối cùng là phần trước @ của email
+    const displayName = item.user.full_name || (item.user.email ? item.user.email.split('@')[0] : 'Ẩn danh');
     // Xác định thời gian hiển thị: nếu updatedAt khác createdAt thì là đã chỉnh sửa
     const created = new Date(item.createdAt);
     const updated = new Date(item.updatedAt);
@@ -160,12 +164,18 @@ const RatingDisplay: React.FC<RatingDisplayProps> = ({
             />
           </View>
           <Text style={styles.starCount}>
-            {movieStats.ratingDistribution[star as keyof typeof movieStats.ratingDistribution]}
+            {safeDistribution[star as keyof typeof safeDistribution]}
           </Text>
         </View>
       ))}
     </View>
   );
+
+  // Đảm bảo ratings luôn là mảng
+  const safeRatings = Array.isArray(ratings) ? ratings : [];
+  // Đảm bảo movieStats và ratingDistribution luôn hợp lệ
+  const safeMovieStats = movieStats || { averageRating: 0, totalRatings: 0, ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } };
+  const safeDistribution = safeMovieStats.ratingDistribution || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
 
   return (
     <View style={styles.container}>
@@ -173,17 +183,17 @@ const RatingDisplay: React.FC<RatingDisplayProps> = ({
       <View style={styles.overallRating}>
         <View style={styles.ratingScore}>
           <Text style={styles.averageRating}>
-            {movieStats.averageRating.toFixed(1)}
+            {safeMovieStats.averageRating.toFixed(1)}
           </Text>
           <StarRating
-            rating={movieStats.averageRating}
+            rating={safeMovieStats.averageRating}
             readonly={true}
             size={20}
             showRating={false}
             showText={false}
           />
           <Text style={styles.totalRatings}>
-            {movieStats.totalRatings} đánh giá
+            {safeMovieStats.totalRatings} đánh giá
           </Text>
         </View>
         
@@ -194,9 +204,15 @@ const RatingDisplay: React.FC<RatingDisplayProps> = ({
 
       {/* Rate Button */}
       <TouchableOpacity
-        style={[styles.rateButton, loading && styles.disabledButton]}
-        onPress={onRatePress}
-        disabled={loading}
+        style={[styles.rateButton, (loading || !canRate) && styles.disabledButton]}
+        onPress={() => {
+          if (!canRate && rateDisabledReason) {
+            alert(rateDisabledReason);
+            return;
+          }
+          onRatePress();
+        }}
+        disabled={loading || !canRate}
       >
         {loading ? (
           <ActivityIndicator color="#fff" size="small" />
@@ -229,31 +245,29 @@ const RatingDisplay: React.FC<RatingDisplayProps> = ({
       )}
 
       {/* Ratings List */}
-      {ratings.length > 0 && (
-        <View style={styles.ratingsSection}>
-          <Text style={styles.sectionTitle}>
-            Đánh giá từ người dùng ({ratings.length})
-          </Text>
-          
-          <FlatList
-            data={ratings}
-            renderItem={renderRatingItem}
-            keyExtractor={(item) => item._id}
-            style={styles.ratingsList}
-            showsVerticalScrollIndicator={false}
-            onEndReached={hasMore ? onLoadMore : undefined}
-            onEndReachedThreshold={0.1}
-            scrollEnabled={false} // Disable scroll to avoid nested scroll
-          />
-          
-          {hasMore && (
-            <TouchableOpacity style={styles.loadMoreButton} onPress={onLoadMore}>
-              <Text style={styles.loadMoreText}>Xem thêm đánh giá</Text>
-              <Ionicons name="chevron-down" size={16} color="#FFD700" />
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
+      <View style={styles.ratingsSection}>
+        <Text style={styles.sectionTitle}>
+          Đánh giá từ người dùng ({safeRatings.length})
+        </Text>
+        
+        <FlatList
+          data={safeRatings}
+          renderItem={renderRatingItem}
+          keyExtractor={(item) => item._id}
+          style={styles.ratingsList}
+          showsVerticalScrollIndicator={false}
+          onEndReached={hasMore ? onLoadMore : undefined}
+          onEndReachedThreshold={0.1}
+          scrollEnabled={false} // Disable scroll to avoid nested scroll
+        />
+        
+        {hasMore && (
+          <TouchableOpacity style={styles.loadMoreButton} onPress={onLoadMore}>
+            <Text style={styles.loadMoreText}>Xem thêm đánh giá</Text>
+            <Ionicons name="chevron-down" size={16} color="#FFD700" />
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 };
