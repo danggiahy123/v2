@@ -20,7 +20,7 @@ interface Comment {
   _id: string;
   user: {
     _id: string;
-    name: string;
+    full_name?: string;
     avatar?: string;
   };
   comment: string;
@@ -122,9 +122,9 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
           _id: comment._id,
           user: {
             _id: comment.user._id || 'unknown',
-            name: comment.user.name && comment.user.name !== 'Unknown User' 
-              ? comment.user.name 
-              : comment.user.email?.split('@')[0] || 'User',
+            full_name:
+              (comment.user.full_name && comment.user.full_name !== 'Unknown User' && comment.user.full_name)
+              || (comment.user.email ? comment.user.email.split('@')[0] : 'Ẩn danh'),
           },
           comment: comment.comment,
           isLike: comment.isLike || false,
@@ -224,11 +224,11 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
         <View style={styles.userInfo}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>
-              {item.user.name.charAt(0).toUpperCase()}
+              {(item.user.full_name ? item.user.full_name.charAt(0).toUpperCase() : 'A')}
             </Text>
           </View>
           <View>
-            <Text style={styles.userName}>{item.user.name}</Text>
+            <Text style={styles.userName}>{item.user.full_name || 'Ẩn danh'}</Text>
             <Text style={styles.commentTime}>{formatTimeAgo(item.createdAt)}</Text>
           </View>
         </View>

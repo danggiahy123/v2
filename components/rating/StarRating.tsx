@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Animated, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 interface StarRatingProps {
@@ -18,13 +18,14 @@ interface StarRatingProps {
 
 interface StarProps {
   filled: boolean;
-  halfFilled: boolean;
+  partial: number; // 0-1, tỉ lệ phần trăm sáng
   size: number;
   onPress?: () => void;
   readonly: boolean;
+  starColor?: string;
 }
 
-const Star: React.FC<StarProps & { starColor?: string }> = ({ filled, halfFilled, size, onPress, readonly, starColor }) => {
+const Star: React.FC<StarProps> = ({ filled, partial, size, onPress, readonly, starColor }) => {
   const [scaleAnim] = useState(new Animated.Value(1));
 
   const handlePressIn = () => {
@@ -49,24 +50,60 @@ const Star: React.FC<StarProps & { starColor?: string }> = ({ filled, halfFilled
     }
   };
 
-  const getStarIcon = () => {
-    if (filled) {
-      return 'star';
-    } else if (halfFilled) {
-      return 'star-half';
-    } else {
-      return 'star-outline';
-    }
-  };
+  // Nếu là sao đầy
+  if (filled) {
+    return (
+      <TouchableOpacity 
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        disabled={readonly}
+        activeOpacity={readonly ? 1 : 0.7}
+      >
+        <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+          <Ionicons
+            name={'star'}
+            size={size}
+            color={starColor || '#FFD700'}
+          />
+        </Animated.View>
+      </TouchableOpacity>
+    );
+  }
 
-  const getStarColor = () => {
-    if (filled || halfFilled) {
-      return starColor || '#FFD700';
-    } else {
-      return '#333'; // Xám đậm
-    }
-  };
+  // Nếu là sao lẻ (partial > 0)
+  if (partial > 0) {
+    return (
+      <TouchableOpacity 
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        disabled={readonly}
+        activeOpacity={readonly ? 1 : 0.7}
+      >
+        <Animated.View style={{ transform: [{ scale: scaleAnim }], position: 'relative', width: size, height: size }}>
+          {/* Nền là star-outline */}
+          <Ionicons
+            name={'star-outline'}
+            size={size}
+            color={starColor || '#FFD700'}
+            style={{ position: 'absolute', left: 0, top: 0 }}
+          />
+          {/* Overlay phần trăm vàng */}
+          <View style={{ position: 'absolute', left: 0, top: 0, width: size * partial, height: size, overflow: 'hidden' }} pointerEvents="none">
+            <Ionicons
+              name={'star'}
+              size={size}
+              color={starColor || '#FFD700'}
+              style={{ position: 'absolute', left: 0, top: 0 }}
+            />
+          </View>
+        </Animated.View>
+      </TouchableOpacity>
+    );
+  }
 
+  // Sao tối
   return (
     <TouchableOpacity 
       onPress={onPress}
@@ -77,9 +114,9 @@ const Star: React.FC<StarProps & { starColor?: string }> = ({ filled, halfFilled
     >
       <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
         <Ionicons
-          name={getStarIcon()}
+          name={'star-outline'}
           size={size}
-          color={getStarColor()}
+          color={'#333'}
         />
       </Animated.View>
     </TouchableOpacity>
@@ -124,17 +161,17 @@ const StarRating: React.FC<StarRatingProps> = ({
     const displayRating = readonly ? rating : currentRating;
     for (let i = 0; i < maxStars; i++) {
       let isFilled = false;
-      let isHalfFilled = false;
+      let partial = 0;
       if (displayRating >= i + 1) {
         isFilled = true;
-      } else if (displayRating >= i + 0.5) {
-        isHalfFilled = true;
+      } else if (displayRating > i) {
+        partial = displayRating - i;
       }
       stars.push(
         <Star
           key={i}
           filled={isFilled}
-          halfFilled={isHalfFilled}
+          partial={partial}
           size={size}
           onPress={() => handleStarPress(i)}
           readonly={readonly}

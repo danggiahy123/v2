@@ -308,9 +308,27 @@ return `${hours}h ${remainingMinutes}min`;
     }
   };
   
+  // Điều kiện cho phép đánh giá phim
+  const canRate = !!(
+    hasRentalAccess ||
+    movieDetail?.userInteractions?.watchingProgress?.completed === true
+  );
+  let rateDisabledReason = '';
+  if (!canRate) {
+    if (!hasRentalAccess) {
+      rateDisabledReason = 'Bạn cần thuê phim hoặc xem xong phim để đánh giá.';
+    } else {
+      rateDisabledReason = 'Bạn cần xem xong phim để đánh giá.';
+    }
+  }
+  
   const handleRatePress = () => {
     if (!isLoggedIn) {
       showLoginModal('Đánh giá phim');
+      return;
+    }
+    if (!canRate) {
+      Alert.alert('Không thể đánh giá', rateDisabledReason || 'Bạn cần thuê phim hoặc xem xong phim để đánh giá.');
       return;
     }
     setShowRatingModal(true);
@@ -1329,11 +1347,24 @@ if (!movieDetail) return;
     setExpandedComments((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
+  
+
   const renderComments = () => {
     // 🔥 FIX: Hiển thị TẤT CẢ comments từ recentComments
-    const allComments = movieDetail?.recentComments || [];
+    const recent = movieDetail?.recentComments;
+    const allComments: any[] = (Array.isArray(recent) && recent) || [];
+    // Chuẩn hóa user.full_name cho mỗi comment: chỉ lấy full_name, nếu không có thì 'Ẩn danh'
+    const normalizedComments = allComments.map((comment) => ({
+      ...comment,
+      user: {
+        ...comment.user,
+        full_name:
+          (comment.user.full_name && comment.user.full_name !== 'Unknown User' && comment.user.full_name)
+          || (comment.user.email ? comment.user.email.split('@')[0] : 'Ẩn danh'),
+      },
+    }));
     
-    if (allComments.length === 0) {
+    if (normalizedComments.length === 0) {
       return (
         <View style={styles.commentsContainer}>
           <Text style={styles.emptyCommentsText}>Chưa có bình luận nào. Hãy là người đầu tiên bình luận!</Text>
@@ -1343,8 +1374,8 @@ if (!movieDetail) return;
 
     return (
       <View style={styles.commentsContainer}>
-        <Text style={styles.sectionTitle}>Bình luận ({allComments.length})</Text>
-        {allComments.map((comment: any, index: number) => {
+        <Text style={styles.sectionTitle}>Bình luận ({normalizedComments.length})</Text>
+        {normalizedComments.map((comment: any, index: number) => {
           const commentId = comment._id || String(index);
           const isExpanded = expandedComments[commentId];
           // Đếm số dòng bằng cách tạm thời tách dòng (chỉ để xác định có cần show "Xem thêm" không)
@@ -1354,9 +1385,7 @@ if (!movieDetail) return;
           return (
             <View key={commentId} style={styles.commentItem}>
               <Text style={styles.commentUser}>
-                {comment.user.name && comment.user.name !== 'Unknown User' 
-                  ? comment.user.name 
-                  : comment.user.email?.split('@')[0] || 'User'}
+                {comment.user.full_name}
               </Text>
               <Text
                 style={isExpanded ? styles.commentText : [styles.commentText, styles.commentTextClamp]}
@@ -1807,7 +1836,7 @@ if (!movieDetail) return;
                  <View style={styles.ratingsTabContent}>
                    <RatingDisplay
                      movieStats={movieRatingStats}
-                     ratings={ratingsData}
+                     ratings={Array.isArray(ratingsData) ? ratingsData : []}
                      onRatePress={handleRatePress}
                      loading={ratingLoading}
                      currentUserRating={currentUserRating ? {
@@ -1815,6 +1844,8 @@ if (!movieDetail) return;
                        star_rating: currentUserRating.star_rating,
                        comment: currentUserRating.comment
                      } : null}
+                     canRate={canRate}
+                     rateDisabledReason={rateDisabledReason}
                    />
                  </View>
                )}

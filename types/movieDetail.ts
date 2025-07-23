@@ -94,8 +94,8 @@ export interface Genre {
 export interface Comment {
   _id: string;
   user: {
-    name: string;
-    email: string;
+    full_name: string;
+    email: string;    
   };
   comment: string;
   isLike: boolean;
