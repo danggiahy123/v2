@@ -774,9 +774,15 @@ const isValidVideoUrl = (url: string): boolean => {
     }
 
     // Check rental access for paid content  
-    if (!movieDetail?.is_free && userId && !hasRentalAccess && !hasEverHadRentalAccess) {
-      console.log('🎫 [DEBUG] User needs to rent movie');
-      showNotificationMessage('Bạn cần thuê phim để xem tập này', 'error');
+    if (!movieDetail?.is_free && userId && (!hasRentalAccess || needsActivation)) {
+      // Nếu chưa thuê hoặc đã thuê nhưng chưa kích hoạt
+      if (!hasRentalAccess) {
+        console.log('🎫 [DEBUG] User needs to rent movie');
+        showNotificationMessage('Bạn cần thuê phim để xem tập này', 'error');
+      } else if (needsActivation) {
+        console.log('⏳ [DEBUG] User needs to activate rental before watching');
+        showNotificationMessage('Bạn cần kích hoạt phim trước khi xem!', 'error');
+      }
       setShowRentalModal(true);
       return;
     }
@@ -1298,14 +1304,20 @@ if (!movieDetail) return;
     }
 
     // Render episodes list
+    const isSeriesLocked = !movieDetail.is_free && (!hasRentalAccess || needsActivation);
     return (
       <View style={styles.episodesContainer}>
         <Text style={styles.sectionTitle}>Tập phim ({movieDetail.episodes.length})</Text>
+        {isSeriesLocked && (
+          <View style={styles.lockedOverlay}>
+            <Text style={styles.episodeStatusLocked}>🔒 Bạn cần kích hoạt phim để xem các tập!</Text>
+          </View>
+        )}
         {movieDetail.episodes.map((episode, index) => {
           const hasValidUri = episode.uri && episode.uri.trim() !== '';
-          const canAccess = movieDetail.is_free || hasRentalAccess || hasEverHadRentalAccess;
-          const shouldShowUpdateStatus = !hasValidUri && canAccess; // Only show "Đang cập nhật" if user has access
-          
+          // Nếu chưa kích hoạt rental thì disable hết các tập
+          const canAccess = !isSeriesLocked && (movieDetail.is_free || hasRentalAccess);
+          const shouldShowUpdateStatus = !hasValidUri && canAccess;
           return (
             <TouchableOpacity
               key={episode._id || index}
@@ -1313,13 +1325,13 @@ if (!movieDetail) return;
                 styles.episodeItem,
                 (!hasValidUri || !canAccess) && styles.episodeItemDisabled
               ]}
-              onPress={() => handleEpisodePress(episode)}
-              disabled={!hasValidUri || !canAccess}
+              onPress={() => canAccess && handleEpisodePress(episode)}
+              disabled={!canAccess}
             >
               <Text style={styles.episodeNumber}>Tập {episode.episode_number}</Text>
               <Text style={[
                 styles.episodeTitle,
-(!hasValidUri || !canAccess) && styles.episodeTitleDisabled
+                (!hasValidUri || !canAccess) && styles.episodeTitleDisabled
               ]}>
                 {episode.episode_title}
               </Text>
@@ -1327,7 +1339,7 @@ if (!movieDetail) return;
                 {formatDuration(episode.duration)}
               </Text>
               {!canAccess && (
-                <Text style={styles.episodeStatusLocked}>🔒 Cần thuê</Text>
+                <Text style={styles.episodeStatusLocked}>🔒 Cần kích hoạt</Text>
               )}
               {shouldShowUpdateStatus && (
                 <Text style={styles.episodeStatus}>Đang cập nhật</Text>
@@ -1606,9 +1618,9 @@ if (!movieDetail) return;
               // Nếu đã chọn tập phim cụ thể, không sử dụng defaultEpisode
               const episodeToPlay = currentEpisode || (!currentEpisode && defaultEpisode);
               // Enhanced canShowVideo logic to include all access scenarios
-              const canShowVideo = movieDetail?.is_free || 
-                                 hasRentalAccess || 
-                                 hasEverHadRentalAccess || 
+              const canShowVideo = movieDetail?.is_free ||
+                                 hasRentalAccess ||
+                                 hasEverHadRentalAccess ||
                                  (initialRentalAccess === 'true') ||
                                  (rentalSuccess === 'true' && fromPayment === 'true');
               const renderTime = Date.now();
@@ -2980,6 +2992,12 @@ backgroundColor: '#D11030',
     fontWeight: '600',
     marginBottom: 2,
     marginLeft: 8,
+  },
+  lockedOverlay: {
+    backgroundColor: '#1a1a1a',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 10,
   },
 });
 
