@@ -18,6 +18,7 @@ import { genreService, Genre } from '../../services/genreService';
 import { Banner, GenreSelector } from '../../components/anime';
 import { useRouter } from 'expo-router';
 import { shouldShowPaidBadge, enrichMoviesWithPriceInfo } from '../../utils/moviePriceHelper';
+import eventBus from '../../utils/eventBus';
 
 type Anime = {
   _id?: string;
@@ -29,6 +30,9 @@ type Anime = {
   price?: number;
   is_free?: boolean;
   price_display?: string;
+  viewCount?: number;
+  likeCount?: number;
+  hasLiked?: boolean;
 };
 
 export default function AnimeScreen() {
@@ -91,7 +95,10 @@ export default function AnimeScreen() {
           producer: anime.producer || '',
           rating: anime.rating,
           year: anime.year || anime.release_year,
-          _id: anime._id || anime.movieId // Keep original _id for API calls
+          _id: anime._id || anime.movieId, // Keep original _id for API calls
+          viewCount: anime.view_count || 0,
+          likeCount: anime.like_count || 0,
+          hasLiked: anime.has_liked || false,
         }));
       };
 
@@ -176,6 +183,16 @@ export default function AnimeScreen() {
     fetchAnimeGenres();
   }, []);
 
+  useEffect(() => {
+    const handleLikeChange = ({ movieId, likeCount, hasLiked }: { movieId: string, likeCount: number, hasLiked: boolean }) => {
+      setTrending(prev => prev.map(movie => movie.movieId === movieId ? { ...movie, likeCount, hasLiked } : movie));
+      setSeries(prev => prev.map(movie => movie.movieId === movieId ? { ...movie, likeCount, hasLiked } : movie));
+      setMovies(prev => prev.map(movie => movie.movieId === movieId ? { ...movie, likeCount, hasLiked } : movie));
+    };
+    eventBus.on('movie-like-changed', handleLikeChange);
+    return () => eventBus.off('movie-like-changed', handleLikeChange);
+  }, []);
+
   const renderMovieItem = ({ item }: { item: Anime }) => (
     <TouchableOpacity 
       style={styles.movieItem}
@@ -252,6 +269,12 @@ export default function AnimeScreen() {
                   style={styles.trendingGradient}
                 >
                   <Text style={styles.trendingTitle} numberOfLines={2}>{item.title}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                    <Ionicons name="eye-outline" size={14} color="#fff" style={{ marginRight: 2 }} />
+                    <Text style={{ color: '#fff', fontSize: 12, marginRight: 8 }}>{item.viewCount ?? 0}</Text>
+                    <Ionicons name={item.hasLiked ? 'heart' : 'heart-outline'} size={14} color={item.hasLiked ? '#ff6b6b' : '#fff'} style={{ marginRight: 2 }} />
+                    <Text style={{ color: '#fff', fontSize: 12 }}>{item.likeCount ?? 0}</Text>
+                  </View>
                 </LinearGradient>
               </View>
             </TouchableOpacity>

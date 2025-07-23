@@ -204,7 +204,7 @@ export default function QRPaymentScreen() {
 
   const handleGoHome = () => {
     setShowSuccessModal(false);
-    router.replace('/');
+    router.replace('/(tabs)'); // Điều hướng về tab Trang chủ
   };
 
   if (!orderData) {

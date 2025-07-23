@@ -21,6 +21,7 @@ import { genreService, Genre } from '../../services/genreService';
 import { SeriesBanner } from '../../components/series';
 import { SeriesGenreSelector } from '../../components/series/SeriesGenreSelector';
 import { shouldShowPaidBadge, enrichMoviesWithPriceInfo } from '../../utils/moviePriceHelper';
+import eventBus from '../../utils/eventBus';
 
 type Movie = {
   movieId: string;
@@ -31,6 +32,9 @@ type Movie = {
   price?: number;
   is_free?: boolean;
   price_display?: string;
+  viewCount?: number;
+  likeCount?: number;
+  hasLiked?: boolean;
 };
 
 export default function SeriesScreen() {
@@ -82,6 +86,17 @@ export default function SeriesScreen() {
     fetchSeriesGenres();
   }, []);
 
+  useEffect(() => {
+    const handleLikeChange = ({ movieId, likeCount, hasLiked }: { movieId: string, likeCount: number, hasLiked: boolean }) => {
+      setTrending(prev => prev.map(movie => movie.movieId === movieId ? { ...movie, likeCount, hasLiked } : movie));
+      setRecommended(prev => prev.map(movie => movie.movieId === movieId ? { ...movie, likeCount, hasLiked } : movie));
+      setVietnamese(prev => prev.map(movie => movie.movieId === movieId ? { ...movie, likeCount, hasLiked } : movie));
+      setAnime(prev => prev.map(movie => movie.movieId === movieId ? { ...movie, likeCount, hasLiked } : movie));
+    };
+    eventBus.on('movie-like-changed', handleLikeChange);
+    return () => eventBus.off('movie-like-changed', handleLikeChange);
+  }, []);
+
   const fetchSeriesData = async () => {
     try {
       setLoading(true);
@@ -102,6 +117,9 @@ export default function SeriesScreen() {
         poster: series.poster || series.poster_path,
         producer: series.producer || '',
         movieType: series.movieType || series.movie_type || '',
+        viewCount: series.view_count || 0,
+        likeCount: series.like_count || 0,
+        hasLiked: series.has_liked || false,
       });
 
       const trendingMovies = extractMovies(trendingRes).map(convertToMovie);
@@ -339,6 +357,12 @@ export default function SeriesScreen() {
                       style={styles.trendingGradient}
                     >
                       <Text style={styles.trendingTitle} numberOfLines={2}>{item.title}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                        <Ionicons name="eye-outline" size={14} color="#fff" style={{ marginRight: 2 }} />
+                        <Text style={{ color: '#fff', fontSize: 12, marginRight: 8 }}>{item.viewCount ?? 0}</Text>
+                        <Ionicons name={item.hasLiked ? 'heart' : 'heart-outline'} size={14} color={item.hasLiked ? '#ff6b6b' : '#fff'} style={{ marginRight: 2 }} />
+                        <Text style={{ color: '#fff', fontSize: 12 }}>{item.likeCount ?? 0}</Text>
+                      </View>
                     </LinearGradient>
                   </View>
                 </TouchableOpacity>
