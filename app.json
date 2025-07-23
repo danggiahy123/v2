@@ -42,7 +42,12 @@
             "DEFAULT"
           ]
         }
-      ]
+      ],
+      "manifest": {
+        "application": {
+          "tools:replace": "android:appComponentFactory"
+        }
+      }
     },
     "web": {
       "bundler": "metro",
@@ -66,6 +71,20 @@
           "icon": "./assets/images/icon.png",
           "color": "#ffffff",
           "sounds": []
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "extraManifests": [
+              {
+                "application": {
+                  "tools:replace": "android:appComponentFactory"
+                }
+              }
+            ]
+          }
         }
       ]
     ],
