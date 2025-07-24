@@ -763,7 +763,7 @@ export default function HomeScreen() {
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 4 }}>
                       <Ionicons name="eye-outline" size={14} color="#fff" style={{ marginRight: 2 }} />
                       <Text style={{ color: '#fff', fontSize: 12, marginRight: 8 }}>{item.viewCount}</Text>
-                      <Ionicons name={item.hasLiked ? 'heart' : 'heart-outline'} size={14} color={item.hasLiked ? '#ff6b6b' : '#fff'} style={{ marginRight: 2 }} />
+                      <Ionicons name={item.hasLiked ? 'heart' : 'heart-outline'} size={14} color={item.hasLiked ? '#D11030' : '#fff'} style={{ marginRight: 2 }} />
                       <Text style={{ color: '#fff', fontSize: 12 }}>{item.likeCount}</Text>
                     </View>
                   </LinearGradient>
@@ -856,12 +856,7 @@ export default function HomeScreen() {
                   <View style={styles.animeShine} />
                 </View>
                 <Text style={styles.animeTitle} numberOfLines={2}>{item.title}</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 2 }}>
-                  <Ionicons name="eye-outline" size={13} color="#fff" style={{ marginRight: 2 }} />
-                  <Text style={{ color: '#fff', fontSize: 11, marginRight: 6 }}>{item.viewCount}</Text>
-                  <Ionicons name={item.hasLiked ? 'heart' : 'heart-outline'} size={13} color={item.hasLiked ? '#ff6b6b' : '#fff'} style={{ marginRight: 2 }} />
-                  <Text style={{ color: '#fff', fontSize: 11 }}>{item.likeCount}</Text>
-                </View>
+               
               </TouchableOpacity>
             )}
           />

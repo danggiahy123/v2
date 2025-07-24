@@ -196,11 +196,19 @@ const RatingDisplay: React.FC<RatingDisplayProps> = ({
             {safeMovieStats.totalRatings} đánh giá
           </Text>
         </View>
-        
         <View style={styles.distributionSection}>
           {renderStarDistribution()}
         </View>
       </View>
+
+      {/* Rating Guide - hướng dẫn sử dụng chức năng đánh giá */}
+      {(!canRate) && (
+        <View style={styles.guideContainer}>
+          <Text style={styles.guideText}>
+            Để gửi đánh giá, hãy hoàn thành việc xem phim hoặc thuê phim để mở khóa chức năng đánh giá.
+          </Text>
+        </View>
+      )}
 
       {/* Rate Button */}
       <TouchableOpacity
@@ -460,6 +468,19 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     opacity: 0.7,
+  },
+  guideContainer: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 8,
+    padding: 12,
+    marginHorizontal: 16,
+    marginBottom: 8,
+  },
+  guideText: {
+    color: '#fff',
+    fontSize: 14,
+    textAlign: 'left',
+    lineHeight: 20,
   },
 });
 

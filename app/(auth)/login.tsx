@@ -225,7 +225,15 @@ export default function BannerLogin() {
             <View style={[styles.checkbox, isAgreed && styles.checkboxChecked]}>
               {isAgreed && <MaterialCommunityIcons name="check-bold" size={16} color="#fff" />}
             </View>
-            <Text style={styles.agreeText}>Tôi đồng ý <Text style={styles.linkText}>Điều khoản sử dụng</Text></Text>
+            <Text style={styles.agreeText}>
+              Tôi đồng ý 
+              <Text 
+                style={styles.linkText} 
+                onPress={() => router.push('/settings/terms')}
+              >
+                Điều khoản sử dụng
+              </Text>
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity

@@ -1162,7 +1162,7 @@ if (!movieDetail) return;
             <Ionicons
               name={hasLiked ? "heart" : "heart-outline"}
               size={24}
-              color={hasLiked ? "#ff6b6b" : "#ffffff"}
+              color={hasLiked ? "#D11030" : "#ffffff"}
             />
             <Text style={styles.actionCount}>{movieDetail.likeCount || 67}</Text>
           </TouchableOpacity>

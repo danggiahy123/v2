@@ -30,9 +30,6 @@ const LoginRequiredModal: React.FC<LoginRequiredModalProps> = ({
       <View style={styles.overlay}>
         <View style={styles.modalContainer}>
           <Text style={styles.title}>Bạn cần đăng nhập để sử dụng chức năng này</Text>
-          {featureName && (
-            <Text style={styles.featureName}>Tính năng: {featureName}</Text>
-          )}
           <View style={styles.buttonRow}>
             <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
               <Text style={styles.loginButtonText}>Đăng nhập</Text>
@@ -50,7 +47,7 @@ const LoginRequiredModal: React.FC<LoginRequiredModalProps> = ({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.83)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -60,6 +57,8 @@ const styles = StyleSheet.create({
     padding: 24,
     minWidth: 280,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#D11030',
   },
   title: {
     fontSize: 16,
@@ -68,12 +67,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     textAlign: 'center',
   },
-  featureName: {
-    fontSize: 14,
-    color: '#D11030',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
+
   buttonRow: {
     flexDirection: 'row',
     gap: 16,

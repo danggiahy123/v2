@@ -196,13 +196,8 @@ export default function ExploreScreen() {
                     <Ionicons name="person" size={32} color="#666" />
                   </View>
                 </View>
-                <View style={{marginLeft: 8, marginRight: 12}}>
-                  <Text style={styles.userText}>Khách</Text>
-                  <Text style={styles.userEmail}>Chưa đăng nhập</Text>
-                </View>
-                <TouchableOpacity style={styles.loginButtonRow} onPress={handleLogin} activeOpacity={0.85}>
-                  <Ionicons name="log-in-outline" size={20} color="#fff" style={{marginRight: 6}} />
-                  <Text style={styles.loginButtonRowText}>Đăng nhập</Text>
+                <TouchableOpacity onPress={handleLogin} activeOpacity={0.85}>
+                  <Text style={{color: '#D32F2F', fontSize: 20, fontWeight: 'bold'}}>Đăng nhập</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -569,7 +564,7 @@ const styles = StyleSheet.create({
   guestRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     width: '100%',
     paddingVertical: 4,
   },
