@@ -106,13 +106,10 @@ const MovieItem = ({ item, onPress, userId }: { item: GridMovie; onPress: () => 
           <Text style={styles.movieTitle} numberOfLines={1}>
             {item.title}
           </Text>
+          {/* Xóa dòng movieType (PHIM LẺ) */}
           <View style={styles.movieMeta}>
-            <Text style={styles.movieType}>{item.movieType}</Text>
             {item.year && (
-              <>
-                <Text style={styles.metaDivider}>•</Text>
-                <Text style={styles.movieYear}>{item.year}</Text>
-              </>
+              <Text style={styles.movieYear}>{item.year}</Text>
             )}
           </View>
         </View>
