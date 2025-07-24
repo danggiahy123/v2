@@ -35,6 +35,8 @@ type Movie = {
   viewCount?: number;
   likeCount?: number;
   hasLiked?: boolean;
+  description?: string;
+  movie_title?: string;
 };
 
 export default function SeriesScreen() {
@@ -123,7 +125,13 @@ export default function SeriesScreen() {
       });
 
       const trendingMovies = extractMovies(trendingRes).map(convertToMovie);
-      const vietnameseMovies = extractMovies(vietnameseRes).map(convertToMovie);
+      // Lọc lại chỉ lấy phim Việt Nam thật sự: nếu tên phim là tiếng Việt thì coi là phim Việt Nam
+      const isVietnameseTitle = (title: string) => /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(title);
+      const vietnameseMovies = extractMovies(vietnameseRes)
+        .map(convertToMovie)
+        .filter((m: Movie) =>
+          isVietnameseTitle(m.title || m.movie_title || '')
+        );
       const animeMovies = extractMovies(animeRes).map(convertToMovie);
       
       // 💰 Enhance series data với price info

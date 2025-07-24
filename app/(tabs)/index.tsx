@@ -239,16 +239,41 @@ export default function HomeScreen() {
       }
 
       try {
+        // Tìm genreId của "Phim việt nam"
+        let vietnameseGenreId = null;
+        let vietnameseGenreName = 'Việt Nam';
+        try {
+          // Ưu tiên lấy từ biến genres nếu đã có
+          let genresList = genres;
+          if (!genresList || genresList.length === 0) {
+            // Nếu chưa có, fetch lại
+            const genresRes = await genreService.getGenres('parent');
+            if (genresRes.status === 'success') {
+              genresList = genresRes.data.genres;
+            }
+          }
+          const found = genresList.find((g: any) => g.genre_name.toLowerCase().includes('việt nam'));
+          if (found) {
+            vietnameseGenreId = found._id;
+            vietnameseGenreName = found.genre_name;
+          }
+        } catch (err) {
+          console.error('Không lấy được genreId Phim việt nam:', err);
+        }
+
         const sectionCalls = await Promise.allSettled([
           movieService.getTrending(8),
           movieService.getTopRated(8),
           movieService.getSports({ limit: 8, status: 'released' }),
           animeService.getAllAnime({ showAll: false }),
-          seriesService.getVietnameseSeries({ limit: 8 }),
+          // Thay thế ở đây:
+          vietnameseGenreId
+            ? genreService.getMoviesByGenre(vietnameseGenreId, 1, 8, true)
+            : seriesService.getVietnameseSeries({ limit: 8 }),
           movieService.getComingSoon({ limit: 8, days: 30 }),
         ]);
 
-        const titles = ['Trending', 'Top Rated', 'Thể thao', 'Anime', 'Việt Nam', 'Sắp chiếu'];
+        const titles = ['Trending', 'Top Rated', 'Thể thao', 'Anime', vietnameseGenreName, 'Sắp chiếu'];
 
         const builtSections: MovieSection[] = sectionCalls
           .map((res, idx) => {
@@ -286,7 +311,32 @@ export default function HomeScreen() {
                 }
                 return null;
               }
-
+              // Special handling for Vietnamese genre section
+              if (idx === 4) {
+                let movies = [];
+                if (res.value.data?.movies) {
+                  movies = res.value.data.movies;
+                } else if (Array.isArray(res.value.data)) {
+                  movies = res.value.data;
+                }
+                // Map về GridMovie format
+                const mappedMovies = movies.map((movie: any) => ({
+                  movieId: movie.movieId || movie._id || movie.id,
+                  title: movie.title || movie.movie_title,
+                  poster: movie.poster || movie.poster_path,
+                  movieType: movie.movieType || movie.movie_type || 'Phim Việt Nam',
+                  producer: movie.producer || '',
+                  rating: movie.rating,
+                  year: movie.year || movie.release_year
+                }));
+                if (mappedMovies.length > 0) {
+                  return {
+                    title: titles[idx],
+                    movies: mappedMovies,
+                  };
+                }
+                return null;
+              }
               // Standard handling for other sections
               if (res.value.data?.movies?.length > 0) {
                 return {
@@ -869,9 +919,9 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>{title}</Text>
-            <TouchableOpacity onPress={() => handleViewAll(category || 'vietnamese', title)}>
-              <Text style={styles.seeAllText}>Xem tất cả</Text>
-            </TouchableOpacity>
+            {/* <TouchableOpacity onPress={() => handleViewAll(category || 'vietnamese', title)}> */}
+              {/* <Text style={styles.seeAllText}>Xem tất cả</Text> */}
+            {/* </TouchableOpacity> */}
           </View>
           <FlatList
             data={safeMovies.slice(0, 6)}
