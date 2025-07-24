@@ -272,7 +272,7 @@ export default function AnimeScreen() {
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
                     <Ionicons name="eye-outline" size={14} color="#fff" style={{ marginRight: 2 }} />
                     <Text style={{ color: '#fff', fontSize: 12, marginRight: 8 }}>{item.viewCount ?? 0}</Text>
-                    <Ionicons name={item.hasLiked ? 'heart' : 'heart-outline'} size={14} color={item.hasLiked ? '#ff6b6b' : '#fff'} style={{ marginRight: 2 }} />
+                    <Ionicons name={item.hasLiked ? 'heart' : 'heart-outline'} size={14} color={item.hasLiked ? '#D11030' : '#fff'} style={{ marginRight: 2 }} />
                     <Text style={{ color: '#fff', fontSize: 12 }}>{item.likeCount ?? 0}</Text>
                   </View>
                 </LinearGradient>
