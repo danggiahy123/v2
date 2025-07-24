@@ -2,14 +2,15 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
+import { isNotificationMuted } from '../utils/notificationSettingsHelper';
 
 // Local IP configuration for Expo Go testing
-const API_BASE_URL = 'https://backend-app-lou3.onrender.com'; // Change to your backend URL if needed
+export const API_BASE_URL = 'http://192.168.5.119:3003'; // Change to your backend URL if needed
 
 // Configure notification behavior
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: false,
+    shouldShowAlert: !(await isNotificationMuted()),
     shouldPlaySound: true,
     shouldSetBadge: false,
     shouldShowBanner: true,
