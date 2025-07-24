@@ -205,7 +205,7 @@ const RatingDisplay: React.FC<RatingDisplayProps> = ({
       {(!canRate) && (
         <View style={styles.guideContainer}>
           <Text style={styles.guideText}>
-            Để gửi đánh giá, hãy hoàn thành việc xem phim hoặc thuê phim để mở khóa chức năng đánh giá.
+            Để gửi đánh giá, hãy đăng nhập và hoàn thành việc xem phim hoặc thuê phim để mở khóa chức năng đánh giá.
           </Text>
         </View>
       )}

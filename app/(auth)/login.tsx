@@ -207,6 +207,13 @@ export default function BannerLogin() {
 
       <View style={styles.formWrapper}>
         <View style={styles.formCard}>
+          <View style={styles.logoFormContainer}>
+            <Image
+              source={require('../../assets/anh/logo.png')}
+              style={styles.logoForm}
+              resizeMode="contain"
+            />
+          </View>
           <View style={styles.inputWrapper}>
             <Ionicons name="call-outline" size={22} color="#D32F2F" style={{ marginLeft: 10 }} />
             <TextInput
@@ -445,8 +452,8 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: '#fff',
-    fontWeight: '900',
-    fontSize: 21,
+    fontWeight: '600',
+    fontSize: 24,
     letterSpacing: 1,
     textShadowColor: 'rgba(0,0,0,0.18)',
     textShadowOffset: { width: 0, height: 2 },
@@ -491,5 +498,15 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
+  },
+  logoFormContainer: {
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 18,
+    marginTop: -8,
+  },
+  logoForm: {
+    width: 120,
+    height: 56,
   },
 });
