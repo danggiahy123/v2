@@ -62,6 +62,17 @@ export default function NotificationDebugScreen() {
       return;
     }
 
+    // Test userId format
+    addLog(`Testing userId format: ${userId}`);
+    const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(userId);
+    addLog(`UserId is valid ObjectId: ${isValidObjectId}`);
+    
+    if (!isValidObjectId) {
+      addLog('❌ UserId is not a valid MongoDB ObjectId');
+      Alert.alert('Error', 'UserId is not a valid MongoDB ObjectId format');
+      return;
+    }
+
     try {
       addLog('Registering push token...');
       await notificationService.initialize(userId);

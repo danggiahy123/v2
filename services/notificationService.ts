@@ -5,7 +5,7 @@ import { Platform } from 'react-native';
 import { isNotificationMuted } from '../utils/notificationSettingsHelper';
 
 // Local IP configuration for Expo Go testing
-export const API_BASE_URL = 'https://your-backend-url.onrender.com'; // Change to your backend URL if needed
+export const API_BASE_URL = 'https://backend-app-lou3.onrender.com';
 
 // Configure notification behavior
 Notifications.setNotificationHandler({
