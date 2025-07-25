@@ -50,13 +50,21 @@ export function useNotifications(userId?: string) {
   // Convert backend notification to NotificationItem
   const convertBackendNotification = useCallback((userNotification: UserNotification): NotificationItem => {
     const notification = userNotification.notification;
+
+    console.log('🔄 [convertBackendNotification] Converting:', {
+      userNotificationId: userNotification._id,
+      notificationTitle: notification?.title,
+      notificationBody: notification?.body,
+      hasNotification: !!notification
+    });
+
     return {
       id: userNotification._id,
       _id: userNotification._id,
       notification_id: userNotification.notification_id,
       user_id: userNotification.user_id,
-      title: notification?.title || 'Notification',
-      message: notification?.body || '',
+      title: notification?.title || 'Thông báo',
+      message: notification?.body || 'Không có nội dung',
       timestamp: userNotification.created_at,
       read: userNotification.is_read,
       type: notification?.type || 'manual',
@@ -86,7 +94,6 @@ export function useNotifications(userId?: string) {
 
       const response = await notificationService.getNotifications(userId, filters);
       const convertedNotifications = response.data.notifications.map(convertBackendNotification);
-
       if (append) {
         setNotifications(prev => [...prev, ...convertedNotifications]);
       } else {
@@ -131,17 +138,17 @@ export function useNotifications(userId?: string) {
       console.log('📖 [useNotifications] Marking notification as read...', { notificationId });
 
       const success = await notificationService.markNotificationAsRead(notificationId, userId);
-      
+
       if (success) {
         // Update local state
-        setNotifications(prev => 
-          prev.map(notif => 
-            notif.id === notificationId 
+        setNotifications(prev =>
+          prev.map(notif =>
+            notif.id === notificationId
               ? { ...notif, read: true }
               : notif
           )
         );
-        
+
         // Update unread count
         setUnreadCount(prev => Math.max(0, prev - 1));
 
@@ -162,7 +169,7 @@ export function useNotifications(userId?: string) {
       console.log('🗑️ [useNotifications] Deleting notification...', { notificationId });
 
       const success = await notificationService.deleteNotification(notificationId, userId);
-      
+
       if (success) {
         // Update local state
         setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
@@ -185,7 +192,7 @@ export function useNotifications(userId?: string) {
 
       // Mark all unread notifications as read
       const unreadNotifications = notifications.filter(n => !n.read);
-      const markPromises = unreadNotifications.map(notif => 
+      const markPromises = unreadNotifications.map(notif =>
         notificationService.markNotificationAsRead(notif.id, userId)
       );
 

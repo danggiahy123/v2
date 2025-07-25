@@ -295,14 +295,30 @@ export class NotificationService {
         )
       });
 
-      const response = await fetch(`${API_BASE_URL}/api/notifications?${params}`, {
+      const fullUrl = `${API_BASE_URL}/api/notifications?${params}`;
+      console.log('🌐 [NotificationService] Full request URL:', fullUrl);
+
+      const response = await fetch(fullUrl, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
       });
 
+      console.log('📡 [NotificationService] Response received:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        url: response.url
+      });
+
       const data = await response.json();
+      console.log('📦 [NotificationService] Response data:', {
+        success: data.success,
+        message: data.message,
+        notificationCount: data.data?.notifications?.length || 0,
+        unreadCount: data.data?.unread_count || 0
+      });
       
       if (data.success) {
         console.log('✅ [NotificationService] Notifications fetched successfully');
