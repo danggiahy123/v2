@@ -1,4 +1,4 @@
-export const API_BASE_URL = 'http://192.168.5.119:3003';
+export const API_BASE_URL = 'https://your-backend-url.onrender.com';
 
 export async function updateNotificationMute(userId: string, isMuted: boolean, muteUntil?: number | null) {
   await fetch(`${API_BASE_URL}/api/users/notification-mute`, {
