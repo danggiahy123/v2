@@ -17,7 +17,7 @@ import {
   MovieEpisodesProgressResponse
 } from '../types/userInteraction';
 
-const API_BASE_URL = 'http://192.168.5.174:3003';
+const API_BASE_URL = 'https://backend-app-lou3.onrender.com';
 
 /**
  * 👤 USER INTERACTION SERVICE

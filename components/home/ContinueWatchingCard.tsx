@@ -47,8 +47,8 @@ export const ContinueWatchingCard: React.FC<ContinueWatchingCardProps> = ({
   const cardHeight = (width * 9) / 16; // 16:9 aspect ratio
 
   const getEpisodeInfo = (): string => {
-    // Show episode info if episodeNumber exists
-    if (item.episodeNumber) {
+    // Show episode info if episodeNumber exists and it's a series
+    if (item.episodeNumber && item.movieType === 'Phim bộ') {
       return `Tập ${item.episodeNumber}`;
     }
     return '';
