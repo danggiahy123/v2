@@ -17,6 +17,7 @@ interface EpisodeCardProps {
   disabled?: boolean;
   isLocked?: boolean;
   showUpdateStatus?: boolean;
+  isCurrentEpisode?: boolean; // 🔧 NEW: Prop để highlight tập đang xem
 }
 
 export const EpisodeCard: React.FC<EpisodeCardProps> = ({
@@ -28,6 +29,7 @@ export const EpisodeCard: React.FC<EpisodeCardProps> = ({
   disabled = false,
   isLocked = false,
   showUpdateStatus = false,
+  isCurrentEpisode = false, // 🔧 NEW: Default false
 }) => {
   // Kiểm tra xem episode này có progress không
   const hasProgress = watchingProgress && watchingProgress.episodeId === episode._id;
@@ -47,9 +49,8 @@ export const EpisodeCard: React.FC<EpisodeCardProps> = ({
     <TouchableOpacity
       style={[
         styles.container,
-        disabled && styles.containerDisabled
-        // Ẩn style đặc biệt cho episodes đã hoàn thành
-        // isCompleted && styles.containerCompleted
+        disabled && styles.containerDisabled,
+        isCurrentEpisode && styles.containerCurrentEpisode // 🔧 NEW: Style cho tập đang xem
       ]}
       onPress={() => !disabled && onPress(episode)}
       disabled={disabled}
@@ -64,6 +65,8 @@ export const EpisodeCard: React.FC<EpisodeCardProps> = ({
           resizeMode="cover"
         />
         
+     
+        
         {/* Progress Bar Overlay - Chỉ hiển thị cho episodes đang xem dở, không hiển thị cho episodes đã hoàn thành */}
         {hasProgress && progressPercent > 0 && !isCompleted && (
           <View style={styles.progressOverlay}>
@@ -73,20 +76,13 @@ export const EpisodeCard: React.FC<EpisodeCardProps> = ({
                   styles.progressFill, 
                   { 
                     width: `${Math.min(Math.max(progressPercent, 0), 100)}%`,
-                    backgroundColor: '#FF0000' // Màu đỏ cho episodes đang xem dở
+                    backgroundColor: '#FF0000' // 🔧 NEW: Màu đỏ cho tất cả episodes
                   }
                 ]} 
               />
             </View>
           </View>
         )}
-
-        {/* Completed Badge - Ẩn badge khi episode đã hoàn thành */}
-        {/* {isCompleted && (
-          <View style={styles.completedBadge}>
-            <Text style={styles.completedText}>✓</Text>
-          </View>
-        )} */}
 
         {/* Locked Badge */}
         {isLocked && (
@@ -111,13 +107,6 @@ export const EpisodeCard: React.FC<EpisodeCardProps> = ({
           {formatDuration(episodeDuration)}
         </Text>
         
-        {/* Progress Text - Ẩn text "Đã xem X%" */}
-        {/* {hasProgress && progressPercent > 0 && !isCompleted && (
-          <Text style={styles.progressText}>
-            Đã xem {Math.round(progressPercent)}%
-          </Text>
-        )} */}
-        
         {/* Status Text */}
         {isLocked && (
           <Text style={styles.statusText}>Cần kích hoạt</Text>
@@ -125,7 +114,11 @@ export const EpisodeCard: React.FC<EpisodeCardProps> = ({
         {showUpdateStatus && (
           <Text style={styles.updateStatusText}>Đang cập nhật</Text>
         )}
-
+        
+        {/* 🔧 NEW: Current Episode Status */}
+        {isCurrentEpisode && (
+          <Text style={styles.currentEpisodeStatus}>Đang xem</Text>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -153,6 +146,17 @@ const styles = StyleSheet.create({
     borderColor: '#4CAF50',
     borderWidth: 1,
   },
+  // 🔧 NEW: Style cho tập đang xem - viền đỏ
+  containerCurrentEpisode: {
+    borderColor: '#FF0000',
+    borderWidth: 2,
+    backgroundColor: '#2a2a2a',
+    shadowColor: '#FF0000',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
   posterContainer: {
     position: 'relative',
     marginRight: 12,
@@ -161,6 +165,21 @@ const styles = StyleSheet.create({
     width: 80,
     height: 120,
     borderRadius: 8,
+  },
+  // 🔧 NEW: Badge cho tập đang xem - màu đỏ
+  currentEpisodeBadge: {
+    position: 'absolute',
+    top: 4,
+    left: 4,
+    backgroundColor: '#FF0000',
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  currentEpisodeText: {
+    fontSize: 12,
   },
   progressOverlay: {
     position: 'absolute',
@@ -233,22 +252,29 @@ const styles = StyleSheet.create({
   },
   episodeDuration: {
     fontSize: 14,
-    color: '#aaa',
+    color: '#999',
+    marginBottom: 4,
+  },
+  progressText: {
+    fontSize: 12,
+    color: '#FF6B6B',
     marginBottom: 4,
   },
   statusText: {
     fontSize: 12,
     color: '#FF6B6B',
-    fontWeight: '500',
+    fontStyle: 'italic',
   },
   updateStatusText: {
     fontSize: 12,
     color: '#FFA500',
-    fontWeight: '500',
+    fontStyle: 'italic',
   },
-  progressText: {
+  // 🔧 NEW: Style cho status tập đang xem - màu đỏ
+  currentEpisodeStatus: {
     fontSize: 12,
-    color: '#4CAF50',
-    fontWeight: '500',
+    color: '#FF0000',
+    fontWeight: 'bold',
+    fontStyle: 'italic',
   },
 }); 

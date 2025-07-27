@@ -74,7 +74,7 @@ export const debugEpisodeSwitching = (
 
 /**
  * 🎯 Lọc continue watching data cho phim bộ
- * Chỉ giữ lại episode cuối cùng đã xem cho mỗi phim bộ
+ * Chỉ giữ lại episode được xem gần đây nhất cho mỗi phim bộ
  */
 export const filterContinueWatchingForSeries = (continueWatchingData: ContinueWatchingItem[]): ContinueWatchingItem[] => {
   const seriesMap = new Map<string, ContinueWatchingItem>();
@@ -86,7 +86,8 @@ export const filterContinueWatchingForSeries = (continueWatchingData: ContinueWa
       title: item.title,
       movieType: item.movieType,
       episodeNumber: item.episodeNumber,
-      episodeId: item.episodeId
+      episodeId: item.episodeId,
+      lastWatchedAt: item.lastWatchedAt
     }))
   });
   
@@ -94,31 +95,42 @@ export const filterContinueWatchingForSeries = (continueWatchingData: ContinueWa
     if (item.movieType === 'Phim bộ') {
       const existingItem = seriesMap.get(item.movieId);
       
-      // Logic: Giữ lại episode có số tập lớn nhất (episode cuối cùng đã xem)
+      // Logic: Giữ lại episode được xem gần đây nhất (dựa trên lastWatchedAt)
       if (!existingItem) {
         // Chưa có item cho phim này
         seriesMap.set(item.movieId, item);
         console.log('✅ [filterContinueWatchingForSeries] Added first item for series:', {
           movieId: item.movieId,
           title: item.title,
-          episodeNumber: item.episodeNumber
-        });
-      } else if (item.episodeNumber && existingItem.episodeNumber && item.episodeNumber > existingItem.episodeNumber) {
-        // Item hiện tại có episode number lớn hơn (episode mới hơn)
-        seriesMap.set(item.movieId, item);
-        console.log('🔄 [filterContinueWatchingForSeries] Replaced with newer episode:', {
-          movieId: item.movieId,
-          title: item.title,
-          oldEpisode: existingItem.episodeNumber,
-          newEpisode: item.episodeNumber
+          episodeNumber: item.episodeNumber,
+          lastWatchedAt: item.lastWatchedAt
         });
       } else {
-        console.log('⏭️ [filterContinueWatchingForSeries] Skipped older episode:', {
-          movieId: item.movieId,
-          title: item.title,
-          existingEpisode: existingItem.episodeNumber,
-          currentEpisode: item.episodeNumber
-        });
+        // So sánh thời gian xem cuối cùng
+        const existingTime = new Date(existingItem.lastWatchedAt).getTime();
+        const currentTime = new Date(item.lastWatchedAt).getTime();
+        
+        if (currentTime > existingTime) {
+          // Item hiện tại được xem gần đây hơn
+          seriesMap.set(item.movieId, item);
+          console.log('🔄 [filterContinueWatchingForSeries] Replaced with more recent episode:', {
+            movieId: item.movieId,
+            title: item.title,
+            oldEpisode: existingItem.episodeNumber,
+            newEpisode: item.episodeNumber,
+            oldTime: existingItem.lastWatchedAt,
+            newTime: item.lastWatchedAt
+          });
+        } else {
+          console.log('⏭️ [filterContinueWatchingForSeries] Skipped older episode:', {
+            movieId: item.movieId,
+            title: item.title,
+            existingEpisode: existingItem.episodeNumber,
+            currentEpisode: item.episodeNumber,
+            existingTime: existingItem.lastWatchedAt,
+            currentTime: item.lastWatchedAt
+          });
+        }
       }
     } else {
       // Phim lẻ giữ nguyên
@@ -138,7 +150,8 @@ export const filterContinueWatchingForSeries = (continueWatchingData: ContinueWa
       movieId: item.movieId,
       title: item.title,
       movieType: item.movieType,
-      episodeNumber: item.episodeNumber
+      episodeNumber: item.episodeNumber,
+      lastWatchedAt: item.lastWatchedAt
     }))
   });
   

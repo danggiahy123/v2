@@ -1505,6 +1505,9 @@ if (!movieDetail) return;
             completed: allEpisodesProgress[episode._id].completed
           } : null;
           
+          // 🔧 NEW: Xác định tập đang xem hiện tại
+          const isCurrentEpisode = currentEpisode?._id === episode._id;
+          
           return (
             <EpisodeCard
               key={episode._id || index}
@@ -1516,6 +1519,7 @@ if (!movieDetail) return;
               disabled={!canAccess}
               isLocked={!canAccess}
               showUpdateStatus={shouldShowUpdateStatus}
+              isCurrentEpisode={isCurrentEpisode} // 🔧 NEW: Truyền prop để highlight tập đang xem
             />
           );
         })}
