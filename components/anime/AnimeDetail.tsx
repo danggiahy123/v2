@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, Image, ActivityIndicator, ScrollView, StyleSheet } from 'react-native';
 import { animeService } from '../../services/animeService';
 import { Collapsible } from '../layout/Collapsible';
+import { EpisodeCard } from '../movie/EpisodeCard';
 
 interface AnimeDetailProps {
   animeId: string;
@@ -35,13 +36,36 @@ const AnimeDetail: React.FC<AnimeDetailProps> = ({ animeId }) => {
       {anime.episodes && anime.episodes.length > 0 && (
         <View style={{ marginTop: 18 }}>
           <Text style={styles.sectionTitle}>Danh sách tập</Text>
-          {anime.episodes.map((ep: any) => (
-            <View key={ep._id || ep.number} style={styles.episodeItem}>
-              <Text style={styles.episodeTitle}>Tập {ep.number}: {ep.title}</Text>
-              {ep.duration && <Text style={styles.episodeInfo}>Thời lượng: {ep.duration} phút</Text>}
-              {ep.is_locked ? <Text style={styles.episodeLocked}>Khoá</Text> : <Text style={styles.episodeUnlocked}>Xem ngay</Text>}
-            </View>
-          ))}
+          {anime.episodes.map((ep: any) => {
+            // Convert anime episode format to EpisodeCard format
+            const episode = {
+              _id: ep._id || ep.number?.toString(),
+              episode_number: ep.number || 1,
+              episode_title: ep.title || `Tập ${ep.number}`,
+              episode_description: ep.description || '',
+              uri: ep.uri || '',
+              duration: ep.duration ? ep.duration * 60 : 0, // Convert minutes to seconds
+              movie_id: anime._id || '',
+              createdAt: ep.createdAt || new Date().toISOString(),
+              updatedAt: ep.updatedAt || new Date().toISOString(),
+            };
+            
+            return (
+              <EpisodeCard
+                key={ep._id || ep.number}
+                episode={episode}
+                moviePoster={anime.poster}
+                movieTitle={anime.title}
+                onPress={() => {
+                  // TODO: Implement episode press handler
+                  console.log('Anime episode pressed:', episode);
+                }}
+                disabled={ep.is_locked}
+                isLocked={ep.is_locked}
+                showUpdateStatus={false}
+              />
+            );
+          })}
         </View>
       )}
     </ScrollView>

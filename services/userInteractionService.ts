@@ -13,10 +13,11 @@ import {
   AddCommentRequest,
   AddCommentResponse,
   UpdateProgressRequest,
-  UpdateProgressResponse
+  UpdateProgressResponse,
+  MovieEpisodesProgressResponse
 } from '../types/userInteraction';
 
-const API_BASE_URL = 'https://backend-app-lou3.onrender.com';
+const API_BASE_URL = 'http://192.168.5.174:3003';
 
 /**
  * 👤 USER INTERACTION SERVICE
@@ -385,6 +386,74 @@ export const userInteractionService = {
         userComment: null,
         watchingProgress: null
       };
+    }
+  },
+
+  /**
+   * 🎬 GET MOVIE EPISODES PROGRESS
+   * 
+   * API để lấy tiến độ xem của tất cả episodes trong một movie
+   * ENDPOINT: GET /api/watching/movie/:movieId/episodes
+   * 
+   * @param movieId - ID của movie
+   * @param userId - ID của user
+   * @returns Promise<MovieEpisodesProgressResponse>
+   */
+  async getMovieEpisodesProgress(
+    movieId: string,
+    userId: string
+  ): Promise<MovieEpisodesProgressResponse> {
+    try {
+      if (!movieId) {
+        throw new Error('Movie ID is required');
+      }
+      if (!userId || userId === 'anonymous' || userId === 'null') {
+        console.log('⚠️ [UserInteractionService] Skipping progress fetch for anonymous user');
+        throw new Error('User must be logged in to fetch progress');
+      }
+
+      const url = `${API_BASE_URL}/api/watching/movie/${movieId}/episodes?userId=${userId}`;
+      
+      console.log('🎬 [UserInteractionService] Fetching movie episodes progress:', {
+        movieId,
+        userId,
+        url
+      });
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ [UserInteractionService] API Error:', {
+          status: response.status,
+          error: errorText,
+          movieId,
+          userId
+        });
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+      
+      const result: MovieEpisodesProgressResponse = await response.json();
+      
+      if (result.status !== 'success') {
+        throw new Error(result.message || 'Failed to fetch episodes progress');
+      }
+      
+      console.log('✅ [UserInteractionService] Movie episodes progress fetched successfully:', {
+        movieId,
+        episodesCount: result.data?.episodes?.length || 0
+      });
+      
+      return result;
+      
+    } catch (error) {
+      console.error('❌ [UserInteractionService] Error fetching movie episodes progress:', error);
+      throw error;
     }
   },
   

@@ -6,4 +6,5 @@
 export { default as MovieList } from './MovieList';
 export { default as ContinueWatchingBadge } from './ContinueWatchingBadge';
 export { EnhancedMovieCard } from './EnhancedMovieCard';
-export { default as RelatedMovies } from './RelatedMovies'; 
+export { default as RelatedMovies } from './RelatedMovies';
+export { EpisodeCard } from './EpisodeCard'; 

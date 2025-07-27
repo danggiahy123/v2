@@ -126,15 +126,39 @@ export interface UpdateProgressRequest {
 }
 
 export interface UpdateProgressResponse {
-  status: 'success' | 'error';
+  status: string;
   message: string;
-  data: {
-    episode_id: string;
-    current_time: number;
-    duration: number;
-    watch_percentage: number;
-    completed: boolean;
-    last_watched: string;
+  data?: {
+    watching: {
+      episode_id: string;
+      current_time: number;
+      duration: number;
+      completed: boolean;
+      watch_percentage: number;
+      last_watched: string;
+    };
+  };
+}
+
+export interface MovieEpisodesProgressResponse {
+  status: string;
+  message: string;
+  data?: {
+    movieId: string;
+    episodes: Array<{
+      episodeId: string;
+      episodeNumber: number;
+      episodeTitle: string;
+      duration: number;
+      watchingProgress: {
+        episodeId: string;
+        currentTime: number;
+        duration: number;
+        completed: boolean;
+        watchPercentage: number;
+        lastWatched: string;
+      } | null;
+    }>;
   };
 }
 
