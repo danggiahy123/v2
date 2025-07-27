@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { seriesService } from '../../services/seriesService';
+import { EpisodeCard } from '../movie/EpisodeCard';
 
 interface SeriesDetailProps {
   seriesId: string;
@@ -119,19 +120,19 @@ export default function SeriesDetail({ seriesId, onClose }: SeriesDetailProps) {
             <Text style={styles.sectionTitle}>Danh sách tập</Text>
             <View style={styles.episodes}>
               {series.episodes.map((episode: any, index: number) => (
-                <TouchableOpacity key={episode._id} style={styles.episodeItem}>
-                  <View style={styles.episodeNumber}>
-                    <Text style={styles.episodeNumberText}>{episode.episode_number}</Text>
-                  </View>
-                  <View style={styles.episodeInfo}>
-                    <Text style={styles.episodeTitle}>{episode.episode_title}</Text>
-                    {episode.duration && (
-                      <Text style={styles.episodeDuration}>
-                        {Math.floor(episode.duration / 60)}:{String(episode.duration % 60).padStart(2, '0')}
-                      </Text>
-                    )}
-                  </View>
-                </TouchableOpacity>
+                <EpisodeCard
+                  key={episode._id}
+                  episode={episode}
+                  moviePoster={series.poster_path}
+                  movieTitle={series.movie_title}
+                  onPress={() => {
+                    // TODO: Implement episode press handler
+                    console.log('Episode pressed:', episode);
+                  }}
+                  disabled={false}
+                  isLocked={false}
+                  showUpdateStatus={false}
+                />
               ))}
             </View>
           </View>

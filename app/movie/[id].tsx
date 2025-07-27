@@ -10,7 +10,7 @@
  * - Star rating system (NEW)
  */
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -44,13 +44,14 @@ import { Notification, LoginRequiredModal } from '../../components/ui';
 import { SkeletonLoader } from '../../components/ui/AnimatedElements';
 import { getResumeWatchingInfo, getResumeButtonText, shouldShowContinueBadge, debugEpisodeSwitching } from '../../utils/watchingHelper';
 import { useFocusEffect } from '@react-navigation/native';
-import { RelatedMovies } from '../../components/movie';
+import { RelatedMovies, EpisodeCard } from '../../components/movie';
 import { useAuthGuard } from '../../hooks';
 // Rating system imports (NEW)
 import { RatingModal, RatingDisplay, StarRating } from '../../components/rating';
 import { addStarRating, getUserStarRating, getMovieStarRatings, type RatingStats, type UserRating, type RatingItem } from '../../services/ratingService';
 // Removed Collapsible import - using inline logic
 import eventBus from '../../utils/eventBus';
+import { userInteractionService } from '../../services/userInteractionService';
 
 
 // Screen width for responsive design - will be used in future updates
@@ -790,32 +791,58 @@ const isValidVideoUrl = (url: string): boolean => {
 
     console.log('✅ [DEBUG] Episode validation passed, setting up video player');
     
-    // 🔧 FIX: Reset resume time when switching episodes
-    // Chỉ giữ resume time nếu episode này có watching progress
-    const watchingProgress = movieDetail?.userInteractions?.watchingProgress;
+    // 🔧 FIX: Use allEpisodesProgress to get the correct progress for this specific episode
+    const episodeProgress = allEpisodesProgress[episode._id];
     let newResumeTime: number | undefined = undefined;
     
     console.log('🎬 [DEBUG] Episode switching logic:', {
       clickedEpisodeId: episode._id,
       clickedEpisodeNumber: episode.episode_number,
-      watchingProgressEpisodeId: watchingProgress?.episodeId,
-      watchingProgressCurrentTime: watchingProgress?.currentTime,
-      isSameEpisode: watchingProgress?.episodeId === episode._id,
-      isSameEpisodeEnhanced: watchingProgress?.episodeId === episode._id || watchingProgress?.episodeId === episode._id?.toString() || episode._id === watchingProgress?.episodeId?.toString()
+      hasEpisodeProgress: !!episodeProgress,
+      episodeProgressCurrentTime: episodeProgress?.currentTime,
+      episodeProgressWatchPercentage: episodeProgress?.watchPercentage,
+      episodeProgressCompleted: episodeProgress?.completed
     });
     
-    // 🔧 ENHANCED: Use debug function to check episode switching logic
-    const debugResult = debugEpisodeSwitching(episode, watchingProgress);
-    const { isSameEpisode, shouldResume, resumeTime } = debugResult;
-    
-    if (shouldResume) {
-      // Nếu đây là episode đang được resume, giữ thời gian
-      newResumeTime = resumeTime;
-      console.log('🎬 [DEBUG] Keeping resume time for current episode:', newResumeTime);
+    // 🔧 ENHANCED: Check if this episode has saved progress
+    if (episodeProgress && episodeProgress.currentTime && episodeProgress.currentTime > 0) {
+      const savedTime = episodeProgress.currentTime;
+      const watchPercentage = episodeProgress.watchPercentage;
+      const duration = episodeProgress.duration || episode.duration || 0;
+      
+      console.log('🎬 [DEBUG] Found saved progress for episode:', {
+        episodeId: episode._id,
+        episodeTitle: episode.episode_title,
+        savedTime,
+        watchPercentage,
+        duration,
+        completed: episodeProgress.completed
+      });
+      
+      // Validate if we should resume
+      if (watchPercentage && watchPercentage >= 90) {
+        console.log('⚠️ [DEBUG] Episode already completed (≥90%), starting from beginning');
+        newResumeTime = 0;
+      } else if (savedTime > 7200) {
+        console.log('⚠️ [DEBUG] Saved time too large (>2h), starting from beginning');
+        newResumeTime = 0;
+      } else if (duration && savedTime >= duration - 10) {
+        console.log('⚠️ [DEBUG] Resume time too close to episode end, starting from beginning');
+        newResumeTime = 0;
+      } else {
+        // Valid resume time
+        newResumeTime = savedTime;
+        console.log('🎬 [DEBUG] Using saved progress for episode:', {
+          episodeId: episode._id,
+          episodeTitle: episode.episode_title,
+          resumeTime: newResumeTime,
+          watchPercentage
+        });
+      }
     } else {
-      // Nếu đổi sang episode khác, bắt đầu từ đầu
-      newResumeTime = 0; // Explicitly set to 0
-      console.log('🎬 [DEBUG] Starting new episode from beginning (0:00)');
+      // No saved progress, start from beginning
+      console.log('🎬 [DEBUG] No saved progress for episode, starting from beginning');
+      newResumeTime = 0;
     }
     
     console.log('🎬 [DEBUG] Final resume time:', newResumeTime);
@@ -1019,17 +1046,50 @@ if (!movieDetail) return;
         await new Promise<void>((resolve) => setTimeout(resolve, 1500));
         showNotificationMessage('Kích hoạt thành công! Bắt đầu xem phim.', 'success');
       }
-      // Lấy tiến trình đã lưu nếu có
-      const watchingProgress = movieDetail?.userInteractions?.watchingProgress;
-      const savedTime = watchingProgress?.currentTime;
-      const watchPercentage = watchingProgress?.watchPercentage;
+      
+      // 🔧 FIX: Use allEpisodesProgress for series or general watchingProgress for single movies
       let resumeTime: number | undefined = undefined;
-      if (savedTime && savedTime > 0 && (!watchPercentage || watchPercentage < 90) && savedTime <= 7200) {
-        const episodeDuration = movieDetail?.duration || movieDetail?.episodes?.[0]?.duration;
-        if (!episodeDuration || savedTime < episodeDuration - 10) {
-          resumeTime = savedTime;
+      
+      if (movieDetail?.movie_type === 'Phim bộ' && movieDetail.episodes?.length > 0) {
+        // For series, find the first episode with progress or use the first episode
+        const firstEpisode = movieDetail.episodes[0];
+        if (firstEpisode?._id && allEpisodesProgress[firstEpisode._id]) {
+          const episodeProgress = allEpisodesProgress[firstEpisode._id];
+          const savedTime = episodeProgress.currentTime;
+          const watchPercentage = episodeProgress.watchPercentage;
+          const duration = episodeProgress.duration || firstEpisode.duration || 0;
+          
+          console.log('🎬 [handleWatchNow] Found progress for first episode:', {
+            episodeId: firstEpisode._id,
+            episodeTitle: firstEpisode.episode_title,
+            savedTime,
+            watchPercentage,
+            duration
+          });
+          
+          // Validate if we should resume
+          if (savedTime && savedTime > 0 && (!watchPercentage || watchPercentage < 90) && savedTime <= 7200) {
+            if (!duration || savedTime < duration - 10) {
+              resumeTime = savedTime;
+              console.log('🎬 [handleWatchNow] Using saved progress for first episode:', resumeTime);
+            }
+          }
+        }
+      } else {
+        // For single movies, use general watching progress
+        const watchingProgress = movieDetail?.userInteractions?.watchingProgress;
+        const savedTime = watchingProgress?.currentTime;
+        const watchPercentage = watchingProgress?.watchPercentage;
+        
+        if (savedTime && savedTime > 0 && (!watchPercentage || watchPercentage < 90) && savedTime <= 7200) {
+          const episodeDuration = movieDetail?.duration || movieDetail?.episodes?.[0]?.duration;
+          if (!episodeDuration || savedTime < episodeDuration - 10) {
+            resumeTime = savedTime;
+            console.log('🎬 [handleWatchNow] Using saved progress for single movie:', resumeTime);
+          }
         }
       }
+      
       setResumeFromTime(resumeTime);
       setHasClickedWatchButton(true);
       setShowVideoPlayer(true);
@@ -1196,19 +1256,40 @@ if (!movieDetail) return;
             <TouchableOpacity
               style={styles.freeWatchButton}
               onPress={() => {
-                // Lấy tiến trình đã lưu nếu có
-                const watchingProgress = movieDetail?.userInteractions?.watchingProgress;
-                const savedTime = watchingProgress?.currentTime;
-                const watchPercentage = watchingProgress?.watchPercentage;
+                // 🔧 FIX: Use allEpisodesProgress for series or general watchingProgress for single movies
                 let resumeTime: number | undefined = undefined;
-                if (savedTime && savedTime > 0 && (!watchPercentage || watchPercentage < 90) && savedTime <= 7200) {
-                  const savedDuration = watchingProgress?.duration;
-                  const episodeDuration = movieDetail?.duration || movieDetail?.episodes?.[0]?.duration;
-                  const actualDuration = savedDuration || episodeDuration;
-                  if (!actualDuration || savedTime < actualDuration - 10) {
-                    resumeTime = savedTime;
+                
+                if (movieDetail?.movie_type === 'Phim bộ' && movieDetail.episodes?.length > 0) {
+                  // For series, find the first episode with progress or use the first episode
+                  const firstEpisode = movieDetail.episodes[0];
+                  if (firstEpisode?._id && allEpisodesProgress[firstEpisode._id]) {
+                    const episodeProgress = allEpisodesProgress[firstEpisode._id];
+                    const savedTime = episodeProgress.currentTime;
+                    const watchPercentage = episodeProgress.watchPercentage;
+                    const duration = episodeProgress.duration || firstEpisode.duration || 0;
+                    
+                    if (savedTime && savedTime > 0 && (!watchPercentage || watchPercentage < 90) && savedTime <= 7200) {
+                      if (!duration || savedTime < duration - 10) {
+                        resumeTime = savedTime;
+                      }
+                    }
+                  }
+                } else {
+                  // For single movies, use general watching progress
+                  const watchingProgress = movieDetail?.userInteractions?.watchingProgress;
+                  const savedTime = watchingProgress?.currentTime;
+                  const watchPercentage = watchingProgress?.watchPercentage;
+                  
+                  if (savedTime && savedTime > 0 && (!watchPercentage || watchPercentage < 90) && savedTime <= 7200) {
+                    const savedDuration = watchingProgress?.duration;
+                    const episodeDuration = movieDetail?.duration || movieDetail?.episodes?.[0]?.duration;
+                    const actualDuration = savedDuration || episodeDuration;
+                    if (!actualDuration || savedTime < actualDuration - 10) {
+                      resumeTime = savedTime;
+                    }
                   }
                 }
+                
                 setResumeFromTime(resumeTime);
                 setHasClickedWatchButton(true);
                 setShowVideoPlayer(true);
@@ -1217,10 +1298,34 @@ if (!movieDetail) return;
               <Ionicons name="play-circle" size={24} color="#ffffff" />
               <Text style={styles.freeWatchText}>
                 {(() => {
-                  const watchingProgress = movieDetail?.userInteractions?.watchingProgress;
-                  const savedTime = watchingProgress?.currentTime;
-                  const watchPercentage = watchingProgress?.watchPercentage;
-                  if (savedTime && savedTime > 0 && (!watchPercentage || watchPercentage < 90) && savedTime <= 7200) {
+                  // 🔧 FIX: Use allEpisodesProgress for series or general watchingProgress for single movies
+                  let savedTime: number | undefined = undefined;
+                  
+                  if (movieDetail?.movie_type === 'Phim bộ' && movieDetail.episodes?.length > 0) {
+                    // For series, find the first episode with progress
+                    const firstEpisode = movieDetail.episodes[0];
+                    if (firstEpisode?._id && allEpisodesProgress[firstEpisode._id]) {
+                      const episodeProgress = allEpisodesProgress[firstEpisode._id];
+                      const watchPercentage = episodeProgress.watchPercentage;
+                      
+                      if (episodeProgress.currentTime && episodeProgress.currentTime > 0 && (!watchPercentage || watchPercentage < 90) && episodeProgress.currentTime <= 7200) {
+                        const duration = episodeProgress.duration || firstEpisode.duration || 0;
+                        if (!duration || episodeProgress.currentTime < duration - 10) {
+                          savedTime = episodeProgress.currentTime;
+                        }
+                      }
+                    }
+                  } else {
+                    // For single movies, use general watching progress
+                    const watchingProgress = movieDetail?.userInteractions?.watchingProgress;
+                    const watchPercentage = watchingProgress?.watchPercentage;
+                    
+                    if (watchingProgress?.currentTime && watchingProgress.currentTime > 0 && (!watchPercentage || watchPercentage < 90) && watchingProgress.currentTime <= 7200) {
+                      savedTime = watchingProgress.currentTime;
+                    }
+                  }
+                  
+                  if (savedTime && savedTime > 0) {
                     // Hiển thị thời gian tiếp tục xem
                     const minutes = Math.floor(savedTime / 60);
                     const seconds = Math.floor(savedTime % 60);
@@ -1288,29 +1393,95 @@ if (!movieDetail) return;
     );
   };
 
-  const renderEpisodes = () => {
-    // Don't render if it's not a series
-    if (movieDetail?.movie_type !== 'Phim bộ') return null;
-    
-    // Handle series without episodes
-    if (!movieDetail?.episodes || movieDetail.episodes.length === 0) {
-      return (
-        <View style={styles.episodesContainer}>
-          <Text style={styles.sectionTitle}>Tập phim</Text>
-          <View style={styles.emptyEpisodesContainer}>
-            <Text style={styles.emptyEpisodesText}>
-              Phim bộ này chưa có tập phim nào.
-            </Text>
-            <Text style={styles.emptyEpisodesSubtext}>
-              Vui lòng thử lại sau hoặc liên hệ admin.
-            </Text>
-          </View>
-        </View>
-      );
+  // State để lưu progress của tất cả episodes
+  const [allEpisodesProgress, setAllEpisodesProgress] = useState<{
+    [episodeId: string]: {
+      episodeId: string;
+      currentTime: number;
+      duration: number;
+      completed: boolean;
+      watchPercentage: number;
+      lastWatched: string;
+    };
+  }>({});
+
+  // Function để lấy progress của tất cả episodes
+  const fetchAllEpisodesProgress = useCallback(async () => {
+    if (!userId || userId === 'anonymous' || userId === 'null' || !movieDetail) {
+      return;
     }
 
-    // Render episodes list
+    try {
+      console.log('🎬 [MovieDetail] Fetching all episodes progress for movie:', movieDetail._id);
+      
+      const response = await userInteractionService.getMovieEpisodesProgress(
+        movieDetail._id || movieDetail.movieId,
+        userId
+      );
+
+      if (response.data?.episodes) {
+        const progressMap: { [episodeId: string]: any } = {};
+        response.data.episodes.forEach(episode => {
+          if (episode.watchingProgress) {
+            progressMap[episode.episodeId] = episode.watchingProgress;
+          }
+        });
+        
+        setAllEpisodesProgress(progressMap);
+        
+        console.log('✅ [MovieDetail] All episodes progress loaded:', {
+          movieId: movieDetail._id,
+          episodesCount: response.data.episodes.length,
+          progressCount: Object.keys(progressMap).length
+        });
+      }
+    } catch (error) {
+      console.error('❌ [MovieDetail] Error fetching all episodes progress:', error);
+    }
+  }, [userId, movieDetail]);
+
+  // Fetch all episodes progress khi movie detail được load
+  useEffect(() => {
+    if (movieDetail && movieDetail.movie_type === 'Phim bộ') {
+      fetchAllEpisodesProgress();
+    }
+  }, [movieDetail, fetchAllEpisodesProgress]);
+
+  // Refresh progress khi episode thay đổi
+  useEffect(() => {
+    if (currentEpisode && movieDetail && movieDetail.movie_type === 'Phim bộ') {
+      console.log('🔄 [MovieDetail] Episode changed, refreshing progress');
+      fetchAllEpisodesProgress();
+    }
+  }, [currentEpisode, movieDetail, fetchAllEpisodesProgress]);
+
+  // Function để refresh progress khi có thay đổi
+  const refreshEpisodesProgress = useCallback(() => {
+    if (movieDetail && movieDetail.movie_type === 'Phim bộ') {
+      fetchAllEpisodesProgress();
+    }
+  }, [movieDetail, fetchAllEpisodesProgress]);
+
+  // Cập nhật progress khi episode được xem
+  const handleEpisodeProgressUpdate = useCallback((episodeId: string, progress: number) => {
+    setAllEpisodesProgress(prev => ({
+      ...prev,
+      [episodeId]: {
+        ...prev[episodeId],
+        watchPercentage: progress,
+        completed: progress >= 90
+      }
+    }));
+  }, []);
+
+  const renderEpisodes = () => {
+    if (!movieDetail?.episodes || movieDetail.episodes.length === 0) {
+      return null;
+    }
+
+    // Định nghĩa isSeriesLocked
     const isSeriesLocked = !movieDetail.is_free && (!hasRentalAccess || needsActivation);
+
     return (
       <View style={styles.episodesContainer}>
         <Text style={styles.sectionTitle}>Tập phim ({movieDetail.episodes.length})</Text>
@@ -1324,33 +1495,28 @@ if (!movieDetail) return;
           // Nếu chưa kích hoạt rental thì disable hết các tập
           const canAccess = !isSeriesLocked && (movieDetail.is_free || hasRentalAccess);
           const shouldShowUpdateStatus = !hasValidUri && canAccess;
+          
+          // Lấy watching progress cho episode này từ allEpisodesProgress
+          const episodeProgress = allEpisodesProgress[episode._id] ? {
+            episodeId: episode._id,
+            watchPercentage: allEpisodesProgress[episode._id].watchPercentage,
+            currentTime: allEpisodesProgress[episode._id].currentTime,
+            duration: allEpisodesProgress[episode._id].duration || episode.duration || 0,
+            completed: allEpisodesProgress[episode._id].completed
+          } : null;
+          
           return (
-            <TouchableOpacity
+            <EpisodeCard
               key={episode._id || index}
-              style={[
-                styles.episodeItem,
-                (!hasValidUri || !canAccess) && styles.episodeItemDisabled
-              ]}
-              onPress={() => canAccess && handleEpisodePress(episode)}
+              episode={episode}
+              moviePoster={movieDetail.poster || movieDetail.image || movieDetail.poster_path}
+              movieTitle={movieDetail.movie_title}
+              watchingProgress={episodeProgress}
+              onPress={handleEpisodePress}
               disabled={!canAccess}
-            >
-              <Text style={styles.episodeNumber}>Tập {episode.episode_number}</Text>
-              <Text style={[
-                styles.episodeTitle,
-                (!hasValidUri || !canAccess) && styles.episodeTitleDisabled
-              ]}>
-                {episode.episode_title}
-              </Text>
-              <Text style={styles.episodeDuration}>
-                {formatDuration(episode.duration)}
-              </Text>
-              {!canAccess && (
-                <Text style={styles.episodeStatusLocked}>🔒 Cần kích hoạt</Text>
-              )}
-              {shouldShowUpdateStatus && (
-                <Text style={styles.episodeStatus}>Đang cập nhật</Text>
-              )}
-            </TouchableOpacity>
+              isLocked={!canAccess}
+              showUpdateStatus={shouldShowUpdateStatus}
+            />
           );
         })}
       </View>
@@ -1715,7 +1881,7 @@ if (!movieDetail) return;
                   showTitle={false}
                   resumeFromTime={resumeFromTime !== undefined ? resumeFromTime : (() => {
                     // 🔧 FIX: Handle resume time correctly for auto-play vs manual play
-// Case 1: Auto-play from Continue Watching - use resume info from getResumeWatchingInfo
+                    // Case 1: Auto-play from Continue Watching - use resume info from getResumeWatchingInfo
                     if (autoPlay === 'true' && fromContinueWatching === 'true') {
                       const { resumeFromTime: autoResumeTime } = getResumeWatchingInfo({
                         movieDetail,
@@ -1726,16 +1892,74 @@ if (!movieDetail) return;
                       return autoResumeTime;
                     }
                     
-                    // Case 2: Manual episode selection - don't resume, start from beginning
-                    if (currentEpisode) {
-                      console.log('🔥 [RESUME] Manual episode selection - start from beginning');
-                      return undefined;
+                    // Case 2: Manual episode selection - use episode-specific progress
+                    if (currentEpisode && episodeToPlay?._id && allEpisodesProgress[episodeToPlay._id]) {
+                      const episodeProgress = allEpisodesProgress[episodeToPlay._id];
+                      const savedTime = episodeProgress.currentTime;
+                      const watchPercentage = episodeProgress.watchPercentage;
+                      const duration = episodeProgress.duration || episodeToPlay.duration || 0;
+                      
+                      console.log('🎬 [RESUME] Manual episode selection with progress:', {
+                        episodeId: episodeToPlay._id,
+                        episodeTitle: episodeToPlay.episode_title,
+                        savedTime,
+                        watchPercentage,
+                        duration
+                      });
+                      
+                      // Validate if we should resume
+                      if (!savedTime || savedTime <= 0) {
+                        console.log('⚠️ [RESUME] No saved time or invalid time');
+                        return undefined;
+                      }
+                      if (watchPercentage && watchPercentage >= 90) {
+                        console.log('⚠️ [RESUME] Already watched 90%+, starting from beginning');
+                        return undefined;
+                      }
+                      if (savedTime > 7200) {
+                        console.log('⚠️ [RESUME] Saved time too large (>2h), starting from beginning');
+                        return undefined;
+                      }
+                      if (duration && savedTime >= duration - 10) {
+                        console.log('⚠️ [RESUME] Resume time too close to episode end, starting from beginning');
+                        return undefined;
+                      }
+                      
+                      console.log('🎬 [RESUME] Using saved progress for manual episode selection:', {
+                        episodeId: episodeToPlay._id,
+                        episodeTitle: episodeToPlay.episode_title,
+                        resumeTime: savedTime,
+                        watchPercentage
+                      });
+                      
+                      return savedTime;
                     }
 
                     // Case 3: Default episode for single movies or first episode - check for saved progress
                     const watchingProgress = movieDetail?.userInteractions?.watchingProgress;
-                    const savedTime = watchingProgress?.currentTime;
-                    const watchPercentage = watchingProgress?.watchPercentage;
+                    
+                    // 🔧 FIX: Sử dụng progress từ allEpisodesProgress cho episode cụ thể
+                    let savedTime = watchingProgress?.currentTime;
+                    let watchPercentage = watchingProgress?.watchPercentage;
+                    
+                    // Nếu có episodeToPlay và allEpisodesProgress, sử dụng progress của episode đó
+                    if (episodeToPlay?._id && allEpisodesProgress[episodeToPlay._id]) {
+                      const episodeProgress = allEpisodesProgress[episodeToPlay._id];
+                      savedTime = episodeProgress.currentTime;
+                      watchPercentage = episodeProgress.watchPercentage;
+                      
+                      console.log('🎬 [RESUME] Using episode-specific progress:', {
+                        episodeId: episodeToPlay._id,
+                        episodeTitle: episodeToPlay.episode_title,
+                        savedTime,
+                        watchPercentage
+                      });
+                    } else if (watchingProgress?.currentTime) {
+                      console.log('🎬 [RESUME] Using general watching progress:', {
+                        savedTime: watchingProgress.currentTime,
+                        watchPercentage: watchingProgress.watchPercentage
+                      });
+                    }
                     
                     // Validate saved time
                     if (!savedTime || savedTime <= 0) {
@@ -1782,10 +2006,22 @@ if (!movieDetail) return;
                   })()}
                   onProgressUpdate={(progress: number) => {
                     console.log(`⏯️ [VIDEO] Progress: ${progress}%`);
+                    // Cập nhật progress cho episode hiện tại
+                    if (episodeToPlay?._id) {
+                      handleEpisodeProgressUpdate(episodeToPlay._id, progress);
+                    }
+                    // Refresh progress từ server mỗi 30 giây
+                    if (progress % 30 === 0 && movieDetail && movieDetail.movie_type === 'Phim bộ') {
+                      fetchAllEpisodesProgress();
+                    }
                   }}
                   onEpisodeComplete={() => {
                     console.log('🎬 [VIDEO] Episode completed!');
                     showNotificationMessage('Tập phim đã hoàn thành!', 'success');
+                    // Refresh progress khi episode hoàn thành
+                    if (movieDetail && movieDetail.movie_type === 'Phim bộ') {
+                      fetchAllEpisodesProgress();
+                    }
                   }}
                 />
               ) : (
