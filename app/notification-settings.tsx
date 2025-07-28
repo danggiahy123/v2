@@ -19,7 +19,7 @@ import { LoginRequiredModal } from '../components/ui';
 import { notificationService } from '../services/notificationService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setNotificationMute, getNotificationMute, NotificationMuteOption } from '../utils/notificationSettingsHelper';
-import { updateNotificationMute } from '../services/notificationMuteService';
+import { updateNotificationMute, getNotificationMuteFromServer } from '../services/notificationMuteService';
 
 interface NotificationSettings {
   newMovies: boolean;
@@ -52,17 +52,27 @@ export default function NotificationSettingsScreen() {
   useEffect(() => {
     const getUserId = async () => {
       try {
+        console.log('🔄 Getting userId from storage...');
         const storedUserId = await AsyncStorage.getItem('userId');
+        console.log('📱 Stored userId:', storedUserId);
+        
         if (storedUserId) {
           setUserId(storedUserId);
+          console.log('✅ UserId set successfully:', storedUserId);
+        } else {
+          console.log('⚠️ No userId found in storage');
+          setUserId(null);
         }
       } catch (error) {
-        console.error('Error getting userId:', error);
+        console.error('❌ Error getting userId:', error);
+        setUserId(null);
       }
     };
 
     if (isLoggedIn) {
       getUserId();
+    } else {
+      setUserId(null);
     }
   }, [isLoggedIn]);
 
@@ -74,11 +84,57 @@ export default function NotificationSettingsScreen() {
 
   useEffect(() => {
     // Lấy trạng thái mute khi vào màn hình
-    getNotificationMute().then((settings) => {
-      setMuteOption(settings.muteOption);
-      setMuteUntil(settings.muteUntil);
-    });
-  }, []);
+    const loadMuteStatus = async () => {
+      try {
+        console.log('🔄 Loading mute status...');
+        
+        // Lấy từ local storage trước
+        const localSettings = await getNotificationMute();
+        console.log('📱 Local mute settings loaded:', localSettings);
+        
+        // Nếu có userId, lấy từ server để đồng bộ
+        if (userId) {
+          const serverMuteStatus = await getNotificationMuteFromServer(userId);
+          console.log('📱 Server mute status loaded:', serverMuteStatus);
+          
+          if (serverMuteStatus) {
+            // Ưu tiên server data
+            const isMuted = serverMuteStatus.isMuted;
+            const muteUntil = serverMuteStatus.muteUntil ? new Date(serverMuteStatus.muteUntil).getTime() : undefined;
+            
+            // Cập nhật local storage nếu khác với server
+            if (localSettings.muteOption === 'on' && isMuted) {
+              // Server cho thấy đang mute nhưng local là on
+              await setNotificationMute('off');
+              setMuteOption('off');
+              setMuteUntil(muteUntil);
+            } else if (localSettings.muteOption !== 'on' && !isMuted) {
+              // Server cho thấy không mute nhưng local không phải on
+              await setNotificationMute('on');
+              setMuteOption('on');
+              setMuteUntil(undefined);
+            } else {
+              // Giữ nguyên local settings
+              setMuteOption(localSettings.muteOption);
+              setMuteUntil(localSettings.muteUntil);
+            }
+          } else {
+            // Không lấy được từ server, dùng local
+            setMuteOption(localSettings.muteOption);
+            setMuteUntil(localSettings.muteUntil);
+          }
+        } else {
+          // Không có userId, chỉ dùng local
+          setMuteOption(localSettings.muteOption);
+          setMuteUntil(localSettings.muteUntil);
+        }
+      } catch (error) {
+        console.error('❌ Error loading mute status:', error);
+      }
+    };
+    
+    loadMuteStatus();
+  }, [userId]);
 
   const updateSettings = async (newSettings: Partial<NotificationSettings>) => {
     if (!userId) return;
@@ -90,7 +146,7 @@ export default function NotificationSettingsScreen() {
       
       if (success) {
         setSettings(updatedSettings);
-        Alert.alert('Thành công', 'Đã cập nhật cài đặt thông báo');
+        // Bỏ Alert thành công - chỉ cập nhật state
       } else {
         Alert.alert('Lỗi', 'Không thể cập nhật cài đặt thông báo');
       }
@@ -106,22 +162,49 @@ export default function NotificationSettingsScreen() {
   };
 
   const handleMuteChange = async (option: NotificationMuteOption) => {
-    await setNotificationMute(option);
-    setMuteOption(option);
-    let muteUntil: number | null = null;
-    let isMuted = false;
-    if (option === 'on') {
-      setMuteUntil(undefined);
-      isMuted = false;
-      muteUntil = null;
-    } else {
-      const settings = await getNotificationMute();
-      setMuteUntil(settings.muteUntil);
-      muteUntil = settings.muteUntil || null;
-      isMuted = true;
-    }
-    if (userId) {
-      await updateNotificationMute(userId, isMuted, muteUntil);
+    try {
+      console.log('🔄 Handling mute change:', { option, userId });
+      
+      if (!userId) {
+        Alert.alert('Lỗi', 'Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.');
+        return;
+      }
+
+      // Cập nhật local storage trước
+      await setNotificationMute(option);
+      setMuteOption(option);
+      
+      let muteUntil: number | null = null;
+      let isMuted = false;
+      
+      if (option === 'on') {
+        setMuteUntil(undefined);
+        isMuted = false;
+        muteUntil = null;
+      } else {
+        const settings = await getNotificationMute();
+        setMuteUntil(settings.muteUntil);
+        muteUntil = settings.muteUntil || null;
+        isMuted = true;
+      }
+      
+      // Cập nhật lên server
+      const success = await updateNotificationMute(userId, isMuted, muteUntil);
+      
+      if (success) {
+        console.log('✅ Mute status updated successfully');
+        // Bỏ Alert thành công - chỉ log thôi
+      } else {
+        console.error('❌ Failed to update mute status on server');
+        Alert.alert('Lỗi', 'Không thể cập nhật trạng thái thông báo. Vui lòng thử lại.');
+        // Revert local changes if server update failed
+        const currentSettings = await getNotificationMute();
+        setMuteOption(currentSettings.muteOption || 'on');
+        setMuteUntil(currentSettings.muteUntil);
+      }
+    } catch (error) {
+      console.error('❌ Error in handleMuteChange:', error);
+      Alert.alert('Lỗi', 'Đã có lỗi xảy ra khi cập nhật trạng thái thông báo');
     }
   };
 
