@@ -69,30 +69,48 @@ export class DeepLinkService {
     
   // Handle notification tap navigation
   handleNotificationTap(notificationData: NotificationData) {
-    console.log('Handling notification tap:', notificationData);
+    console.log('🎯 [DeepLinkService] Handling notification tap:', notificationData);
 
-    switch (notificationData.type) {
-      case 'NEW_MOVIE':
-        if (notificationData.movieId) {
-          this.navigateToMovie(notificationData.movieId);
-        }
-        break;
+    try {
+      switch (notificationData.type) {
+        case 'NEW_MOVIE':
+          if (notificationData.movieId) {
+            console.log('🎬 [DeepLinkService] Navigating to movie:', notificationData.movieId);
+            this.navigateToMovie(notificationData.movieId);
+          } else {
+            console.warn('⚠️ [DeepLinkService] NEW_MOVIE notification missing movieId');
+          }
+          break;
 
-      case 'NEW_EPISODE':
-        if (notificationData.seriesId) {
-          this.navigateToSeries(
-            notificationData.seriesId, 
-            notificationData.episodeNumber?.toString()
-          );
-        }
-        break;
+        case 'NEW_EPISODE':
+          if (notificationData.seriesId) {
+            console.log('📺 [DeepLinkService] Navigating to series:', notificationData.seriesId, 'episode:', notificationData.episodeNumber);
+            this.navigateToSeries(
+              notificationData.seriesId, 
+              notificationData.episodeNumber?.toString()
+            );
+          } else {
+            console.warn('⚠️ [DeepLinkService] NEW_EPISODE notification missing seriesId');
+          }
+          break;
 
-      case 'REMINDER':
-        this.navigateToWatchLater();
-        break;
+        case 'REMINDER':
+          console.log('⏰ [DeepLinkService] Navigating to watch later');
+          this.navigateToWatchLater();
+          break;
 
-      default:
-        console.log('Unknown notification type:', notificationData.type);
+        default:
+          console.log('❓ [DeepLinkService] Unknown notification type:', notificationData.type);
+          
+          // Fallback: try to extract movieId from deep_link if available
+          if (notificationData.deep_link && notificationData.deep_link.startsWith('movie/')) {
+            const movieId = notificationData.deep_link.split('/')[1];
+            console.log('🔄 [DeepLinkService] Fallback navigation to movie:', movieId);
+            this.navigateToMovie(movieId);
+          }
+      }
+    } catch (error) {
+      console.error('💥 [DeepLinkService] Error handling notification tap:', error);
     }
   }
 

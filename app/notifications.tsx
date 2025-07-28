@@ -203,6 +203,26 @@ export default function NotificationsScreen() {
     }
   }, [isLoggedIn]);
 
+  // Auto-refresh notifications when unread count changes
+  useEffect(() => {
+    if (userId && unreadCount > 0) {
+      console.log('🔄 [NotificationsScreen] Unread count changed, refreshing notifications');
+      refreshNotifications();
+    }
+  }, [unreadCount, userId]);
+
+  // Set up interval to refresh notifications every 30 seconds when screen is active
+  useEffect(() => {
+    if (!userId) return;
+
+    const interval = setInterval(() => {
+      console.log('⏰ [NotificationsScreen] Auto-refreshing notifications');
+      refreshNotifications();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [userId, refreshNotifications]);
+
   useEffect(() => {
     // Entry animations
     Animated.parallel([
@@ -237,41 +257,76 @@ export default function NotificationsScreen() {
   };
 
   const handleNotificationPress = async (notification: NotificationItem) => {
-    // Mark as read
-    await markAsRead(notification.id);
-    
-    // Add haptic feedback
-    if (Platform.OS === 'ios') {
-      // iOS haptic feedback would go here
-    }
-    
-    // Navigate based on deep link or action type
-    if (notification.deep_link) {
-      // Handle deep link navigation
-      const deepLink = notification.deep_link;
-      if (deepLink.startsWith('movie/')) {
-        const movieId = deepLink.split('/')[1];
-        router.push(`/movie/${movieId}`);
-      } else if (deepLink.startsWith('series/')) {
-        const seriesId = deepLink.split('/')[1];
-        // Series navigation - sử dụng movie route vì series cũng là movie
-        router.push(`/movie/${seriesId}`);
+    try {
+      console.log('👆 [NotificationsScreen] Notification pressed:', {
+        id: notification.id,
+        title: notification.title,
+        deep_link: notification.deep_link,
+        type: notification.type
+      });
+      
+      // Mark as read
+      await markAsRead(notification.id);
+      
+      // Add haptic feedback
+      if (Platform.OS === 'ios') {
+        // iOS haptic feedback would go here
       }
-    } else {
-      // Fallback navigation based on action type
-      switch (notification.actionType) {
-        case 'movie':
-          if (notification.actionData?.movieId) {
-            router.push(`/movie/${notification.actionData.movieId}`);
-          }
-          break;
-        case 'payment':
-          router.push('/settings/subscriptions');
-          break;
-        case 'settings':
-          router.push('/settings');
-          break;
+      
+      // Navigate based on deep link or action type
+      if (notification.deep_link) {
+        console.log('🔗 [NotificationsScreen] Navigating via deep link:', notification.deep_link);
+        
+        // Handle deep link navigation
+        const deepLink = notification.deep_link;
+        if (deepLink.startsWith('movie/')) {
+          const movieId = deepLink.split('/')[1];
+          console.log('🎬 [NotificationsScreen] Navigating to movie:', movieId);
+          router.push(`/movie/${movieId}`);
+        } else if (deepLink.startsWith('series/')) {
+          const seriesId = deepLink.split('/')[1];
+          console.log('📺 [NotificationsScreen] Navigating to series:', seriesId);
+          // Series navigation - sử dụng movie route vì series cũng là movie
+          router.push(`/movie/${seriesId}`);
+        } else {
+          console.warn('⚠️ [NotificationsScreen] Unknown deep link format:', deepLink);
+        }
+      } else {
+        console.log('🔄 [NotificationsScreen] No deep link, using fallback navigation');
+        
+        // Fallback navigation based on action type
+        switch (notification.type) {
+          case 'NEW_MOVIE':
+            if (notification.backend_notification?.event_type === 'new_movie') {
+              // Try to extract movie ID from notification data
+              const movieId = notification.backend_notification.deep_link?.split('/')[1];
+              if (movieId) {
+                console.log('🎬 [NotificationsScreen] Fallback navigation to movie:', movieId);
+                router.push(`/movie/${movieId}`);
+              } else {
+                console.warn('⚠️ [NotificationsScreen] No movie ID found in notification');
+              }
+            }
+            break;
+          case 'NEW_EPISODE':
+            if (notification.backend_notification?.event_type === 'new_episode') {
+              const movieId = notification.backend_notification.deep_link?.split('/')[1];
+              if (movieId) {
+                console.log('📺 [NotificationsScreen] Fallback navigation to episode:', movieId);
+                router.push(`/movie/${movieId}`);
+              }
+            }
+            break;
+          case 'REMINDER':
+            console.log('⏰ [NotificationsScreen] Navigating to watch later');
+            router.push('/watch-later');
+            break;
+          default:
+            console.log('❓ [NotificationsScreen] Unknown notification type:', notification.type);
+        }
       }
+    } catch (error) {
+      console.error('💥 [NotificationsScreen] Error handling notification press:', error);
     }
   };
 

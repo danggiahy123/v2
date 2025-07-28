@@ -20,7 +20,7 @@ const API_BASE_URL = 'https://backend-app-lou3.onrender.com';
 
 /**
  * 👤 USER INTERACTION SERVICE
- */
+ */ 
 export const userInteractionService = {
   
   /**

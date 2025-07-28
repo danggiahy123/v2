@@ -1,7 +1,7 @@
 import { ContinueWatchingResponse, HomeApiResponse, GridMovie } from '../types/movie';
 import { enrichMoviesWithPriceInfo } from '../utils/moviePriceHelper';
 
-const API_BASE_URL = 'https://backend-app-lou3.onrender.com';
+const API_BASE_URL = 'https://backend-app-lou3.onrender.com'; // Thay đổi thành URL của backend
 
 interface GenericMovieResponse {
   status: string;

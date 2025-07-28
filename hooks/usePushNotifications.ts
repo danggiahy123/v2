@@ -19,44 +19,64 @@ export function usePushNotifications(userId?: string) {
     // Register notification listeners
     notificationListener.current = notificationService.addNotificationReceivedListener(
       (notification) => {
-        console.log('📱 Notification received:', notification);
+        console.log('📱 [usePushNotifications] Notification received:', {
+          title: notification.request.content.title,
+          body: notification.request.content.body,
+          data: notification.request.content.data
+        });
         
         // Increment unread count when notification is received
         notificationService.incrementUnreadCount();
         
         const data = notificationService.getNotificationData(notification);
-        // if (data) {
-        //   // Show in-app alert for foreground notifications
-        //   Alert.alert(
-        //     notification.request.content.title || 'New Notification',
-        //     data.movieTitle ? `${data.movieTitle} - Khám phá ngay!` : notification.request.content.body || '',
-        //     [
-        //       { text: 'Dismiss', style: 'cancel' },
-        //       { 
-        //         text: 'View', 
-        //         onPress: () => {
-        //           // Mark as read when user views
-        //           notificationService.markAsRead();
-        //           deepLinkService.handleNotificationTap(data);
-        //         }
-        //       }
-        //     ]
-        //   );
-        // }
+        if (data) {
+          console.log('✅ [usePushNotifications] Extracted notification data:', data);
+          
+          // Show in-app alert for foreground notifications
+          Alert.alert(
+            notification.request.content.title || 'Thông báo mới',
+            data.movieTitle 
+              ? `🎬 ${data.movieTitle} - Khám phá ngay!` 
+              : notification.request.content.body || 'Bạn có thông báo mới',
+            [
+              { text: 'Đóng', style: 'cancel' },
+              { 
+                text: 'Xem ngay', 
+                onPress: () => {
+                  console.log('👆 [usePushNotifications] User tapped "Xem ngay" for notification');
+                  // Mark as read when user views
+                  notificationService.markAsRead();
+                  // Navigate to the content
+                  deepLinkService.handleNotificationTap(data);
+                }
+              }
+            ],
+            { cancelable: true }
+          );
+        } else {
+          console.warn('⚠️ [usePushNotifications] Could not extract notification data');
+        }
       }
     );
 
     responseListener.current = notificationService.addNotificationResponseReceivedListener(
       (response) => {
-        console.log('👆 Notification tapped:', response);
+        console.log('👆 [usePushNotifications] Notification tapped:', {
+          title: response.notification.request.content.title,
+          body: response.notification.request.content.body,
+          data: response.notification.request.content.data
+        });
         
         // Mark notifications as read when user taps
         notificationService.markAsRead();
         
         const data = notificationService.getResponseData(response);
         if (data) {
+          console.log('✅ [usePushNotifications] Extracted response data:', data);
           // Navigate based on notification data
           deepLinkService.handleNotificationTap(data);
+        } else {
+          console.warn('⚠️ [usePushNotifications] Could not extract response data');
         }
       }
     );
