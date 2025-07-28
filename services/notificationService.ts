@@ -27,6 +27,7 @@ export interface NotificationData {
   seriesTitle?: string;
   moviePoster?: string;
   action?: string;
+  deep_link?: string; // Thêm deep_link property
 }
 
 // Backend notification interface
@@ -451,14 +452,65 @@ export class NotificationService {
 
   // Get notification data from notification
   getNotificationData(notification: Notifications.Notification): NotificationData | null {
-    const data = notification.request.content.data;
-    return data ? data as unknown as NotificationData : null;
+    try {
+      const data = notification.request.content.data as any;
+      console.log('📦 [NotificationService] Extracting notification data:', data);
+      
+      if (!data) {
+        console.warn('⚠️ [NotificationService] No data in notification');
+        return null;
+      }
+
+      // Map backend notification data to frontend format
+      const notificationData: NotificationData = {
+        type: ((data.type as string) || 'NEW_MOVIE') as 'NEW_MOVIE' | 'NEW_EPISODE' | 'REMINDER',
+        movieId: data.movie_id as string,
+        seriesId: data.series_id as string,
+        episodeNumber: data.episode_number as number,
+        movieTitle: data.movie_title as string,
+        seriesTitle: data.series_title as string,
+        moviePoster: data.movie_poster as string,
+        deep_link: data.deep_link as string,
+        action: data.action as string
+      };
+
+      console.log('✅ [NotificationService] Extracted notification data:', notificationData);
+      return notificationData;
+    } catch (error) {
+      console.error('💥 [NotificationService] Error extracting notification data:', error);
+      return null;
+    }
   }
 
-  // Get notification data from response
   getResponseData(response: Notifications.NotificationResponse): NotificationData | null {
-    const data = response.notification.request.content.data;
-    return data ? data as unknown as NotificationData : null;
+    try {
+      const data = response.notification.request.content.data as any;
+      console.log('📦 [NotificationService] Extracting response data:', data);
+      
+      if (!data) {
+        console.warn('⚠️ [NotificationService] No data in notification response');
+        return null;
+      }
+
+      // Map backend notification data to frontend format
+      const notificationData: NotificationData = {
+        type: ((data.type as string) || 'NEW_MOVIE') as 'NEW_MOVIE' | 'NEW_EPISODE' | 'REMINDER',
+        movieId: data.movie_id as string,
+        seriesId: data.series_id as string,
+        episodeNumber: data.episode_number as number,
+        movieTitle: data.movie_title as string,
+        seriesTitle: data.series_title as string,
+        moviePoster: data.movie_poster as string,
+        deep_link: data.deep_link as string,
+        action: data.action as string
+      };
+
+      console.log('✅ [NotificationService] Extracted response data:', notificationData);
+      return notificationData;
+    } catch (error) {
+      console.error('💥 [NotificationService] Error extracting response data:', error);
+      return null;
+    }
   }
 
   // Subscribe to unread count changes
