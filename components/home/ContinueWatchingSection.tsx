@@ -189,10 +189,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   seeAllText: {
-    color: '#E50914',
-    fontSize: 14,
+    color: '#B0B0B0',
+    fontSize: 15,
     fontWeight: '600',
-    marginRight: 4,
+    textDecorationLine: 'underline',
+    textDecorationColor: 'transparent',
   },
   listContainer: {
     paddingRight: 16,

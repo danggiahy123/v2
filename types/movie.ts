@@ -93,7 +93,7 @@ export interface MovieSection {
  * API RESPONSE TYPES - Response từ movie APIs
  */
 
-// Response từ home API (banner + recommended)
+// Response từ home API (banner + newMovies)
 export interface HomeApiResponse {
   status: string;                 // API status
   data: {
@@ -102,10 +102,10 @@ export interface HomeApiResponse {
       type: 'banner_list';        // Section type
       movies: BannerMovie[];      // Banner movies array
     };
-    recommended: {
-      title: string;              // Recommended section title
+    newMovies: {
+      title: string;              // New movies section title
       type: 'grid';               // Section type
-      movies: GridMovie[];        // Recommended movies array
+      movies: GridMovie[];        // New movies array
     };
   };
 }

@@ -29,6 +29,7 @@ import { BannerMovie, ContinueWatchingItem, GridMovie } from '../../types/movie'
 import { useRouter, useFocusEffect } from 'expo-router';
 import { TabHeader, SearchModal, ViewAllModal, LoginRequiredModal } from '../../components/ui';
 import { ContinueWatchingSection } from '../../components/home';
+import RecommendationsSection from '../../components/home/RecommendationsSection';
 import GenreGrid from '../../components/genre/GenreGrid';
 import { shouldShowPaidBadge, enrichMoviesWithPriceInfo } from '../../utils/moviePriceHelper';
 import { useAuthGuard } from '../../hooks';
@@ -62,6 +63,12 @@ export default function HomeScreen() {
   const [bannerMovies, setBannerMovies] = useState<BannerMovie[]>([]);
   const [recommendedMovies, setRecommendedMovies] = useState<GridMovie[]>([]);
   const [continueWatching, setContinueWatching] = useState<ContinueWatchingItem[]>([]);
+  const [recommendationReason, setRecommendationReason] = useState<string>('');
+  const [recommendationPreferences, setRecommendationPreferences] = useState<{
+    topGenres: string[];
+    topMovieTypes: string[];
+    topProducers: string[];
+  } | null>(null);
   const [sections, setSections] = useState<MovieSection[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -192,21 +199,43 @@ export default function HomeScreen() {
         if (newReleasesRes?.status === 'success' && newReleasesRes.data) {
           setBannerMovies(newReleasesRes.data.banner?.movies || []);
           
-          // Enhance recommended movies with price info
-          const originalRecommended = newReleasesRes.data.recommended?.movies || [];
-          if (originalRecommended.length > 0) {
+          // Load new movies (not recommendations)
+          const newMovies = newReleasesRes.data.newMovies?.movies || [];
+          if (newMovies.length > 0) {
             try {
-              const enhancedRecommended = await enrichMoviesWithPriceInfo(originalRecommended);
-              setRecommendedMovies(enhancedRecommended);
-              console.log('Recommended movies enhanced with price info');
+              const enhancedNewMovies = await enrichMoviesWithPriceInfo(newMovies);
+              setRecommendedMovies(enhancedNewMovies);
+              console.log('New movies enhanced with price info');
             } catch (error) {
-              console.error('Error enhancing recommended movies:', error);
-              setRecommendedMovies(originalRecommended);
+              console.error('Error enhancing new movies:', error);
+              setRecommendedMovies(newMovies);
             }
           }
         }
       } catch (error) {
         console.error('Error loading new releases:', error);
+      }
+
+      // 🎯 Load personalized recommendations if user is logged in
+      if (userId && isLoggedIn) {
+        try {
+          console.log('🎯 [Home] Loading personalized recommendations for user:', userId);
+          const recommendationsRes = await movieService.getRecommendations(userId, 6);
+          
+          if (recommendationsRes?.status === 'success' && recommendationsRes.data) {
+            setRecommendedMovies(recommendationsRes.data.recommendations);
+            setRecommendationReason(recommendationsRes.data.reason);
+            setRecommendationPreferences(recommendationsRes.data.preferences || null);
+            console.log('✅ [Home] Personalized recommendations loaded:', {
+              count: recommendationsRes.data.recommendations.length,
+              reason: recommendationsRes.data.reason,
+              preferences: recommendationsRes.data.preferences
+            });
+          }
+        } catch (error) {
+          console.error('❌ [Home] Error loading recommendations:', error);
+          // Keep new movies as fallback
+        }
       }
 
       if (userId) {
@@ -1202,7 +1231,22 @@ export default function HomeScreen() {
           {renderBanner()}
 
           {isLoggedIn && renderContinueWatching()}
-          {renderMovieGrid(recommendedMovies, 'Đề xuất cho bạn', 'recommended')}
+          {/* Personalized Recommendations Section */}
+          {isLoggedIn && recommendedMovies.length > 0 && (
+            <RecommendationsSection
+              recommendations={recommendedMovies}
+              reason={recommendationReason}
+              preferences={recommendationPreferences || undefined}
+            />
+          )}
+          
+          {/* Fallback to new movies if not logged in */}
+          {!isLoggedIn && recommendedMovies.length > 0 && (
+            <RecommendationsSection
+              recommendations={recommendedMovies}
+              reason="Phim mới"
+            />
+          )}
           {/* Action Genre Section */}
           {actionGenre && actionGenreMovies.length > 0 && (
             <View style={styles.actionGenreSection}>

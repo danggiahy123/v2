@@ -224,6 +224,72 @@ export const movieService = {
   },
 
   /**
+   * 🎯 API 7: Lấy phim đề xuất dựa trên lịch sử xem
+   * ENDPOINT: GET /api/movies/recommendations
+   * THAM SỐ:
+   * - userId - ID của user (required)
+   * - limit - Số lượng phim đề xuất (optional, default: 10)
+   * TRẢ VỀ: { data: { recommendations: [], total: number, reason: string, preferences: {} } }
+   */
+  async getRecommendations(userId: string, limit?: number): Promise<{
+    status: string;
+    data: {
+      recommendations: GridMovie[];
+      total: number;
+      reason: string;
+      preferences?: {
+        topGenres: string[];
+        topMovieTypes: string[];
+        topProducers: string[];
+      };
+    };
+  }> {
+    try {
+      if (!userId) {
+        throw new Error('User ID là bắt buộc để lấy đề xuất phim');
+      }
+
+      const queryParams = new URLSearchParams();
+      queryParams.append('userId', userId);
+      if (limit) queryParams.append('limit', limit.toString());
+
+      const url = `${API_BASE_URL}/api/movies/recommendations?${queryParams.toString()}`;
+      
+      console.log('🎯 [MovieService] Getting recommendations for userId:', userId);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch recommendations: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // 💰 Enhance với thông tin price cho recommendations
+      if (data.data?.recommendations && data.data.recommendations.length > 0) {
+        console.log('💰 [MovieService] Enhancing recommendations with price info...');
+        const enhancedRecommendations = await enrichMoviesWithPriceInfo(data.data.recommendations, 3);
+        data.data.recommendations = enhancedRecommendations;
+        
+        console.log('✅ [MovieService] Enhanced recommendations:', {
+          total: enhancedRecommendations.length,
+          paidMovies: enhancedRecommendations.filter(m => !m.is_free).length
+        });
+      }
+
+      return data;
+    } catch (error) {
+      console.error('❌ [MovieService] Error getting recommendations:', error);
+      throw error;
+    }
+  },
+
+  /**
    * Tìm kiếm phim theo từ khóa
    * @param params Tham số tìm kiếm (từ khóa, trang, giới hạn, chỉ tìm theo tên)
    * @returns Promise<SearchMoviesResponse>
