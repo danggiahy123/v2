@@ -12,6 +12,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
+import eventBus from '../utils/eventBus';
 import {
   ActivityIndicator,
   Alert,
@@ -38,7 +39,7 @@ interface WatchLaterMovie {
   description: string;
   movie_type: string;
   producer: string;
-  genres?: Array<{ genre_name: string }>;
+  genres?: string[];
   production_time: string;
   price: number;
   is_free: boolean;
@@ -59,29 +60,75 @@ export default function WatchLaterScreen() {
     loadWatchLaterMovies();
   }, [userId]);
 
+  // Listen for favorite changes from movie detail screen
+  useEffect(() => {
+    const handleFavoriteChange = (data: { movieId: string; isFavorite: boolean }) => {
+      console.log('🔄 [WatchLater] Favorite change detected:', data);
+      if (data.isFavorite) {
+        // Movie was added to favorites, refresh the list
+        loadWatchLaterMovies();
+      } else {
+        // Movie was removed from favorites, remove from local list
+        setMovies(prev => prev.filter(item => item._id !== data.movieId));
+      }
+    };
+
+    eventBus.on('movie-favorite-changed', handleFavoriteChange);
+
+    return () => {
+      eventBus.off('movie-favorite-changed', handleFavoriteChange);
+    };
+  }, []);
+
   const loadWatchLaterMovies = async () => {
-    if (!userId) return;
+    if (!userId) {
+      console.log('⚠️ [WatchLater] No userId provided');
+      return;
+    }
     
     try {
       setLoading(true);
       console.log('🔄 [WatchLater] Loading movies for userId:', userId);
       
-      const API_URL = `https://backend-app-lou3.onrender.com/api/favorites?userId=${userId}`;
+      const API_URL = `http://192.168.5.90:3003/api/favorites?userId=${userId}`;
       console.log('🌐 [WatchLater] Calling API:', API_URL);
       
       const response = await fetch(API_URL);
       console.log('📡 [WatchLater] Response status:', response.status);
       
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ [WatchLater] API Error Response:', errorText);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
       const data = await response.json();
       console.log('🎬 [WatchLater] API Response:', {
         status: data.status,
         favorites_count: data.data?.favorites?.length || 0,
-        first_movie: data.data?.favorites?.[0]
+        first_movie: data.data?.favorites?.[0],
+        raw_data: data
       });
       
-      if (data.status === 'success' && data.data && data.data.favorites) {
+      if (data.status === 'success' && data.data && Array.isArray(data.data.favorites)) {
+        console.log('✅ [WatchLater] Movies loaded successfully:', {
+          count: data.data.favorites.length,
+          firstMovie: data.data.favorites[0] ? {
+            id: data.data.favorites[0]._id,
+            title: data.data.favorites[0].movie_title,
+            poster: data.data.favorites[0].poster_path
+          } : null
+        });
         setMovies(data.data.favorites);
-        console.log('✅ [WatchLater] Movies loaded:', data.data.favorites.length);
+      } else {
+        console.log('⚠️ [WatchLater] No favorites found or invalid response format:', {
+          status: data.status,
+          hasData: !!data.data,
+          hasFavorites: !!data.data?.favorites,
+          favoritesLength: data.data?.favorites?.length,
+          favoritesType: typeof data.data?.favorites
+        });
+        setMovies([]);
       }
     } catch (error: any) {
       console.error('❌ [WatchLater] Error details:', {
@@ -89,7 +136,16 @@ export default function WatchLaterScreen() {
         message: error?.message || 'Unknown error occurred',
         stack: error?.stack || 'No stack trace available'
       });
-      Alert.alert('Error', 'Could not load watch later movies. Please check your connection and try again.');
+      
+      // Show user-friendly error message
+      Alert.alert(
+        'Lỗi tải danh sách', 
+        'Không thể tải danh sách phim xem sau. Vui lòng kiểm tra kết nối và thử lại.',
+        [
+          { text: 'Thử lại', onPress: () => loadWatchLaterMovies() },
+          { text: 'Đóng', style: 'cancel' }
+        ]
+      );
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -116,6 +172,8 @@ await loadWatchLaterMovies();
           onPress: async () => {
             try {
               setRemoving(movieId);
+              console.log('🗑️ [WatchLater] Removing movie from favorites:', { movieId, userId });
+              
               await userInteractionService.toggleFavorite(movieId, false, userId);
               
               // Cập nhật danh sách local
@@ -123,8 +181,9 @@ await loadWatchLaterMovies();
               
               // Hiển thị thông báo thành công
               Alert.alert('Thành công', 'Đã xóa phim khỏi danh sách xem sau');
+              console.log('✅ [WatchLater] Movie removed successfully');
             } catch (error) {
-              console.error('Error removing from watch later:', error);
+              console.error('❌ [WatchLater] Error removing from watch later:', error);
               Alert.alert('Lỗi', 'Không thể xóa phim khỏi danh sách');
             } finally {
               setRemoving(null);
@@ -157,9 +216,9 @@ await loadWatchLaterMovies();
         disabled={isRemoving}
       >
         <View style={styles.movieContent}>
-          {item.poster_path ? (
+          {(item.poster_path || item.poster) ? (
             <Image
-              source={{ uri: item.poster_path }}
+              source={{ uri: item.poster_path || item.poster }}
               style={styles.moviePoster}
               resizeMode="cover"
               onError={(error) => {
@@ -181,16 +240,22 @@ await loadWatchLaterMovies();
               {item.movie_title}
             </Text>
             
-            <Text style={styles.movieType}>
-              {item.movie_type} • {item.producer}
-            </Text>
-{item.genres && item.genres.length > 0 && (
+            {item.genres && Array.isArray(item.genres) && item.genres.length > 0 && (
               <View style={styles.genreContainer}>
-                {item.genres.slice(0, 3).map((genre, index) => (
+                {item.genres.slice(0, 2).map((genre, index) => (
                   <View key={index} style={styles.genreTag}>
-                    <Text style={styles.genreText}>{genre.genre_name}</Text>
+                    <Text style={styles.genreText}>
+                      {genre}
+                    </Text>
                   </View>
                 ))}
+                {item.genres.length > 2 && (
+                  <View style={styles.genreTag}>
+                    <Text style={styles.genreText}>
+                      +{item.genres.length - 2}
+                    </Text>
+                  </View>
+                )}
               </View>
             )}
             
@@ -282,7 +347,7 @@ await loadWatchLaterMovies();
         
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#E50914" />
-          <Text style={styles.loadingText}>Đang tải...</Text>
+          <Text style={styles.loadingText}>Đang tải danh sách phim xem sau...</Text>
         </View>
       </SafeAreaView>
     );
@@ -299,7 +364,9 @@ await loadWatchLaterMovies();
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Phim xem sau</Text>
         <View style={styles.headerRight}>
-          <Text style={styles.countText}>{movies.length} phim</Text>
+          <Text style={styles.countText}>
+            {movies.length} {movies.length === 1 ? 'phim' : 'phim'}
+          </Text>
         </View>
       </View>
 
@@ -400,12 +467,14 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 12,
     justifyContent: 'space-between',
+    paddingVertical: 2,
   },
   movieTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
-    marginBottom: 4,
+    marginBottom: 6,
+    lineHeight: 20,
   },
   movieType: {
     fontSize: 14,
@@ -416,22 +485,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     marginBottom: 8,
+    marginTop: 4,
   },
   genreTag: {
     backgroundColor: '#333',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
-    marginRight: 6,
+    marginRight: 8,
     marginBottom: 4,
   },
   genreText: {
-    fontSize: 12,
-    color: '#E50914',
+    fontSize: 10,
+    color: '#fff',
+    fontWeight: '600',
   },
   addedDate: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 11,
+    color: '#888',
+    fontStyle: 'italic',
   },
   removeButton: {
     padding: 12,

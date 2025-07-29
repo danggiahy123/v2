@@ -73,8 +73,8 @@ export const userInteractionService = {
   /**
    * ⭐ TOGGLE FAVORITE/UNFAVORITE
    * 
-   * API để add/remove phim khỏi favorites (Updated for Swagger)
-   * ENDPOINT: POST /api/favorites/movies/{movieId}/add or /remove
+   * API để add/remove phim khỏi favorites (Using Unified API)
+   * ENDPOINT: PUT /api/favorites/movies/{movieId}
    * 
    * @param movieId - ID của phim
    * @param isFavorite - true để add, false để remove
@@ -83,35 +83,19 @@ export const userInteractionService = {
    */
   async toggleFavorite(movieId: string, isFavorite: boolean, userId: string): Promise<ToggleFavoriteResponse> {
     try {
-      const action = isFavorite ? 'add' : 'remove';
-      const url = `${API_BASE_URL}/api/favorites/movies/${movieId}/${action}`;
+      const url = `${API_BASE_URL}/api/favorites/movies/${movieId}`;
       
-      console.log(`⭐ [UserInteractionService] ${action} favorite:`, { movieId, isFavorite, userId });
+      console.log(`⭐ [UserInteractionService] toggle favorite:`, { movieId, isFavorite, userId });
       
       const response = await fetch(url, {
-        method: 'POST',
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ userId }),
+        body: JSON.stringify({ isFavorite, userId }),
       });
       
       const result: ToggleFavoriteResponse = await response.json();
-      
-      // Handle 400 case for "already in favorites" or "not found in favorites" - both are actually success
-      if (!response.ok && response.status === 400 && result.message?.includes('danh sách yêu thích')) {
-        const isAlreadyInFavorites = result.message.includes('đã có trong');
-        const isNotInFavorites = result.message.includes('Không tìm thấy');
-        
-        if (isAlreadyInFavorites || isNotInFavorites) {
-          console.log(`ℹ️ [UserInteractionService] ${isAlreadyInFavorites ? 'Already in favorites' : 'Not in favorites'}, treating as success`);
-          return {
-            status: 'success',
-            message: result.message,
-            data: {}
-          } as ToggleFavoriteResponse;
-        }
-      }
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -121,7 +105,7 @@ export const userInteractionService = {
         throw new Error(result.message || 'Failed to toggle favorite');
       }
       
-      console.log(`✅ [UserInteractionService] Favorite ${action} successful:`, result.message);
+      console.log(`✅ [UserInteractionService] Favorite toggle successful:`, result.message);
       
       return result;
       
