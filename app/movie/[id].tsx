@@ -1642,15 +1642,15 @@ if (!movieDetail) return;
               >
                 {comment.comment}
               </Text>
-              {isLong && !isExpanded && (
-                <Text style={styles.showMoreText} onPress={() => toggleExpandComment(commentId)}>
-                  ... Xem thêm
-                </Text>
-              )}
-              {isLong && isExpanded && (
-                <Text style={styles.showMoreText} onPress={() => toggleExpandComment(commentId)}>
-                  Thu gọn
-                </Text>
+              {isLong && (
+                <TouchableOpacity 
+                  style={styles.showMoreButton}
+                  onPress={() => toggleExpandComment(commentId)}
+                >
+                  <Text style={styles.showMoreText}>
+                    {isExpanded ? 'Thu gọn' : 'Xem thêm'}
+                  </Text>
+                </TouchableOpacity>
               )}
               <Text style={styles.commentDate}>
                 {comment.createdAt ? new Date(comment.createdAt).toLocaleDateString() : ''}
@@ -2839,6 +2839,10 @@ alignItems: 'center',
     color: '#ffff',
     fontSize: 14,
     fontWeight: 'bold',
+    marginTop: 5,
+  },
+  showMoreButton: {
+    alignSelf: 'flex-end',
     marginTop: 5,
   },
   commentDate: {

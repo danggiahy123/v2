@@ -55,6 +55,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMoreComments, setHasMoreComments] = useState(true);
+  const [expandedComments, setExpandedComments] = useState<{[key: string]: boolean}>({});
   
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(300)).current;
@@ -67,6 +68,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
       setHasMoreComments(true);
       setNewComment('');
       setIsLikeComment(false);
+      setExpandedComments({});
       
       console.log('📝 [CommentsModal] Modal opened, loading fresh comments...');
       loadComments(1);
@@ -138,6 +140,14 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
           setComments(apiComments);
         } else {
           setComments(prev => [...prev, ...apiComments]);
+        }
+        
+        // Debug: Kiểm tra thứ tự bình luận
+        if (apiComments.length > 0) {
+          console.log('🔍 [CommentsModal] Comment order check:');
+          apiComments.forEach((comment, index) => {
+            console.log(`  ${index + 1}. ${comment.user.full_name}: "${comment.comment.substring(0, 30)}..." - ${formatTimeAgo(comment.createdAt)}`);
+          });
         }
         
         // For now, assume no pagination in API
@@ -218,27 +228,58 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
     return `${Math.floor(diffInMinutes / 1440)} ngày trước`;
   };
 
-  const renderComment = ({ item }: { item: Comment }) => (
-    <View style={styles.commentItem}>
-      <View style={styles.commentHeader}>
-        <View style={styles.userInfo}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {(item.user.full_name ? item.user.full_name.charAt(0).toUpperCase() : 'A')}
-            </Text>
+  const toggleExpandComment = (commentId: string) => {
+    setExpandedComments(prev => ({
+      ...prev,
+      [commentId]: !prev[commentId]
+    }));
+  };
+
+  const renderComment = ({ item }: { item: Comment }) => {
+    const isExpanded = expandedComments[item._id];
+    const MAX_CHAR = 120; // Ước lượng cho 2 dòng
+    const isLong = item.comment.length > MAX_CHAR;
+    
+    return (
+      <View style={styles.commentItem}>
+        <View style={styles.commentHeader}>
+          <View style={styles.userInfo}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>
+                {(item.user.full_name ? item.user.full_name.charAt(0).toUpperCase() : 'A')}
+              </Text>
+            </View>
+            <View>
+              <Text style={styles.userName}>{item.user.full_name || 'Ẩn danh'}</Text>
+              <Text style={styles.commentTime}>{formatTimeAgo(item.createdAt)}</Text>
+            </View>
           </View>
-          <View>
-            <Text style={styles.userName}>{item.user.full_name || 'Ẩn danh'}</Text>
-            <Text style={styles.commentTime}>{formatTimeAgo(item.createdAt)}</Text>
-          </View>
+          {item.isLike && (
+            <Ionicons name="heart" size={16} color="#ff6b6b" />
+          )}
         </View>
-        {item.isLike && (
-          <Ionicons name="heart" size={16} color="#ff6b6b" />
-        )}
+        <View style={styles.commentContent}>
+          <Text 
+            style={isExpanded ? styles.commentText : [styles.commentText, styles.commentTextClamp]}
+            numberOfLines={isExpanded ? undefined : 2}
+            ellipsizeMode="tail"
+          >
+            {item.comment}
+          </Text>
+          {isLong && (
+            <TouchableOpacity 
+              style={styles.showMoreButton}
+              onPress={() => toggleExpandComment(item._id)}
+            >
+              <Text style={styles.showMoreText}>
+                {isExpanded ? 'Thu gọn' : 'Xem thêm'}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
-      <Text style={styles.commentText}>{item.comment}</Text>
-    </View>
-  );
+    );
+  };
 
   const handleClose = () => {
     Animated.parallel([
@@ -473,11 +514,26 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 2,
   },
+  commentContent: {
+    marginLeft: 42,
+  },
   commentText: {
     fontSize: 14,
     color: '#333',
     lineHeight: 20,
-    marginLeft: 42,
+  },
+  commentTextClamp: {
+    maxHeight: 40,
+    overflow: 'hidden',
+  },
+  showMoreButton: {
+    alignSelf: 'flex-end',
+    marginTop: 5,
+  },
+  showMoreText: {
+    color: '#007AFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
   emptyContainer: {
     alignItems: 'center',
