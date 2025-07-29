@@ -265,6 +265,23 @@ export const movieService = {
       });
 
       if (!response.ok) {
+        // For 500 errors (new users without data), return empty recommendations instead of throwing
+        if (response.status === 500) {
+          console.log('ℹ️ [MovieService] 500 error detected - new user without recommendation data');
+          return {
+            status: 'success',
+            data: {
+              recommendations: [],
+              total: 0,
+              reason: 'Chưa có dữ liệu đề xuất',
+              preferences: {
+                topGenres: [],
+                topMovieTypes: [],
+                topProducers: []
+              }
+            }
+          };
+        }
         throw new Error(`Failed to fetch recommendations: ${response.status}`);
       }
 
@@ -285,6 +302,25 @@ export const movieService = {
       return data;
     } catch (error) {
       console.error('❌ [MovieService] Error getting recommendations:', error);
+      console.log('🔍 [MovieService] Error message:', error instanceof Error ? error.message : 'Unknown error');
+      
+      // For new users without recommendation data (500 error), return empty data instead of throwing
+      if (error instanceof Error && (error.message.includes('500') || error.message.includes('Failed to fetch recommendations'))) {
+        console.log('ℹ️ [MovieService] New user without recommendation data - returning empty recommendations');
+        return {
+          status: 'success',
+          data: {
+            recommendations: [],
+            total: 0,
+            reason: 'Chưa có dữ liệu đề xuất',
+            preferences: {
+              topGenres: [],
+              topMovieTypes: [],
+              topProducers: []
+            }
+          }
+        };
+      }
       throw error;
     }
   },

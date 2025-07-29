@@ -305,6 +305,7 @@ return `${hours}h ${remainingMinutes}min`;
       setCurrentUserRating(response.data.userRating);
     } catch (error) {
       console.error('Error fetching user rating:', error);
+      // Keep current user rating as null - UI will handle it gracefully
     }
   };
   
@@ -318,6 +319,7 @@ return `${hours}h ${remainingMinutes}min`;
       setRatingsData(response.data.ratings);
     } catch (error) {
       console.error('Error fetching movie ratings:', error);
+      // Keep default empty state - UI will handle it gracefully
     } finally {
       setRatingLoading(false);
     }

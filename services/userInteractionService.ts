@@ -511,6 +511,87 @@ export const userInteractionService = {
   },
 
   /**
+   * ⭐ GET USER FAVORITES
+   * 
+   * API để lấy danh sách phim yêu thích của user
+   * ENDPOINT: GET /api/favorites?userId={userId}
+   * 
+   * @param userId - ID của user
+   * @returns Promise với danh sách favorites
+   */
+  async getFavorites(userId: string): Promise<{
+    status: string;
+    data: {
+      favorites: Array<{
+        _id: string;
+        movie_title: string;
+        poster_path?: string;
+        poster?: string;
+        description: string;
+        movie_type: string;
+        producer: string;
+        genres?: string[];
+        production_time: string;
+        price: number;
+        is_free: boolean;
+        added_at: string;
+      }>;
+    };
+  }> {
+    try {
+      const url = `${API_BASE_URL}/api/favorites?userId=${userId}`;
+      
+      console.log('⭐ [UserInteractionService] Getting favorites for userId:', userId);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        // For 500 errors or invalid userId, return empty favorites instead of throwing
+        if (response.status === 500 || response.status === 404) {
+          console.log('ℹ️ [UserInteractionService] User has no favorites or invalid userId - returning empty list');
+          return {
+            status: 'success',
+            data: {
+              favorites: []
+            }
+          };
+        }
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      
+      if (result.status !== 'success') {
+        throw new Error(result.message || 'Failed to get favorites');
+      }
+
+      console.log('✅ [UserInteractionService] Favorites loaded successfully:', {
+        count: result.data?.favorites?.length || 0
+      });
+
+      return result;
+    } catch (error) {
+      console.error('❌ [UserInteractionService] Error getting favorites:', error);
+      // For null reference errors (new users), return empty favorites instead of throwing
+      if (error instanceof Error && error.message.includes('Cannot read properties of null')) {
+        console.log('ℹ️ [UserInteractionService] Null reference error in getFavorites - returning empty list');
+        return {
+          status: 'success',
+          data: {
+            favorites: []
+          }
+        };
+      }
+      throw error;
+    }
+  },
+
+  /**
    * 🔄 BATCH TOGGLE OPERATIONS
    * 
    * Thực hiện multiple toggle operations cùng lúc

@@ -75,6 +75,7 @@ export default function RecommendationsScreen() {
       }
     } catch (error: any) {
       console.error('❌ [Recommendations] Error:', error);
+      // Show error alert for any error - MovieService should handle 500 errors gracefully
       Alert.alert(
         'Lỗi',
         'Không thể tải danh sách đề xuất. Vui lòng thử lại.',
@@ -187,6 +188,7 @@ export default function RecommendationsScreen() {
       <Text style={styles.emptySubtitle}>
         Hãy xem một số phim để chúng tôi có thể đề xuất phim phù hợp với bạn
       </Text>
+
     </View>
   );
 
