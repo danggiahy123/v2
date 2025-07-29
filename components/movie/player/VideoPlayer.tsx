@@ -4,6 +4,7 @@ import { VideoView, useVideoPlayer, VideoPlayerStatus } from 'expo-video';
 import { Ionicons } from '@expo/vector-icons';
 import { userInteractionService } from '../../../services/userInteractionService';
 import { Episode, REQUIRED_EPISODE_FIELDS } from '../../../types/episode';
+import eventBus from '../../../utils/eventBus';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -462,11 +463,26 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         onProgressUpdate(watchPercentage);
       }
 
+      // Emit progress update event for other components
+      eventBus.emit('progress-updated', {
+        episodeId,
+        currentTime,
+        watchPercentage,
+        completed
+      });
+
       // 🔧 FIX: Only call onEpisodeComplete once per episode
       if (completed && onEpisodeComplete && !hasNotifiedCompletion) {
         console.log('🎬 [VideoPlayer] Episode completed! Calling onEpisodeComplete callback');
         setHasNotifiedCompletion(true);
         onEpisodeComplete();
+        
+        // Emit movie watched event
+        eventBus.emit('movie-watched', {
+          episodeId,
+          movieId: episode.movie_id,
+          completed: true
+        });
       }
     } catch (error) {
       if (error instanceof Error) {

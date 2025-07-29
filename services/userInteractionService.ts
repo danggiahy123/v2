@@ -14,7 +14,8 @@ import {
   AddCommentResponse,
   UpdateProgressRequest,
   UpdateProgressResponse,
-  MovieEpisodesProgressResponse
+  MovieEpisodesProgressResponse,
+  WatchingHistoryResponse
 } from '../types/userInteraction';
 
 const API_BASE_URL = 'https://backend-app-lou3.onrender.com';
@@ -441,6 +442,74 @@ export const userInteractionService = {
     }
   },
   
+  /**
+   * 📺 GET WATCHING HISTORY
+   * 
+   * API để lấy lịch sử xem phim của user
+   * ENDPOINT: GET /api/watching/history
+   * 
+   * @param userId - ID của user
+   * @param page - Trang hiện tại (mặc định: 1)
+   * @param limit - Số lượng item mỗi trang (mặc định: 20)
+   * @returns Promise<WatchingHistoryResponse>
+   */
+  async getWatchingHistory(
+    userId: string,
+    page: number = 1,
+    limit: number = 20
+  ): Promise<WatchingHistoryResponse> {
+    try {
+      if (!userId || userId === 'anonymous' || userId === 'null') {
+        throw new Error('User must be logged in to get watching history');
+      }
+
+      const url = `${API_BASE_URL}/api/watching/history?userId=${userId}&page=${page}&limit=${limit}`;
+      
+      console.log('📺 [UserInteractionService] Getting watching history:', {
+        userId,
+        page,
+        limit,
+        url
+      });
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ [UserInteractionService] API Error:', {
+          status: response.status,
+          error: errorText,
+          url
+        });
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const result: WatchingHistoryResponse = await response.json();
+      
+      if (result.status !== 'success') {
+        throw new Error(result.message || 'Failed to get watching history');
+      }
+
+      console.log('✅ [UserInteractionService] Watching history loaded successfully:', {
+        totalItems: result.data?.pagination?.total_items || 0,
+        currentPage: result.data?.pagination?.current_page || 1,
+        totalPages: result.data?.pagination?.total_pages || 1,
+        historyItems: result.data?.watching_history?.length || 0,
+        continueItems: result.data?.continue_watching?.length || 0
+      });
+
+      return result;
+    } catch (error) {
+      console.error('❌ [UserInteractionService] Error getting watching history:', error);
+      throw error;
+    }
+  },
+
   /**
    * 🔄 BATCH TOGGLE OPERATIONS
    * 

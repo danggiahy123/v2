@@ -61,13 +61,18 @@ import { userInteractionService } from '../../services/userInteractionService';
  * 🎬 MOVIE DETAIL SCREEN COMPONENT
  */
 export default function MovieDetailScreen() {
-  const { id, autoPlay, fromContinueWatching, hasRentalAccess: initialRentalAccess, rentalSuccess, fromPayment } = useLocalSearchParams<{ 
+  const { id, autoPlay, fromContinueWatching, hasRentalAccess: initialRentalAccess, rentalSuccess, fromPayment, fromHistory, episodeId, resumeTime, watchPercentage, completed } = useLocalSearchParams<{ 
     id: string; 
     autoPlay?: string; 
     fromContinueWatching?: string;
     hasRentalAccess?: string;
     rentalSuccess?: string;
     fromPayment?: string;
+    fromHistory?: string;
+    episodeId?: string;
+    resumeTime?: string;
+    watchPercentage?: string;
+    completed?: string;
   }>();
     
   // Debug log for params
@@ -244,6 +249,41 @@ return `${hours}h ${remainingMinutes}min`;
       setShowVideoPlayer(true); // Mở video player
     }
   }, [fromContinueWatching, movieDetail]);
+
+  // 🎬 AUTO-PLAY FROM WATCHING HISTORY
+  useEffect(() => {
+    if (fromHistory === 'true' && movieDetail && episodeId && resumeTime) {
+      console.log('🎬 [MovieDetail] Auto-playing from Watching History:', {
+        episodeId,
+        resumeTime,
+        watchPercentage,
+        completed
+      });
+      
+      // Find the specific episode from history
+      if (movieDetail.episodes && movieDetail.episodes.length > 0) {
+        const historyEpisode = movieDetail.episodes.find(ep => ep._id === episodeId);
+        if (historyEpisode) {
+          setCurrentEpisode(historyEpisode);
+          console.log('📺 [MovieDetail] Set current episode from history:', {
+            episodeId: historyEpisode._id,
+            episodeTitle: historyEpisode.episode_title,
+            episodeNumber: historyEpisode.episode_number
+          });
+        }
+      }
+      
+      // Set resume time from history
+      const resumeTimeNum = parseInt(resumeTime);
+      if (!isNaN(resumeTimeNum) && resumeTimeNum > 0) {
+        setResumeFromTime(resumeTimeNum);
+        console.log('⏯️ [MovieDetail] Set resume time from history:', resumeTimeNum);
+      }
+      
+      setHasClickedWatchButton(true); // Ẩn button
+      setShowVideoPlayer(true); // Mở video player
+    }
+  }, [fromHistory, movieDetail, episodeId, resumeTime, watchPercentage, completed]);
 
   // ⭐ DERIVED STATE FOR UI
   const hasLiked = Boolean(movieDetail?.userInteractions?.hasLiked);

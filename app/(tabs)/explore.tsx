@@ -116,6 +116,9 @@ export default function ExploreScreen() {
   const handleFavoriteMovies = () => {
     router.push('/watch-later' as any);
   };
+  const handleWatchingHistory = () => {
+    router.push('/watching-history' as any);
+  };
   const handleSubscribedMovies = () => {
     router.push('/settings/subscriptions' as any);
   };
@@ -235,6 +238,10 @@ export default function ExploreScreen() {
         {/* Lịch sử Section */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Lịch sử</Text>
+          <TouchableOpacity style={styles.menuItem} onPress={handleWatchingHistory} activeOpacity={0.7}>
+            <Ionicons name="time-outline" size={26} color="#ff6b6b" style={styles.menuIcon} />
+            <Text style={styles.menuItemText}>Lịch sử xem phim</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.menuItem} onPress={handleFavoriteMovies} activeOpacity={0.7}>
             <Ionicons name="bookmark-outline" size={26} color="#ffb347" style={styles.menuIcon} />
             <Text style={styles.menuItemText}>Phim xem sau</Text>

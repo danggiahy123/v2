@@ -293,3 +293,46 @@ export interface BulkOperationResult {
   success: boolean;
   error?: string;
 } 
+
+// =====================================
+// WATCHING HISTORY TYPES
+// =====================================
+
+export interface WatchingHistoryResponse {
+  status: 'success' | 'error';
+  message: string;
+  data?: {
+    watching_history?: WatchingHistoryItem[];
+    continue_watching?: WatchingHistoryItem[];
+    pagination: {
+      current_page: number;
+      total_pages: number;
+      total_items: number;
+    };
+  };
+}
+
+export interface WatchingHistoryItem {
+  _id: string;
+  user_id: string;
+  episode_id: {
+    _id: string;
+    episode_title: string;
+    episode_number?: number;
+    duration: number;
+    movie_id: {
+      _id: string;
+      movie_title: string;
+      poster_path?: string;
+      movie_type: string;
+    };
+  };
+  current_time: number;
+  duration: number;
+  completed: boolean;
+  watch_percentage: number;
+  last_watched: string;
+  watch_count: number;
+  created_at: string;
+  updated_at: string;
+} 
