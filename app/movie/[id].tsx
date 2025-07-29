@@ -932,6 +932,13 @@ hasMovieDetail: !!movieDetail,
     const currentFavoriteState = Boolean(movieDetail?.userInteractions?.isFavorite);
     const newFavoriteState = !currentFavoriteState;
 
+    console.log('⭐ [MovieDetail] Toggling favorite:', {
+      movieId: id,
+      userId,
+      currentFavoriteState,
+      newFavoriteState
+    });
+
     try {
       await toggleFavorite(newFavoriteState);
 
@@ -940,9 +947,16 @@ hasMovieDetail: !!movieDetail,
         'success'
       );
       
-      // Favorite action completed successfully
+      console.log('✅ [MovieDetail] Favorite toggle completed successfully');
+      
+      // Emit event to update lists
+      eventBus.emit('movie-favorite-changed', {
+        movieId: id,
+        isFavorite: newFavoriteState
+      });
+      
     } catch (err) {
-      console.error('Favorite toggle error:', err);
+      console.error('❌ [MovieDetail] Favorite toggle error:', err);
       showNotificationMessage('Không thể cập nhật danh sách xem sau', 'error');
     }
   };
@@ -1240,7 +1254,9 @@ if (!movieDetail) return;
               size={24}
               color={isFavorite ? "#ffc107" : "#ffffff"}
             />
-            <Text style={styles.actionText}>Xem sau</Text>
+            <Text style={[styles.actionText, isFavorite && { color: "#ffc107" }]}>
+              {isFavorite ? "Đã lưu" : "Xem sau"}
+            </Text>
           </TouchableOpacity>
 
           {/* Share Button - Icon 📤 */}
