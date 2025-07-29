@@ -232,9 +232,9 @@ export default function HomeScreen() {
               preferences: recommendationsRes.data.preferences
             });
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error('❌ [Home] Error loading recommendations:', error);
-          // Keep new movies as fallback
+          // Keep recommendations empty on any error - UI will handle it gracefully
         }
       }
 
@@ -2513,4 +2513,5 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 8,
   },
+
 });

@@ -90,62 +90,25 @@ export default function WatchLaterScreen() {
       setLoading(true);
       console.log('🔄 [WatchLater] Loading movies for userId:', userId);
       
-      const API_URL = `http://192.168.5.90:3003/api/favorites?userId=${userId}`;
-      console.log('🌐 [WatchLater] Calling API:', API_URL);
+      const response = await userInteractionService.getFavorites(userId);
       
-      const response = await fetch(API_URL);
-      console.log('📡 [WatchLater] Response status:', response.status);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ [WatchLater] API Error Response:', errorText);
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      console.log('🎬 [WatchLater] API Response:', {
-        status: data.status,
-        favorites_count: data.data?.favorites?.length || 0,
-        first_movie: data.data?.favorites?.[0],
-        raw_data: data
-      });
-      
-      if (data.status === 'success' && data.data && Array.isArray(data.data.favorites)) {
+      if (response.status === 'success' && response.data && Array.isArray(response.data.favorites)) {
         console.log('✅ [WatchLater] Movies loaded successfully:', {
-          count: data.data.favorites.length,
-          firstMovie: data.data.favorites[0] ? {
-            id: data.data.favorites[0]._id,
-            title: data.data.favorites[0].movie_title,
-            poster: data.data.favorites[0].poster_path
+          count: response.data.favorites.length,
+          firstMovie: response.data.favorites[0] ? {
+            id: response.data.favorites[0]._id,
+            title: response.data.favorites[0].movie_title,
+            poster: response.data.favorites[0].poster_path
           } : null
         });
-        setMovies(data.data.favorites);
+        setMovies(response.data.favorites);
       } else {
-        console.log('⚠️ [WatchLater] No favorites found or invalid response format:', {
-          status: data.status,
-          hasData: !!data.data,
-          hasFavorites: !!data.data?.favorites,
-          favoritesLength: data.data?.favorites?.length,
-          favoritesType: typeof data.data?.favorites
-        });
+        console.log('⚠️ [WatchLater] No favorites found or invalid response format');
         setMovies([]);
       }
     } catch (error: any) {
-      console.error('❌ [WatchLater] Error details:', {
-        name: error?.name || 'Unknown',
-        message: error?.message || 'Unknown error occurred',
-        stack: error?.stack || 'No stack trace available'
-      });
-      
-      // Show user-friendly error message
-      Alert.alert(
-        'Lỗi tải danh sách', 
-        'Không thể tải danh sách phim xem sau. Vui lòng kiểm tra kết nối và thử lại.',
-        [
-          { text: 'Thử lại', onPress: () => loadWatchLaterMovies() },
-          { text: 'Đóng', style: 'cancel' }
-        ]
-      );
+      console.error('❌ [WatchLater] Error loading favorites:', error);
+      // Keep movies empty on any error - UI will handle it gracefully
     } finally {
       setLoading(false);
       setRefreshing(false);

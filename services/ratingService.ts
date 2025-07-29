@@ -195,12 +195,28 @@ export const getUserStarRating = async (movieId: string): Promise<GetUserRatingR
     const data = await response.json();
     
     if (!response.ok) {
+      // For 500 errors or invalid movieId, return null user rating instead of throwing
+      if (response.status === 500 || response.status === 404) {
+        console.log('ℹ️ [RatingService] User has no rating for this movie - returning null');
+        return {
+          status: 'success',
+          data: { userRating: null }
+        };
+      }
       throw new Error(data.message || 'Failed to get user rating');
     }
 
     return data;
   } catch (error) {
     console.error('Error getting user star rating:', error);
+    // For null reference errors (new users), return null user rating instead of throwing
+    if (error instanceof Error && error.message.includes('Cannot read properties of null')) {
+      console.log('ℹ️ [RatingService] Null reference error in getUserStarRating - returning null');
+      return {
+        status: 'success',
+        data: { userRating: null }
+      };
+    }
     throw error;
   }
 };
@@ -245,12 +261,56 @@ export const getMovieStarRatings = async (
     const data = await response.json();
     
     if (!response.ok) {
+      // For 500 errors or invalid movieId, return empty ratings instead of throwing
+      if (response.status === 500 || response.status === 404) {
+        console.log('ℹ️ [RatingService] Movie has no ratings or invalid movieId - returning empty ratings');
+        return {
+          status: 'success',
+          data: {
+            movieStats: {
+              averageRating: 0,
+              totalRatings: 0,
+              ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+            },
+            ratings: [],
+            pagination: {
+              currentPage: 1,
+              totalPages: 0,
+              totalRatings: 0,
+              hasNextPage: false,
+              hasPrevPage: false
+            }
+          }
+        };
+      }
       throw new Error(data.message || 'Failed to get movie ratings');
     }
 
     return data;
   } catch (error) {
     console.error('Error getting movie star ratings:', error);
+    // For null reference errors (new users), return empty ratings instead of throwing
+    if (error instanceof Error && error.message.includes('Cannot read properties of null')) {
+      console.log('ℹ️ [RatingService] Null reference error - returning empty ratings');
+      return {
+        status: 'success',
+        data: {
+          movieStats: {
+            averageRating: 0,
+            totalRatings: 0,
+            ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+          },
+          ratings: [],
+          pagination: {
+            currentPage: 1,
+            totalPages: 0,
+            totalRatings: 0,
+            hasNextPage: false,
+            hasPrevPage: false
+          }
+        }
+      };
+    }
     throw error;
   }
 };
