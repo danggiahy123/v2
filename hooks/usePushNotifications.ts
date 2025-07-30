@@ -33,6 +33,8 @@ export function usePushNotifications(userId?: string) {
           console.log('✅ [usePushNotifications] Extracted notification data:', data);
           
           // Show in-app alert for foreground notifications
+          // COMMENTED OUT: Disable in-app alert popup
+          /*
           Alert.alert(
             notification.request.content.title || 'Thông báo mới',
             data.movieTitle 
@@ -53,6 +55,7 @@ export function usePushNotifications(userId?: string) {
             ],
             { cancelable: true }
           );
+          */
         } else {
           console.warn('⚠️ [usePushNotifications] Could not extract notification data');
         }
