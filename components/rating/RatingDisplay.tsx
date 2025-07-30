@@ -212,7 +212,11 @@ const RatingDisplay: React.FC<RatingDisplayProps> = ({
 
       {/* Rate Button */}
       <TouchableOpacity
-        style={[styles.rateButton, (loading || !canRate) && styles.disabledButton]}
+        style={[
+          styles.rateButton, 
+          styles.notRatedButton,
+          (loading || !canRate) && styles.disabledButton
+        ]}
         onPress={() => {
           if (!canRate && rateDisabledReason) {
             alert(rateDisabledReason);
@@ -225,9 +229,12 @@ const RatingDisplay: React.FC<RatingDisplayProps> = ({
         {loading ? (
           <ActivityIndicator color="#fff" size="small" />
         ) : (
-          <Text style={styles.rateButtonText}>
-            {currentUserRating ? 'Sửa đánh giá' : 'Đánh giá phim'}
-          </Text>
+                      <Text style={[
+              styles.rateButtonText,
+              styles.notRatedButtonText
+            ]}>
+              {currentUserRating ? 'Sửa đánh giá' : 'Đánh giá phim'}
+            </Text>
         )}
       </TouchableOpacity>
 
@@ -347,14 +354,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#D11030',
-   
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 16,
     marginHorizontal: 16,
     marginBottom: 16,
     gap: 8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   rateButtonText: {
     fontSize: 16,
@@ -467,7 +477,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#222',
   },
   disabledButton: {
-    opacity: 0.7,
+    opacity: 0.5,
+    backgroundColor: '#333',
+    borderColor: '#555',
+    shadowOpacity: 0.1,
+    elevation: 1,
   },
   guideContainer: {
     backgroundColor: '#1a1a1a',
@@ -481,6 +495,34 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'left',
     lineHeight: 20,
+  },
+  ratedButton: {
+    backgroundColor: '#FFD700',
+    borderWidth: 2,
+    borderColor: '#FFD700',
+    shadowColor: '#FFD700',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  notRatedButton: {
+    backgroundColor: '#D11030',
+    borderWidth: 2,
+    borderColor: '#D11030',
+    shadowColor: '#D11030',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  ratedButtonText: {
+    color: '#000',
+    fontWeight: '600',
+  },
+  notRatedButtonText: {
+    color: '#fff',
+    fontWeight: '600',
   },
 });
 

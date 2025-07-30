@@ -388,96 +388,7 @@ export default function NotificationSettingsScreen() {
           </View>
         </Modal>
 
-        {/* Notification Categories */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Loại thông báo</Text>
-          <View style={styles.settingsCard}>
-            {renderSettingItem(
-              'newMovies',
-              'Phim mới',
-              'Thông báo khi có phim mới được thêm',
-              'film'
-            )}
-            {renderSettingItem(
-              'newEpisodes',
-              'Tập phim mới',
-              'Thông báo khi có tập mới của series bạn theo dõi',
-              'play-circle'
-            )}
-            {renderSettingItem(
-              'reminders',
-              'Nhắc nhở',
-              'Nhắc nhở về phim sắp hết hạn thuê',
-              'alarm'
-            )}
-            {renderSettingItem(
-              'promotions',
-              'Khuyến mãi',
-              'Thông báo về các chương trình khuyến mãi',
-              'gift'
-            )}
-            {renderSettingItem(
-              'systemUpdates',
-              'Cập nhật hệ thống',
-              'Thông báo về các bản cập nhật và tính năng mới',
-              'information-circle'
-            )}
-          </View>
-        </View>
 
-        {/* Advanced Settings */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Cài đặt nâng cao</Text>
-          <View style={styles.settingsCard}>
-            <TouchableOpacity 
-              style={styles.actionItem}
-              onPress={() => {
-                Alert.alert(
-                  'Xóa tất cả thông báo',
-                  'Bạn có chắc chắn muốn xóa tất cả thông báo?',
-                  [
-                    { text: 'Hủy', style: 'cancel' },
-                    { text: 'Xóa', style: 'destructive' }
-                  ]
-                );
-              }}
-            >
-              <Ionicons name="trash" size={20} color="#ff4444" />
-              <Text style={[styles.actionText, { color: '#ff4444' }]}>
-                Xóa tất cả thông báo
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.actionItem}
-              onPress={() => {
-                Alert.alert(
-                  'Đặt lại cài đặt',
-                  'Bạn có chắc chắn muốn đặt lại tất cả cài đặt về mặc định?',
-                  [
-                    { text: 'Hủy', style: 'cancel' },
-                    { 
-                      text: 'Đặt lại', 
-                      onPress: () => {
-                        setSettings({
-                          newMovies: true,
-                          newEpisodes: true,
-                          reminders: true,
-                          promotions: false,
-                          systemUpdates: true,
-                          pushEnabled: true,
-                        });
-                      }
-                    }
-                  ]
-                );
-              }}
-            >
-              <Ionicons name="refresh" size={20} color="#666" />
-              <Text style={styles.actionText}>Đặt lại cài đặt mặc định</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -584,19 +495,7 @@ const styles = StyleSheet.create({
     color: '#666',
     fontSize: 14,
   },
-  actionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  actionText: {
-    color: '#fff',
-    fontSize: 16,
-    marginLeft: 16,
-  },
+
   loginContainer: {
     flex: 1,
     justifyContent: 'center',
