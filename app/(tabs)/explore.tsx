@@ -229,10 +229,7 @@ export default function ExploreScreen() {
             <Ionicons name="settings-outline" size={26} color="#4ecdc4" style={styles.menuIcon} />
             <Text style={styles.menuItemText}>Cài đặt thông báo</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.menuItem} onPress={handleNotificationDebug} activeOpacity={0.7}>
-            <Ionicons name="bug-outline" size={26} color="#ffa726" style={styles.menuIcon} />
-            <Text style={styles.menuItemText}>Debug Thông báo</Text>
-          </TouchableOpacity>
+        
         </View>
 
         {/* Lịch sử Section */}
