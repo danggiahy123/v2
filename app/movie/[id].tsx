@@ -1891,20 +1891,14 @@ if (!movieDetail) return;
 
               // Validate episode before rendering
               if (!episodeToPlay?._id || !episodeToPlay?.episode_title || !episodeToPlay?.episode_number) {
-                console.error('❌ [VideoPlayer] Invalid episode data:', episodeToPlay);
-                return (
-                  <View style={styles.placeholderContainer}>
-                    <Text style={styles.placeholderText}>
-                      Thông tin tập phim không hợp lệ
-                    </Text>
-                  </View>
-                );
+                console.log('⚠️ [VideoPlayer] Invalid episode data, returning empty container');
+                return null; // Return null instead of error message
               }
 
               // Validate video URL (only for accessible movies)
               const videoUrl = episodeToPlay?.uri;
               if (!videoUrl || videoUrl.trim() === '') {
-                console.log('❌ [VideoPlayer] No video URL available:', { 
+                console.log('⚠️ [VideoPlayer] No video URL available, returning empty container:', { 
                   episodeToPlay: episodeToPlay?.episode_title,
                   videoUrl,
                   movieIsFree: movieDetail?.is_free,
@@ -1925,13 +1919,8 @@ if (!movieDetail) return;
                   return null;
                 }
                 
-                return (
-                  <View style={styles.placeholderContainer}>
-                    <Text style={styles.placeholderText}>
-                      Video đang được cập nhật
-                    </Text>
-                  </View>
-                );
+                // Return null instead of error message for videos without URL
+                return null;
               }
 
               return canShowVideo && showVideoPlayer && episodeToPlay ? (

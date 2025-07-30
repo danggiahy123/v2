@@ -39,12 +39,12 @@ class VideoPlayerErrorBoundary extends React.Component<
   }
 
   static getDerivedStateFromError(error: Error) {
-    console.error('❌ [VideoPlayerErrorBoundary] Caught error:', error);
+    console.log('⚠️ [VideoPlayerErrorBoundary] Caught error:', error.message);
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('❌ [VideoPlayerErrorBoundary] Error details:', {
+    console.log('⚠️ [VideoPlayerErrorBoundary] Error details:', {
       error: error.message,
       stack: error.stack,
       errorInfo
@@ -60,28 +60,11 @@ class VideoPlayerErrorBoundary extends React.Component<
 
   render() {
     if (this.state.hasError) {
+      console.log('⚠️ [VideoPlayerErrorBoundary] Error occurred, returning empty container');
       return (
         <View style={styles.wrapper}>
           <View style={styles.container}>
-            <View style={styles.errorOverlay}>
-              <Ionicons name="warning" size={48} color="#ff6b6b" />
-              <Text style={styles.errorText}>Lỗi trình phát video</Text>
-              <Text style={styles.errorSubText}>
-                Đã xảy ra lỗi khi chuyển tập phim. Vui lòng thử lại.
-              </Text>
-              <TouchableOpacity 
-                style={styles.retryButton}
-                onPress={() => this.setState({ hasError: false, error: undefined })}
-              >
-                <Ionicons name="refresh" size={20} color="#fff" />
-                <Text style={styles.retryButtonText}>Thử lại</Text>
-              </TouchableOpacity>
-              {__DEV__ && this.state.error && (
-                <Text style={styles.debugText}>
-                  {this.state.error.message}
-                </Text>
-              )}
-            </View>
+            {/* Empty container - no error message */}
           </View>
         </View>
       );
@@ -103,7 +86,7 @@ const validateEpisode = (episode: Episode): { isValid: boolean; missingFields: s
 // Helper function to validate video URL
 const isValidVideoUrl = (url: string): boolean => {
   if (!url || url.trim() === '') {
-    console.error('❌ [VideoPlayer] Empty video URL detected');
+    console.log('⚠️ [VideoPlayer] Empty video URL detected');
     return false;
   }
   
@@ -112,7 +95,7 @@ const isValidVideoUrl = (url: string): boolean => {
     const urlObj = new URL(url);
     return urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
   } catch {
-    console.error('❌ [VideoPlayer] Invalid video URL format:', url);
+    console.log('⚠️ [VideoPlayer] Invalid video URL format:', url);
     return false;
   }
 };
@@ -120,7 +103,7 @@ const isValidVideoUrl = (url: string): boolean => {
 // Helper function to get video URL from episode
 const getVideoUrl = (episode: Episode): string | null => {
   if (!episode.uri || episode.uri.trim() === '') {
-    console.error('❌ [VideoPlayer] Episode has no video URL:', episode);
+    console.log('⚠️ [VideoPlayer] Episode has no video URL:', episode.episode_title);
     return null;
   }
   
@@ -129,7 +112,7 @@ const getVideoUrl = (episode: Episode): string | null => {
     return episode.uri;
   }
   
-  console.error('❌ [VideoPlayer] Invalid video URL in episode:', { 
+  console.log('⚠️ [VideoPlayer] Invalid video URL in episode:', { 
     episodeId: episode._id,
     episodeTitle: episode.episode_title,
     uri: episode.uri 
@@ -270,7 +253,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       setIsPlayerReady(true);
       
     } catch (err) {
-      console.error('❌ [VideoPlayer] Player initialization error:', err);
+      console.log('⚠️ [VideoPlayer] Player initialization error:', err);
       setError('Không thể khởi tạo trình phát video');
       setIsLoading(false);
     }
@@ -328,7 +311,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         }, 100);
       }
     } catch (err) {
-      console.error('❌ [VideoPlayer] Error updating player:', err);
+      console.log('⚠️ [VideoPlayer] Error updating player:', err);
       setError('Không thể cập nhật trình phát video');
       setIsLoading(false);
     }
@@ -362,7 +345,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
     try {
       if (currentPlayer.status === 'error') {
-        console.error('❌ [VideoPlayer] Player error - Status:', currentPlayer.status);
+        console.log('⚠️ [VideoPlayer] Player error - Status:', currentPlayer.status);
         setError('Video playback error');
         setIsLoading(false);
       }
@@ -486,9 +469,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       }
     } catch (error) {
       if (error instanceof Error) {
-        console.error('❌ [VideoPlayer] Failed to save progress:', error.message);
+        console.log('⚠️ [VideoPlayer] Failed to save progress:', error.message);
       } else {
-        console.error('❌ [VideoPlayer] Failed to save progress:', error);
+        console.log('⚠️ [VideoPlayer] Failed to save progress:', error);
       }
     }
   };
@@ -595,34 +578,18 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const hasValidUrl = !!videoUrlMemo;
 
   if (!isValid || !hasValidUrl) {
-    console.error('❌ [VideoPlayer] Cannot play video:', { 
-      episode,
+    console.log('⚠️ [VideoPlayer] Video not available, returning empty container:', { 
+      episode: episode.episode_title,
       missingFields,
       hasValidUrl,
       videoUrl: episode.uri
     });
     
+    // Return empty container instead of error message
     return (
       <View style={styles.wrapper}>
         <View style={styles.container}>
-          <View style={styles.errorOverlay}>
-            <Ionicons name="warning" size={48} color="#ff6b6b" />
-            <Text style={styles.errorText}>Không thể phát video</Text>
-            <Text style={styles.errorSubText}>
-              {!hasValidUrl 
-                ? 'Video không khả dụng. Vui lòng thử lại sau.'
-                : 'Thông tin tập phim không hợp lệ'
-              }
-            </Text>
-            {__DEV__ && (
-              <Text style={styles.debugText}>
-                {!hasValidUrl 
-                  ? `URI không hợp lệ: "${episode.uri}"`
-                  : `Thiếu các trường: ${missingFields.join(', ')}`
-                }
-              </Text>
-            )}
-          </View>
+          {/* Empty container - no error message */}
         </View>
       </View>
     );
@@ -677,30 +644,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
             </View>
           )}
 
-          {/* Error Overlay */}
+          {/* Error Overlay - Hidden for videos without content */}
           {error && (
             <View style={styles.errorOverlay}>
-              <Ionicons name="warning" size={48} color="#ff6b6b" />
-              <Text style={styles.errorText}>{error}</Text>
-              <TouchableOpacity 
-                style={styles.retryButton}
-                onPress={() => {
-                  setError(null);
-                  setIsLoading(true);
-                  safePlayerOperation(
-                    (player) => {
-                      if (videoUrlMemo) {
-                        player.pause();
-                        player.replace(videoUrlMemo);
-                      }
-                    },
-                    () => console.log('⚠️ [VideoPlayer] Could not retry playback')
-                  );
-                }}
-              >
-                <Ionicons name="refresh" size={20} color="#fff" />
-                <Text style={styles.retryButtonText}>Thử lại</Text>
-              </TouchableOpacity>
+              {/* Empty error overlay - no error message */}
             </View>
           )}
         </View>
