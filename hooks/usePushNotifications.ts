@@ -33,6 +33,7 @@ export function usePushNotifications(userId?: string) {
           console.log('✅ [usePushNotifications] Extracted notification data:', data);
           
           // Show in-app alert for foreground notifications
+
           // Alert.alert(
           //   notification.request.content.title || 'Thông báo mới',
           //   data.movieTitle 
@@ -53,6 +54,31 @@ export function usePushNotifications(userId?: string) {
           //   ],
           //   { cancelable: true }
           // );
+
+          // COMMENTED OUT: Disable in-app alert popup
+          /*
+          Alert.alert(
+            notification.request.content.title || 'Thông báo mới',
+            data.movieTitle 
+              ? `🎬 ${data.movieTitle} - Khám phá ngay!` 
+              : notification.request.content.body || 'Bạn có thông báo mới',
+            [
+              { text: 'Đóng', style: 'cancel' },
+              { 
+                text: 'Xem ngay', 
+                onPress: () => {
+                  console.log('👆 [usePushNotifications] User tapped "Xem ngay" for notification');
+                  // Mark as read when user views
+                  notificationService.markAsRead();
+                  // Navigate to the content
+                  deepLinkService.handleNotificationTap(data);
+                }
+              }
+            ],
+            { cancelable: true }
+          );
+          */
+
         } else {
           console.warn('⚠️ [usePushNotifications] Could not extract notification data');
         }
