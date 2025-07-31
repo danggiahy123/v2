@@ -89,12 +89,14 @@ export default function HomeScreen() {
   const [homeGenreCustomMovies, setHomeGenreCustomMovies] = useState<GridMovie[]>([]);
   const [homeGenreLoading, setHomeGenreLoading] = useState(false);
   const [showLogoutNotification, setShowLogoutNotification] = useState(false);
+  const [showScrollToTop, setShowScrollToTop] = useState(false);
   
   // Banner interaction states
   const [bannerFavorites, setBannerFavorites] = useState<{[key: string]: boolean}>({});
   const [bannerLikes, setBannerLikes] = useState<{[key: string]: boolean}>({});
 
   const bannerFlatListRef = useRef<FlatList>(null);
+  const scrollViewRef = useRef<any>(null);
 
   // Search functionality - will be implemented in future updates
   const [searchQuery] = useState('');
@@ -602,6 +604,14 @@ export default function HomeScreen() {
       listener: (event: any) => {
         const currentScrollY = event.nativeEvent.contentOffset.y;
         const scrollDiff = currentScrollY - lastScrollY.current;
+        
+        // Show/hide scroll to top button
+        if (currentScrollY > 1000) {
+          setShowScrollToTop(true);
+        } else {
+          setShowScrollToTop(false);
+        }
+        
         if (scrollDiff > 2 && currentScrollY > 0) { 
           headerOpacity.setValue(0);
         } else if (scrollDiff < -2 || currentScrollY <= 0) { 
@@ -648,6 +658,10 @@ export default function HomeScreen() {
     } finally {
       setHomeGenreLoading(false);
     }
+  };
+
+  const handleScrollToTop = () => {
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
   };
 
   const renderBanner = () => {
@@ -1219,15 +1233,16 @@ export default function HomeScreen() {
           onGenreSelect={handleHomeGenreSelect}
           opacity={headerOpacity}
         />
-        <Animated.ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollViewContent}
-          onScroll={handleScroll}
-          scrollEventThrottle={16}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FFFFFF" />
-          }
-        >
+                  <Animated.ScrollView
+            ref={scrollViewRef}
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollViewContent}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FFFFFF" />
+            }
+          >
           {renderBanner()}
 
           {isLoggedIn && renderContinueWatching()}
@@ -1339,16 +1354,27 @@ export default function HomeScreen() {
           featureName={currentFeatureName || undefined}
         />
 
-        {/* Logout Notification */}
-        {showLogoutNotification && (
-          <View style={styles.logoutNotification}>
-            <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
-            <Text style={styles.logoutNotificationText}>Đã đăng xuất thành công</Text>
-          </View>
-        )}
-      </View>
-    );
-  };
+                 {/* Logout Notification */}
+         {showLogoutNotification && (
+           <View style={styles.logoutNotification}>
+             <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
+             <Text style={styles.logoutNotificationText}>Đã đăng xuất thành công</Text>
+           </View>
+         )}
+         
+         {/* Scroll to Top Button */}
+         {showScrollToTop && (
+           <TouchableOpacity
+             style={styles.scrollToTopButton}
+             onPress={handleScrollToTop}
+             activeOpacity={0.8}
+           >
+             <Ionicons name="chevron-up" size={24} color="#fff" />
+           </TouchableOpacity>
+         )}
+       </View>
+     );
+   };
 
   useEffect(() => {
     const handleLikeChange = ({ movieId, likeCount, hasLiked }: { movieId: string, likeCount: number, hasLiked: boolean }) => {
@@ -2507,11 +2533,30 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
   },
-  logoutNotificationText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
+     logoutNotificationText: {
+     color: '#fff',
+     fontSize: 14,
+     fontWeight: '600',
+     marginLeft: 8,
+   },
+   scrollToTopButton: {
+     position: 'absolute',
+     bottom: 100,
+     right: 20,
+     width: 50,
+     height: 50,
+     borderRadius: 25,
+     backgroundColor: 'rgba(0, 0, 0, 0.3)',
+     justifyContent: 'center',
+     alignItems: 'center',
+     elevation: 8,
+     shadowColor: '#000',
+     shadowOffset: { width: 0, height: 2 },
+     shadowOpacity: 0.25,
+     shadowRadius: 4,
+     zIndex: 1000,
+     borderWidth: 1,
+     borderColor: 'rgba(255, 255, 255, 0.2)',
+   },
 
 });
