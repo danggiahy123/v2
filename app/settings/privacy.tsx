@@ -96,7 +96,7 @@ export default function PrivacyPolicyScreen() {
         <View style={styles.footerSection}>
           <View style={styles.footerItem}>
             <Feather name="clock" size={20} color="#666" />
-            <Text style={styles.footerText}>Cập nhật lần cuối: 01/03/2024</Text>
+            <Text style={styles.footerText}>Cập nhật lần cuối: 01/03/2025</Text>
           </View>
           <View style={styles.footerItem}>
             <Feather name="file-text" size={20} color="#666" />

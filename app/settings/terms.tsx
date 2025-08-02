@@ -114,7 +114,7 @@ export default function TermsScreen() {
         <View style={styles.footerSection}>
           <View style={styles.footerItem}>
             <MaterialCommunityIcons name="clock-outline" size={20} color="#666" />
-            <Text style={styles.footerText}>Cập nhật lần cuối: 01/03/2024</Text>
+            <Text style={styles.footerText}>Cập nhật lần cuối: 01/03/2025</Text>
           </View>
           <TouchableOpacity style={styles.footerItem}>
             <MaterialCommunityIcons name="file-download-outline" size={20} color="#666" />
