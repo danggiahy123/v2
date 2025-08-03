@@ -193,7 +193,7 @@ export default function HomeScreen() {
         const newReleasesRes = await movieService.getNewReleases({
           bannerLimit: 5,
           limit: 6,
-          days: 30,
+          days: 90,
         });
 
         if (newReleasesRes?.status === 'success' && newReleasesRes.data) {
@@ -299,7 +299,7 @@ export default function HomeScreen() {
           vietnameseGenreId
             ? genreService.getMoviesByGenre(vietnameseGenreId, 1, 8, true)
             : seriesService.getVietnameseSeries({ limit: 8 }),
-          movieService.getComingSoon({ limit: 8, days: 30 }),
+          movieService.getComingSoon({ limit: 8, days: 90 }),
         ]);
 
         const titles = ['Trending', 'Top Rated', 'Thể thao', 'Anime', vietnameseGenreName, 'Sắp chiếu'];
