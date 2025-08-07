@@ -1,16 +1,28 @@
 import { Provider } from 'react-redux';
 import { store } from './store/store';
-import { Slot } from 'expo-router';
+import { Slot, useRouter, useSegments } from 'expo-router';
 import { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { usePushNotifications } from './hooks/usePushNotifications';
+import { HomeReadyProvider } from './app/context/HomeReadyContext';
+import { DeepLinkService } from './services/deepLinkService';
 
 function AppContent() {
   const [userId, setUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const segments = useSegments();
 
   // Initialize push notifications with userId
   const pushNotifications = usePushNotifications(userId || undefined);
+
+  // Track navigation changes to mark app as foreground
+  useEffect(() => {
+    if (segments.length > 0) {
+      // User is navigating within the app - mark as foreground
+      const deepLinkService = DeepLinkService.getInstance();
+      deepLinkService.setAppInForeground(true);
+    }
+  }, [segments]);
 
   useEffect(() => {
     // Get userId from storage when app starts
@@ -45,7 +57,9 @@ function AppContent() {
 export default function App() {
   return (
     <Provider store={store}>
-      <Slot />
+      <HomeReadyProvider>
+        <Slot />
+      </HomeReadyProvider>
     </Provider>
   );
-} 
+}
