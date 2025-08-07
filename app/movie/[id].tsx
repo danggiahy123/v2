@@ -210,7 +210,7 @@ return `${hours}h ${remainingMinutes}min`;
       
       // Show success notification
       showNotificationMessage('Thanh toán thành công! Bạn có thể xem phim ngay.', 'success');
-}
+    }
   }, [rentalSuccess, fromPayment, userId, forceRefreshRental]);
 
   // 🔍 DEBUG: Track rental access changes
@@ -669,7 +669,7 @@ hasUri: !!ep.uri
             }
             
             // Show video player
-            setShowVideoPlayer(true);
+          setShowVideoPlayer(true);
             
             // Show resume message if available
             if (resumeMessage) {
@@ -1147,7 +1147,7 @@ if (!movieDetail) return;
       }
       
       setResumeFromTime(resumeTime);
-      setHasClickedWatchButton(true);
+          setHasClickedWatchButton(true);
       setShowVideoPlayer(true);
     } catch (error) {
       console.error('❌ [DEBUG] Error activating rental:', error);
@@ -1616,9 +1616,9 @@ if (!movieDetail) return;
       return (
         <View style={styles.commentsContainer}>
           <Text style={styles.emptyCommentsText}>Chưa có bình luận nào. Hãy là người đầu tiên bình luận!</Text>
-        </View>
-      );
-    }
+      </View>
+    );
+  }
 
     return (
       <View style={styles.commentsContainer}>
@@ -1684,7 +1684,7 @@ if (!movieDetail) return;
   // LOADING & ERROR STATES
   // =====================================
 
-  if (loading) {
+    if (loading) {
     return (
       
         <SafeAreaView style={styles.container}>
@@ -1752,7 +1752,7 @@ if (!movieDetail) return;
   }
 
   if (error) {
-    return (
+      return (
       
         <SafeAreaView style={styles.container}>
 <StatusBar barStyle="light-content" backgroundColor="#000" />
@@ -1762,12 +1762,12 @@ if (!movieDetail) return;
               <TouchableOpacity style={styles.retryButton} onPress={clearError}>
                 <Text style={styles.retryButtonText}>Retry</Text>
               </TouchableOpacity>
-            </View>
+        </View>
           
         </SafeAreaView>
       
-    );
-  }
+      );
+    }
 
   if (!movieDetail) {
     return (
@@ -2090,8 +2090,8 @@ if (!movieDetail) return;
         
         
                           {/* 📽️ MOVIE INFO - Di chuyển xuống dưới video */}
-          {renderMovieInfo()}
-          
+      {renderMovieInfo()}
+      
 
           
                   {renderEpisodes()}

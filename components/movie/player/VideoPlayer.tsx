@@ -5,7 +5,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { userInteractionService } from '../../../services/userInteractionService';
 import { Episode, REQUIRED_EPISODE_FIELDS } from '../../../types/episode';
 import eventBus from '../../../utils/eventBus';
+import { DeepLinkService } from '../../../services/deepLinkService';
 import { useFocusEffect } from '@react-navigation/native';
+
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -90,7 +92,7 @@ const isValidVideoUrl = (url: string): boolean => {
     console.log('⚠️ [VideoPlayer] Empty video URL detected');
     return false;
   }
-  
+
   // Check if it's a valid HTTP/HTTPS URL
   try {
     const urlObj = new URL(url);
@@ -107,16 +109,16 @@ const getVideoUrl = (episode: Episode): string | null => {
     console.log('⚠️ [VideoPlayer] Episode has no video URL:', episode.episode_title);
     return null;
   }
-  
+
   // If it's already a valid URL, return it
   if (isValidVideoUrl(episode.uri)) {
     return episode.uri;
   }
-  
-  console.log('⚠️ [VideoPlayer] Invalid video URL in episode:', { 
+
+  console.log('⚠️ [VideoPlayer] Invalid video URL in episode:', {
     episodeId: episode._id,
     episodeTitle: episode.episode_title,
-    uri: episode.uri 
+    uri: episode.uri
   });
   return null;
 };
@@ -142,7 +144,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [hasSetResumeTime, setHasSetResumeTime] = useState(false);
   const [isPlayerReady, setIsPlayerReady] = useState(false);
   const [isDestroying, setIsDestroying] = useState(false);
-  
+
   // 🔧 FIX: Track player state to prevent native object access issues
   const playerStateRef = useRef({
     isInitialized: false,
@@ -234,25 +236,25 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
 
     console.log('⚡ [VideoPlayer] Player initialized for:', episode.episode_title);
-    
+
     try {
       player.volume = 1.0;
       player.muted = false;
-      
+
       // 🔧 FIX: Set resume time ONLY once during initialization
       if (resumeFromTime && resumeFromTime > 0 && !hasSetResumeTime) {
         console.log('⏯️ [VideoPlayer] Setting initial resume time:', resumeFromTime);
         player.currentTime = resumeFromTime;
         setHasSetResumeTime(true);
       }
-      
+
       player.play();
-      
+
       // Update player state
       playerStateRef.current.isInitialized = true;
       playerStateRef.current.lastUrl = videoUrlMemo;
       setIsPlayerReady(true);
-      
+
     } catch (err) {
       console.log('⚠️ [VideoPlayer] Player initialization error:', err);
       setError('Không thể khởi tạo trình phát video');
@@ -271,19 +273,19 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       const currentPlayer = playerRef.current;
       if (currentPlayer && !playerStateRef.current.isDestroyed) {
         console.log('🔄 [VideoPlayer] Updating player URL for:', episode.episode_title);
-        
+
         // Safe pause
         safePlayerOperation(
           (player) => player.pause(),
           () => console.log('⚠️ [VideoPlayer] Could not pause player during URL update')
         );
-        
+
         // Safe replace
         safePlayerOperation(
           (player) => player.replace(videoUrlMemo),
           () => console.log('⚠️ [VideoPlayer] Could not replace player URL')
         );
-        
+
         // Reset state
         setIsLoading(true);
         setError(null);
@@ -302,7 +304,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
               );
               setHasSetResumeTime(true);
             }
-            
+
             // Safe play
             safePlayerOperation(
               (player) => player.play(),
@@ -324,7 +326,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       console.log('🧹 [VideoPlayer] Component unmounting, cleaning up player');
       setIsDestroying(true);
       playerStateRef.current.isDestroyed = true;
-      
+
       safePlayerOperation(
         (player) => {
           try {
@@ -377,7 +379,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
 
     const watchPercentage = Math.floor((currentTimeSec / durationSec) * 100);
-    
+
     // Lưu tiến trình ngay khi có thay đổi lớn (seek) hoặc theo điều kiện cũ
     if (
       (!isPlaying && currentTimeSec > 0 && currentTimeSec !== lastSavedProgress) || // Paused
@@ -392,7 +394,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         difference: Math.abs(currentTimeSec - lastSavedProgress),
         reason: Math.abs(currentTimeSec - lastSavedProgress) > 5 ? 'SEEK' : 'NORMAL'
       });
-      
+
       saveProgress(currentTimeSec, watchPercentage, durationSec);
       setLastSavedProgress(currentTimeSec);
     }
@@ -414,7 +416,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       }
 
       const completed = watchPercentage >= 90;
-      
+
       // Log chi tiết trước khi gọi API
       console.log('[DEBUG][VideoPlayer] Gọi API lưu tiến trình:', {
         episodeId,
@@ -433,7 +435,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         userId,
         completed
       );
-      
+
       console.log(`✅ [VideoPlayer] Progress saved successfully: ${watchPercentage}%`, {
         episodeId,
         currentTime,
@@ -460,7 +462,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         console.log('🎬 [VideoPlayer] Episode completed! Calling onEpisodeComplete callback');
         setHasNotifiedCompletion(true);
         onEpisodeComplete();
-        
+
         // Emit movie watched event
         eventBus.emit('movie-watched', {
           episodeId,
@@ -484,7 +486,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     let isMounted = true;
     let lastValidTime = 0;
     let hasStartedPlaying = false;
-    
+
     // Delay để đảm bảo player đã load xong
     const delayId = setTimeout(() => {
       const intervalId = setInterval(() => {
@@ -505,13 +507,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         ) {
           return;
         }
-        
+
         // Đánh dấu đã bắt đầu playing
         if (!hasStartedPlaying && currentPlayer.playing && currentPlayer.currentTime > 0) {
           hasStartedPlaying = true;
           console.log('🎬 [VideoPlayer] Player started playing, beginning progress tracking');
         }
-        
+
         // Chỉ lưu tiến trình sau khi đã bắt đầu playing
         if (hasStartedPlaying) {
           try {
@@ -522,7 +524,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 duration: currentPlayer.duration,
                 percentage: Math.floor((currentPlayer.currentTime / currentPlayer.duration) * 100)
               });
-              
+
               handlePlaybackStatusUpdate(
                 currentPlayer.currentTime * 1000,
                 currentPlayer.duration * 1000,
@@ -628,13 +630,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const hasValidUrl = !!videoUrlMemo;
 
   if (!isValid || !hasValidUrl) {
-    console.log('⚠️ [VideoPlayer] Video not available, returning empty container:', { 
+    console.log('⚠️ [VideoPlayer] Video not available, returning empty container:', {
       episode: episode.episode_title,
       missingFields,
       hasValidUrl,
       videoUrl: episode.uri
     });
-    
+
     // Return empty container instead of error message
     return (
       <View style={styles.wrapper}>
@@ -644,7 +646,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       </View>
     );
   }
-  
+
   console.log('🎬 [VideoPlayer] Component initialized:', {
     episodeId: episode._id,
     episodeTitle: episode.episode_title,
@@ -657,9 +659,31 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     isDestroying,
     isPlayerReady
   });
-  
+
   const currentPlayer = playerRef.current;
 
+  useEffect(() => {
+    const deepLinkService = DeepLinkService.getInstance();
+
+    const stopVideoCallback = async () => {
+      console.log('⏹️ [VideoPlayer] onBeforeNavigateCallback: Pausing video before navigation...');
+      try {
+        const currentPlayer = playerRef.current;
+        if (currentPlayer && typeof currentPlayer.pause === 'function') {
+          await currentPlayer.pause();
+          console.log('✅ [VideoPlayer] Video paused successfully.');
+        }
+      } catch (error) {
+        console.warn('⚠️ [VideoPlayer] Failed to pause video in callback:', error);
+      }
+    };
+
+    deepLinkService.setOnBeforeNavigate(stopVideoCallback);
+
+    return () => {
+      deepLinkService.setOnBeforeNavigate(undefined);
+    };
+  }, []);
   return (
     <VideoPlayerErrorBoundary episode={episode}>
       <View style={styles.wrapper}>
@@ -675,8 +699,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
               nativeControls
             />
           )}
-          
-          {/* Loading Overlay - Only show when loading and not playing */}
+
+          {/* Loading Overlay - Dùng để báo cho người dùng biết video đang được tải lần đầu */}
           {(isLoading && !isPlaying) && (
             <View style={styles.loadingOverlay}>
               <ActivityIndicator size="large" color="#E50914" />
@@ -684,15 +708,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
             </View>
           )}
 
-          {/* Buffering Overlay */}
-          {!isLoading && !error && currentPlayer?.status === 'loading' && (
-            <View style={styles.bufferingOverlay}>
-              <View style={styles.bufferingIndicator}>
-                <ActivityIndicator size="large" color="#E50914" />
-                <Text style={styles.bufferingText}>Đang tải...</Text>
-              </View>
-            </View>
-          )}
+          {/* Đã loại bỏ Buffering Overlay theo yêu cầu */}
 
           {/* Error Overlay - Hidden for videos without content */}
           {error && (
@@ -701,12 +717,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
             </View>
           )}
         </View>
-        
+
         {/* Episode Title Below Video - Clean UI like Netflix */}
         {showTitle && (
           <View style={styles.titleContainer}>
             <Text style={styles.videoTitle}>
-              {movieType === 'Phim lẻ' 
+              {movieType === 'Phim lẻ'
                 ? episode.episode_title // Chỉ hiện tên phim cho phim lẻ
                 : `Tập ${episode.episode_number}: ${episode.episode_title}` // Hiện đầy đủ cho phim bộ
               }
@@ -857,31 +873,31 @@ const styles = StyleSheet.create({
     color: '#aaa',
     fontSize: 14,
   },
-  bufferingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.3)', // Lighter background
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  bufferingIndicator: {
-    backgroundColor: 'rgba(0,0,0,0.8)', // Darker container for the indicator
-    padding: 20,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    minWidth: 120,
-  },
-  bufferingText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-    marginTop: 10,
-    textAlign: 'center',
-  },
+  // bufferingOverlay: {
+  //   position: 'absolute',
+  //   top: 0,
+  //   left: 0,
+  //   right: 0,
+  //   bottom: 0,
+  //   backgroundColor: 'rgba(0,0,0,0.3)', // Lighter background
+  //   justifyContent: 'center',
+  //   alignItems: 'center',
+  // },
+  // bufferingIndicator: {
+  //   backgroundColor: 'rgba(0,0,0,0.8)', // Darker container for the indicator
+  //   padding: 20,
+  //   borderRadius: 10,
+  //   justifyContent: 'center',
+  //   alignItems: 'center',
+  //   minWidth: 120,
+  // },
+  // bufferingText: {
+  //   color: '#fff',
+  //   fontSize: 14,
+  //   fontWeight: '600',
+  //   marginTop: 10,
+  //   textAlign: 'center',
+  // },
 });
 
 // Memoize với shallow comparison của props để tránh re-render không cần thiết
@@ -899,7 +915,7 @@ export default React.memo(VideoPlayer, (prevProps, nextProps) => {
 export const VideoPlayerWrapper: React.FC<VideoPlayerProps> = (props) => {
   // Use episode ID as key to force remount when episode changes
   const key = `${props.episode._id}-${props.movieId}`;
-  
+
   return (
     <VideoPlayerErrorBoundary episode={props.episode}>
       <VideoPlayer

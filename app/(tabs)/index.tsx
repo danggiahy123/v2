@@ -1,5 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { AppState, AppStateStatus } from 'react-native';
+import { useHomeReady } from '../context/HomeReadyContext';
+import { DeepLinkService } from '../../services/deepLinkService';
 import {
   ActivityIndicator,
   Dimensions,
@@ -51,6 +54,59 @@ interface MovieSection {
 }
 
 export default function HomeScreen() {
+  const { homeReady, setHomeReady } = useHomeReady();
+  const appState = useRef<AppStateStatus>(AppState.currentState);
+  
+  // Notify DeepLinkService about home ready status
+  useEffect(() => {
+    const deepLinkService = DeepLinkService.getInstance();
+    
+    if (homeReady) {
+      console.log('🏠 [HomeScreen] Home is ready, notifying DeepLinkService');
+      deepLinkService.setHomeReady(true);
+      eventBus.emit('tabsReady', undefined);
+    }
+    
+    return () => {
+      deepLinkService.setHomeReady(false);
+    };
+  }, [homeReady]);
+
+  // Set home ready state and emit tabs ready event
+  useEffect(() => {
+    console.log('🏠 [HomeScreen] Setting home ready state');
+    setHomeReady(true);
+    
+    return () => setHomeReady(false);
+  }, [setHomeReady]);
+
+  // Listen to AppState changes for foreground deep link handling
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState: AppStateStatus) => {
+      const deepLinkService = DeepLinkService.getInstance();
+      
+      if (
+        appState.current.match(/inactive|background/) &&
+        nextAppState === 'active' &&
+        homeReady
+      ) {
+        console.log('🔗 [HomeScreen] App came to foreground with home ready, setting foreground state and resetting navigation');
+        // Mark app as in foreground state when returning from background
+        deepLinkService.setAppInForeground(true);
+        deepLinkService.resetNavigationState();
+      } else if (nextAppState.match(/inactive|background/)) {
+        console.log('🔗 [HomeScreen] App going to background');
+        // Don't change foreground state when going to background
+        // This preserves the state for proper handling when returning
+      }
+      appState.current = nextAppState;
+    };
+    
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => {
+      subscription.remove();
+    };
+  }, [homeReady]);
   const authState = useAppSelector((state) => state.auth);
   const { userId } = authState || { userId: null };
   const router = useRouter();
