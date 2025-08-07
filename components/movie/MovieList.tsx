@@ -194,20 +194,20 @@ export default function MovieList({ category, title, onClose, showAll = false, c
         case 'comingsoon':
           response = await movieService.getComingSoon({ 
             limit: showAll ? undefined : ITEMS_PER_PAGE, 
-            days: 30,
+            days: 90,
             showAll 
           });
           break;
         case 'recommended':
           response = await movieService.getNewReleases({ 
             limit: showAll ? undefined : ITEMS_PER_PAGE, 
-            days: 30 
+            days: 90 
           });
           break;
         default:
           response = await movieService.getNewReleases({ 
             limit: showAll ? undefined : ITEMS_PER_PAGE, 
-            days: 30 
+            days: 90 
           });
       }
 

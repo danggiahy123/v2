@@ -118,7 +118,7 @@ const RelatedMovies: React.FC<RelatedMoviesProps> = ({
   // Handle movie press
   const handleMoviePress = (relatedMovieId: string) => {
     if (onMoviePress) {
-onMoviePress(relatedMovieId);
+      onMoviePress(relatedMovieId);
     } else {
       router.push(`/movie/${relatedMovieId}`);
     }
@@ -135,7 +135,8 @@ onMoviePress(relatedMovieId);
       key={movie._id}
       style={styles.movieItem}
       onPress={() => handleMoviePress(movie._id)}
-      activeOpacity={0.8}
+      activeOpacity={0.7}
+      delayPressIn={0}
     >
       <View style={styles.movieImageContainer}>
         <Image
@@ -153,12 +154,12 @@ onMoviePress(relatedMovieId);
       </View>
       
       <View style={styles.movieInfo}>
-        <Text style={styles.movieTitle} numberOfLines={2}>
+        <Text style={styles.movieTitle} numberOfLines={3}>
           {movie.movie_title}
         </Text>
         
         {movie.producer && (
-          <Text style={styles.movieProducer} numberOfLines={1}>
+          <Text style={styles.movieProducer} numberOfLines={2}>
             {movie.producer}
           </Text>
         )}
@@ -254,20 +255,25 @@ onMoviePress(relatedMovieId);
         </View>
       )}
       
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor="#ff6b6b"
-          />
-        }
-      >
-        {relatedMovies.map(renderMovieItem)}
-      </ScrollView>
+      {refreshing ? (
+        <View style={styles.refreshContainer}>
+          <ActivityIndicator size="small" color="#ff6b6b" />
+        </View>
+      ) : (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          scrollEventThrottle={16}
+          decelerationRate="fast"
+          snapToAlignment="start"
+          bounces={false}
+          alwaysBounceHorizontal={false}
+          nestedScrollEnabled={false}
+        >
+          {relatedMovies.map(renderMovieItem)}
+        </ScrollView>
+      )}
     </View>
   );
 };
@@ -296,6 +302,8 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 15,
+    alignItems: 'flex-start',
+    paddingBottom: 10,
   },
   movieItem: {
     width: 140,
@@ -303,13 +311,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#222',
     borderRadius: 12,
     overflow: 'hidden',
+    elevation: 0,
+    shadowOpacity: 0,
+    transform: [{ scale: 1 }],
+    flexShrink: 0,
   },
   movieImageContainer: {
     position: 'relative',
+    width: '100%',
+    height: 200,
+    flexShrink: 0,
   },
   movieImage: {
     width: '100%',
-    height: 200,
+    height: '100%',
     backgroundColor: '#333',
   },
   movieTypeBadge: {
@@ -327,33 +342,38 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   movieInfo: {
-    padding: 12,
+    padding: 8,
+    minHeight: 80,
+    flex: 1,
   },
   movieTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: '#fff',
-    marginBottom: 6,
-    lineHeight: 18,
+    marginBottom: 4,
+    lineHeight: 16,
+    flexWrap: 'wrap',
+    minHeight: 48,
   },
   movieProducer: {
     fontSize: 12,
     color: '#999',
-    marginBottom: 8,
+    marginBottom: 4,
+    minHeight: 16,
   },
   genreContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 4,
+    gap: 2,
   },
   genreTag: {
     backgroundColor: '#333',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 3,
   },
   genreText: {
-    fontSize: 10,
+    fontSize: 9,
     color: '#ccc',
   },
   loadingContainer: {
@@ -399,6 +419,12 @@ paddingVertical: 40,
     fontSize: 16,
     marginTop: 10,
     textAlign: 'center',
+  },
+  refreshContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+    height: 200,
   },
 });
 
