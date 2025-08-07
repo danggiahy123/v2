@@ -649,7 +649,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
             />
           )}
 
-          {/* Loading Overlay - Only show when loading and not playing */}
+          {/* Loading Overlay - Dùng để báo cho người dùng biết video đang được tải lần đầu */}
           {(isLoading && !isPlaying) && (
             <View style={styles.loadingOverlay}>
               <ActivityIndicator size="large" color="#E50914" />
@@ -657,15 +657,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
             </View>
           )}
 
-          {/* Buffering Overlay */}
-          {!isLoading && !error && currentPlayer?.status === 'loading' && (
-            <View style={styles.bufferingOverlay}>
-              <View style={styles.bufferingIndicator}>
-                <ActivityIndicator size="large" color="#E50914" />
-                <Text style={styles.bufferingText}>Đang tải...</Text>
-              </View>
-            </View>
-          )}
+          {/* Đã loại bỏ Buffering Overlay theo yêu cầu */}
 
           {/* Error Overlay - Hidden for videos without content */}
           {error && (
@@ -830,31 +822,31 @@ const styles = StyleSheet.create({
     color: '#aaa',
     fontSize: 14,
   },
-  bufferingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.3)', // Lighter background
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  bufferingIndicator: {
-    backgroundColor: 'rgba(0,0,0,0.8)', // Darker container for the indicator
-    padding: 20,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    minWidth: 120,
-  },
-  bufferingText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-    marginTop: 10,
-    textAlign: 'center',
-  },
+  // bufferingOverlay: {
+  //   position: 'absolute',
+  //   top: 0,
+  //   left: 0,
+  //   right: 0,
+  //   bottom: 0,
+  //   backgroundColor: 'rgba(0,0,0,0.3)', // Lighter background
+  //   justifyContent: 'center',
+  //   alignItems: 'center',
+  // },
+  // bufferingIndicator: {
+  //   backgroundColor: 'rgba(0,0,0,0.8)', // Darker container for the indicator
+  //   padding: 20,
+  //   borderRadius: 10,
+  //   justifyContent: 'center',
+  //   alignItems: 'center',
+  //   minWidth: 120,
+  // },
+  // bufferingText: {
+  //   color: '#fff',
+  //   fontSize: 14,
+  //   fontWeight: '600',
+  //   marginTop: 10,
+  //   textAlign: 'center',
+  // },
 });
 
 // Memoize với shallow comparison của props để tránh re-render không cần thiết
