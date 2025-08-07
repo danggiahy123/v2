@@ -61,7 +61,12 @@ const Notification: React.FC<NotificationProps> = ({
             toValue: -100,
             duration: 200,
             useNativeDriver: true,
-          }).start(() => handleClose());
+          }).start(() => {
+            // Wrap handleClose in setTimeout to avoid useInsertionEffect error
+            setTimeout(() => {
+              handleClose();
+            }, 0);
+          });
         } else {
           // Không vuốt đủ xa - trả về vị trí cũ
           Animated.spring(swipeAnim, {
@@ -100,8 +105,10 @@ const Notification: React.FC<NotificationProps> = ({
         useNativeDriver: true,
       }),
     ]).start(() => {
-      // Call onClose after animation completes
-      onClose();
+      // Wrap onClose in setTimeout to avoid useInsertionEffect error
+      setTimeout(() => {
+        onClose();
+      }, 0);
     });
   }, [type, progress, visible, translateAnim, opacityAnim, scaleAnim, onClose]);
 

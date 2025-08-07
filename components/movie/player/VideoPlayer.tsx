@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { userInteractionService } from '../../../services/userInteractionService';
 import { Episode, REQUIRED_EPISODE_FIELDS } from '../../../types/episode';
 import eventBus from '../../../utils/eventBus';
+import { useFocusEffect } from '@react-navigation/native';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -572,6 +573,55 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
     return () => clearInterval(intervalId);
   }, [player, isDestroying]);
+
+  // 🔧 FIX: Pause video when screen loses focus
+  const [wasPausedByFocusLoss, setWasPausedByFocusLoss] = useState(false);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      // When screen gains focus, resume video if it was paused due to focus loss
+      if (wasPausedByFocusLoss && isPlayerReady && !isDestroying) {
+        console.log('🔄 [VideoPlayer] Screen gaining focus, resuming video');
+        // Wrap in setTimeout to avoid scheduling updates during render
+        setTimeout(() => {
+          safePlayerOperation(
+            (player) => {
+              try {
+                if (player && typeof player.play === 'function' && !player.playing) {
+                  player.play();
+                  console.log('▶️ [VideoPlayer] Video resumed after focus gain');
+                  setWasPausedByFocusLoss(false);
+                }
+              } catch (err) {
+                console.warn('⚠️ [VideoPlayer] Error resuming video on focus gain:', err);
+              }
+            }
+          );
+        }, 0);
+      }
+
+      return () => {
+        // When screen loses focus, pause the video
+        console.log('🔄 [VideoPlayer] Screen losing focus, pausing video');
+        // Wrap in setTimeout to avoid scheduling updates during render
+        setTimeout(() => {
+          safePlayerOperation(
+            (player) => {
+              try {
+                if (player && typeof player.pause === 'function' && player.playing) {
+                  player.pause();
+                  setWasPausedByFocusLoss(true);
+                  console.log('⏸️ [VideoPlayer] Video paused due to screen focus loss');
+                }
+              } catch (err) {
+                console.warn('⚠️ [VideoPlayer] Error pausing video on focus loss:', err);
+              }
+            }
+          );
+        }, 0);
+      };
+    }, [safePlayerOperation, wasPausedByFocusLoss, isPlayerReady, isDestroying])
+  );
 
   // Validate episode data
   const { isValid, missingFields } = validateEpisode(episode);
