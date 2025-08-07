@@ -17,6 +17,10 @@ class EventBus {
     if (!this.events[event]) return;
     this.events[event].forEach(cb => cb(payload));
   }
+
+  hasListeners(event: string): boolean {
+    return !!(this.events[event] && this.events[event].length > 0);
+  }
 }
 
 export default new EventBus(); 

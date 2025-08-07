@@ -12,6 +12,7 @@
  * - MovieDescriptionInline: Hiển thị nội dung phim rút gọn và mở rộng inline
  * - LoginRequiredModal: Modal hiển thị khi user chưa đăng nhập muốn dùng tính năng cần auth
  * - NotificationBadge: Badge hiển thị số lượng thông báo chưa đọc
+ * - DeepLinkErrorBoundary: Error boundary để xử lý lỗi deeplink
  * 
  * ARCHITECTURE:
  * Barrel pattern giúp:
@@ -23,6 +24,7 @@
 
 export { default as AnimatedElements } from './AnimatedElements';
 export { default as DebugHighlight } from './DebugHighlight';
+export { DeepLinkErrorBoundary } from './DeepLinkErrorBoundary';
 export { default as LoginRequiredModal } from './LoginRequiredModal';
 export { default as MovieDescriptionInline } from './MovieDescriptionInline';
 export { default as MovieDescriptionPreview } from './MovieDescriptionPreview';
